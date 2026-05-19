@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useResponsive } from "@/hooks/useResponsive";
 
 type StepItem = {
   label: string;
@@ -25,9 +26,7 @@ type StepFlowProps = {
   roadmapId?: string;
 };
 
-const COLUMNS = 4;
-const ROW_GAP = 60;
-const NODE_HEIGHT = 55;
+
 
 export const StepFlow: React.FC<StepFlowProps> = ({
   steps,
@@ -39,6 +38,14 @@ export const StepFlow: React.FC<StepFlowProps> = ({
   roadmapId,
   variant = "light",
 }) => {
+
+  const { isLarge, isMedium, isSmall } = useResponsive();
+
+  const COLUMNS = isLarge ? 4 : 3;
+  const ROW_GAP = isSmall ? 40 : 50;
+  const NODE_HEIGHT = 60  ;
+
+
   const DEFAULT_BORDER_COLOR = variant === "light" ? "#C1CBE6" : "var(--medium-blue)";
   const router = useRouter();
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -168,8 +175,8 @@ export const StepFlow: React.FC<StepFlowProps> = ({
                 border: `2px solid ${isLocked
                   ? "rgba(148, 163, 184, 0.35)"
                   : isHovered || isSelected
-                  ? "var(--light-green)"
-                  : DEFAULT_BORDER_COLOR
+                    ? "var(--light-green)"
+                    : DEFAULT_BORDER_COLOR
                   }`,
                 borderRadius: "3.5vh",
                 display: "flex",
@@ -180,11 +187,11 @@ export const StepFlow: React.FC<StepFlowProps> = ({
                   isLocked
                     ? "rgba(15, 23, 42, 0.65)"
                     : isHovered || isSelected
-                    ? "var(--light-green)"
-                    : variant === "light" ?
-                      "#C1CBE6" :
-                      "var(--medium-blue)",
-                fontSize: "0.8rem",
+                      ? "var(--light-green)"
+                      : variant === "light" ?
+                        "#C1CBE6" :
+                        "var(--medium-blue)",
+                fontSize: isSmall?"var(--text-xxs)":"var(--text-sm)",
                 zIndex: 2,
                 cursor: isLocked ? "not-allowed" : isNavigatable ? "pointer" : "default",
                 paddingBlock: "1rem",
@@ -231,7 +238,7 @@ export const StepFlow: React.FC<StepFlowProps> = ({
                 }}
               >
                 <img
-                  src={variant==="light"?"/roadmap/connector.svg":"/roadmap/connector-blue.svg"}
+                  src={variant === "light" ? "/roadmap/connector.svg" : "/roadmap/connector-blue.svg"}
                   alt=""
                   style={{
                     width: "100%",
@@ -261,7 +268,7 @@ export const StepFlow: React.FC<StepFlowProps> = ({
                 }}
               >
                 <img
-                  src={variant==="light"?"/roadmap/connector-vertical.svg":"/roadmap/connector-vertical-blue.svg"}
+                  src={variant === "light" ? "/roadmap/connector-vertical.svg" : "/roadmap/connector-vertical-blue.svg"}
                   alt=""
                   style={{
                     width: "100%",

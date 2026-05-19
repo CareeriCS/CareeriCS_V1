@@ -36,6 +36,7 @@ import type {
   UnifiedBookmarkEntry,
   UserRoadmapBookmark,
 } from "@/types";
+import { useResponsive } from "@/hooks/useResponsive";
 
 type CachedApiRequest<T> = {
   expiresAt: number;
@@ -507,15 +508,18 @@ export default function RoadmapPage() {
       ? ""
       : "Loading roadmap...";
 
+  const { isLarge, isMedium, isSmall } = useResponsive();
+
   return (
     <div
       style={{
         position: "relative",
         width: "100%",
         height: "100%",
-        padding: "40px",
+        padding: "var(--space-lg)",
         display: "flex",
         flexDirection: "column",
+        gap: "var(--space-md)"
       }}
     >
       <div
@@ -526,13 +530,12 @@ export default function RoadmapPage() {
           flexDirection: "row",
           marginRight: "auto",
           alignItems: "center",
-          gap: "1rem",
-          marginBottom: "1rem",
+          gap: "var(--space-md)",
           flexWrap: "wrap",
         }}
       >
         <CustomDropdown
-        maxwidth="22vw"
+          maxwidth="250px"
           value={selectedRoadmapId}
           options={options}
           placeholder="select a path to view roadmap"
@@ -580,12 +583,14 @@ export default function RoadmapPage() {
           width: "100%",
           flex: 1,
           minHeight: 0,
-          borderRadius: "4vh",
+          borderRadius: "var(--radius-xl)",
           backgroundColor: "var(--dark-blue)",
           display: "flex",
           flexDirection: "column",
-          padding: "2rem",
+          padding: isSmall?"var(--space-xl)":"var(--space-lg)",
+          gap: "var(--space-lg)",
           overflow: "hidden",
+
         }}
       >
         <div
@@ -594,14 +599,13 @@ export default function RoadmapPage() {
             height: "fit-content",
             justifyContent: "space-between",
             alignItems: "center",
-            marginBottom: "1rem",
           }}
         >
           <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
             {roadmapHeading ? (
               <h1
                 style={{
-                  fontSize: "1.2rem",
+                  fontSize: "var(--text-md)",
                   color: "white",
                   margin: 0,
                 }}
@@ -611,7 +615,7 @@ export default function RoadmapPage() {
             ) : null}
 
             {bookmarkError ? (
-              <p style={{ margin: 0, color: "#FFD3D3", fontSize: "0.9rem" }}>
+              <p style={{ margin: 0, color: "#FFD3D3", fontSize: "var(--space-bs)" }}>
                 {bookmarkError}
               </p>
             ) : null}
@@ -620,14 +624,14 @@ export default function RoadmapPage() {
           <div
             style={{
               display: "flex",
-              gap: "1rem",
+              gap: "var(--space-md)",
             }}
           >
             <img
               src={"/roadmap/fullscreen.svg"}
               alt="Open roadmap in fullscreen"
               style={{
-                height: "1.5rem",
+                height: "var(--icon-md)",
                 cursor: selectedRoadmapId === DEFAULT_PATH_OPTION ? "default" : "pointer",
                 opacity: selectedRoadmapId === DEFAULT_PATH_OPTION ? 0.5 : 1,
               }}
@@ -638,7 +642,7 @@ export default function RoadmapPage() {
               src={isSelectedRoadmapBookmarked ? "/global/bookmark-filled.svg" : "/global/bookmark.svg"}
               alt="Toggle roadmap bookmark"
               style={{
-                height: "1.5rem",
+                height: "var(--icon-md)",
                 cursor: selectedRoadmapId === DEFAULT_PATH_OPTION ? "default" : "pointer",
                 opacity: selectedRoadmapId === DEFAULT_PATH_OPTION ? 0.5 : 1,
               }}
@@ -653,8 +657,9 @@ export default function RoadmapPage() {
           style={{
             width: "100%",
             height: "100%",
-            paddingInline: "2rem",
+            paddingInline: !isSmall ? "var(--space-lg)" : 0,
             overflowY: "auto",
+            overflowX: "hidden",
             scrollbarWidth: "none",
           }}
         >
@@ -676,7 +681,7 @@ export default function RoadmapPage() {
                   justifyContent: "center",
                   fontFamily: "var(--font-nova-square)",
                   color: "white",
-                  fontSize: selectedRoadmapId === DEFAULT_PATH_OPTION ? "2.5rem" : "1rem",
+                  fontSize: "var(--text-md)"
                 }}
               >
                 {selectedRoadmapId === DEFAULT_PATH_OPTION ? "select a path to view roadmap" : "Loading..."}
