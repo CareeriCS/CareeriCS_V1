@@ -15,6 +15,7 @@ import {
 import { useAuth } from "@/providers/auth-provider";
 import { roadmapService } from "@/services";
 import type { ApiResponse, RoadmapListItem, RoadmapProgressSummary, RoadmapRead } from "@/types";
+import { useResponsive } from "@/hooks/useResponsive";
 
 type CachedApiRequest<T> = {
   expiresAt: number;
@@ -44,6 +45,7 @@ export default function RoadmapFeaturePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isLoading: isAuthLoading } = useAuth();
+
 
   const roadmapParam = searchParams.get("roadmap") || "";
   const stepParam = searchParams.get("step") || "";
@@ -181,6 +183,8 @@ export default function RoadmapFeaturePage() {
     };
   }, [activeRoadmapId, isAuthLoading, user?.id]);
 
+  const { isLarge, isMedium, isSmall } = useResponsive();
+
   const sections = useMemo(() => {
     return buildRoadmapUiSections({
       roadmap,
@@ -200,25 +204,51 @@ export default function RoadmapFeaturePage() {
   const { selectedSection, selectedIndex } = sectionSelection;
   const activeSectionAccessMessage = sectionAccessMessage || sectionSelection.lockedMessage;
 
+  const [isStatsOpen, setIsStatsOpen] = useState(false);
+
+  const openStats = useCallback(() => {
+    if (!isLarge) setIsStatsOpen(true);
+  }, [isLarge]);
+
+  const closeStats = useCallback(() => {
+    setIsStatsOpen(false);
+  }, []);
+
+  const toggleStats = useCallback(() => {
+    if (!isLarge) {
+      setIsStatsOpen((prev) => !prev);
+    }
+  }, [isLarge]);
+
   const handleSectionSelect = useCallback(
     (index: number) => {
       const nextSection = sections[index];
-      if (!nextSection) {
-        return;
-      }
+      if (!nextSection) return;
 
       if (nextSection.locked) {
         setSectionAccessMessage(
-          nextSection.lockReason || "Complete the previous section first to unlock this one.",
+          nextSection.lockReason || "Locked section",
         );
         return;
       }
 
-      setSectionAccessMessage(null);
       setSelectedSectionPreferenceId(nextSection.id);
+
+      // MOBILE LOGIC ONLY
+      if (!isLarge) {
+        setIsStatsOpen((prev) => {
+          // if same section clicked → toggle
+          const sameSection = selectedSection?.id === nextSection.id;
+          if (sameSection) return !prev;
+
+          // different section → always open
+          return true;
+        });
+      }
     },
-    [sections],
+    [sections, isLarge, selectedSection]
   );
+
 
   useEffect(() => {
     if (!selectedSection || !activeRoadmapId) {
@@ -310,21 +340,52 @@ export default function RoadmapFeaturePage() {
   const currentSectionTotalSteps = selectedSection ? selectedSection.skills.length : 0;
   const roadmapHeading = roadmap?.title ? `${roadmap.title} Roadmap` : "Loading roadmap...";
 
+
   return (
     <div
       style={{
-        display: "flex",
+        display: isLarge ? "flex" : "grid",
         width: "100%",
-        height: "100%",
-        padding: "1rem",
-        flexDirection: "column",
-        overflow: "clip",
+        height: isLarge ? "100%" : "100%",
+        padding: "var(--space-md)",
+        flexDirection: "row",
+        overflow: "auto",
+        gap: "var(--space-md)",
+        gridTemplateColumns: "1fr",
+        gridTemplateRows: "1fr",
       }}
     >
-      <div style={{ display: "flex", flexDirection: "column", gap: "0.45rem", marginBottom: "1rem" }}>
+
+      {(isStatsOpen || isLarge) && !isLarge && (
+        <div
+          onClick={closeStats}
+          style={{
+            position: "fixed",
+            inset: 0,
+            backdropFilter: "blur(2px)",
+            backgroundColor: "rgba(0,0,0,0.5)",
+            zIndex: 998,
+          }}
+        />
+      )}
+
+      {/* Main Content */}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          width: "100%",
+          minHeight: 0,
+          overflow: "hidden",
+          flex: 1,
+          gap: "var(--space-md)",
+          gridArea: "1/1/2/2",
+        }}
+      >
+
         <h1
           style={{
-            fontSize: "2rem",
+            fontSize: "var(--text-xl)",
             color: "white",
             margin: 0,
           }}
@@ -337,83 +398,97 @@ export default function RoadmapFeaturePage() {
             {activeSectionAccessMessage}
           </p>
         ) : null}
-      </div>
 
-      <div
-        style={{
-          display: "flex",
-          width: "100%",
-          minHeight: 0,
-          overflow: "hidden",
-          flex: 1,
-        }}
-      >
-        <div style={{ display: "flex", flexDirection: "column", width: "70%" }}>
-          <div style={{ display: "flex", gap: "2rem", marginBottom: "2rem" }}>
-            <RoadmapProgress
-              text="Sections Completed"
-              done={String(completedSections)}
-              total={String(totalSections)}
-            />
-            <RoadmapProgress
-              text="Total Steps Completed"
-              done={String(completedSteps)}
-              total={String(totalSteps)}
-            />
-            <RoadmapProgress
-              text="Current Steps Completed"
-              done={String(currentSectionCompletedSteps)}
-              total={String(currentSectionTotalSteps)}
-            />
-          </div>
 
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              width: "100%",
-              overflowY: "auto",
-              scrollbarWidth: "none",
-            }}
-          >
-            <StepFlow
-              steps={steps}
-              selectedIndex={selectedIndex}
-              lockedStepIndexes={lockedStepIndexes}
-              onSelect={handleSectionSelect}
-              isNavigatable={false}
-            />
-          </div>
+        {/* Progress Cards */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-start",
+            gap: "var(--space-xl)",
+            flexWrap: "wrap"
+          }}
+        >
+          <RoadmapProgress
+            text="Sections Completed"
+            done={String(completedSections)}
+            total={String(totalSections)}
+          />
+          <RoadmapProgress
+            text="Total Steps Completed"
+            done={String(completedSteps)}
+            total={String(totalSteps)}
+          />
+          <RoadmapProgress
+            text="Current Steps Completed"
+            done={String(currentSectionCompletedSteps)}
+            total={String(currentSectionTotalSteps)}
+          />
         </div>
 
+        {/* Roadmap */}
         <div
           style={{
             display: "flex",
             flexDirection: "column",
-            padding: "1rem 2rem",
-            backgroundColor: "var(--medium-grey)",
-            borderRadius: "4vh",
-            width: "30%",
-            marginLeft: "2rem",
-            alignItems: "center",
-            overflow: "hidden",
+            width: "100%",
+            overflowY: "auto",
+            scrollbarWidth: "none",
           }}
         >
-          <h2 style={{ fontSize: "1.5rem", color: "white", marginBottom: "1rem" }}>
+          <StepFlow
+            steps={steps}
+            selectedIndex={selectedIndex}
+            lockedStepIndexes={lockedStepIndexes}
+            onSelect={handleSectionSelect}
+            isNavigatable={false}
+          />
+        </div>
+      </div>
+
+
+      {/* Stats */}
+      {(isStatsOpen || isLarge) && (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            padding: "var(--space-md)",
+            backgroundColor: "var(--medium-grey)",
+            borderRadius: "var(--radius-xl)",
+            maxWidth: "70vw",
+            minWidth: isLarge ? "400px" : "70vw",
+            alignItems: "center",
+            overflow: "hidden",
+            gap: "var(--space-md)",
+            marginTop: "5vh",
+            gridArea: "1/1/2/2",
+            marginLeft: !isLarge ? "auto" : 0,
+            zIndex: 999,
+          }}
+        >
+          {/* Title */}
+          <h2
+            style={{
+              fontSize: "var(--text-lg)",
+              color: "white",
+              fontFamily: "var(--font-nova-square)",
+            }}
+          >
             {selectedSection?.title || "Section"}
           </h2>
 
+          {/* Divider */}
           <div
             style={{
               height: "0.1rem",
               backgroundColor: "white",
               width: "100%",
-              marginBottom: "1rem",
             }}
           />
 
+          {/* Content */}
           <div
-            className="section-scroll-box"
             style={{
               display: "flex",
               flexDirection: "column",
@@ -424,28 +499,29 @@ export default function RoadmapFeaturePage() {
               overflowX: "hidden",
               scrollbarWidth: "none",
               msOverflowStyle: "none",
-              paddingRight: "0.2rem",
+              paddingRight: "var(--space-xxs)",
+              gap: "var(--space-md)",
             }}
           >
             {Boolean(selectedSection?.resources.length) && (
               <div
                 style={{
                   width: "100%",
-                  marginBottom: "1rem",
                   display: "flex",
                   flexDirection: "column",
-                  gap: "0.7rem",
+                  gap: "var(--space-sm)",
                 }}
               >
                 <p
                   style={{
-                    fontSize: "1.1rem",
+                    fontSize: "var(--text-md)",
                     color: "white",
                     fontFamily: "var(--font-nova-square)",
                   }}
                 >
                   Resources:
                 </p>
+
                 {selectedSection?.resources.map((resource) => {
                   const key = `${resource.url}|${resource.title}|${resource.resourceType}`;
 
@@ -458,6 +534,7 @@ export default function RoadmapFeaturePage() {
                     />
                   );
                 })}
+
                 <div
                   style={{
                     height: "0.1rem",
@@ -471,8 +548,7 @@ export default function RoadmapFeaturePage() {
             {(selectedSection?.skills.length ?? 0) > 0 ? (
               <p
                 style={{
-                  margin: "0 0 1rem 0",
-                  fontSize: "1.1rem",
+                  fontSize: "var(--text-md)",
                   color: "white",
                   fontFamily: "var(--font-nova-square)",
                 }}
@@ -502,14 +578,10 @@ export default function RoadmapFeaturePage() {
             </div>
           </div>
         </div>
-      </div>
+      )}
 
-      <style jsx>{`
-        .section-scroll-box::-webkit-scrollbar {
-          width: 0;
-          height: 0;
-        }
-      `}</style>
-    </div>
+
+
+    </div >
   );
 }

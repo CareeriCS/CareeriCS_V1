@@ -49,6 +49,7 @@ def upload_cv_to_db(db: Session, user_id: UUID, cv_data: dict):
     #user.city = clean_str(cv_data.get("contact", {}).get("city"))
     #user.country = clean_str(cv_data.get("contact", {}).get("country"))
     user.linkedin = clean_str(cv_data.get("contact", {}).get("linkedin"))
+    user.github = clean_str(cv_data.get("contact", {}).get("github"))
     user.portfolio = clean_str(cv_data.get("contact", {}).get("portfolio"))
     user.summary = clean_str(cv_data.get("summary"))
 

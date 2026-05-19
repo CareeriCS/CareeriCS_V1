@@ -260,6 +260,7 @@ class UserSchema(BaseModel):
     city: Optional[str] = None
     country: Optional[str] = None
     linkedin: Optional[str] = None
+    github: Optional[str] = None
     portfolio: Optional[str] = None
     summary: Optional[str] = None
 

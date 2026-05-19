@@ -9,20 +9,20 @@ interface roadmapProgressProps {
     isScore?: boolean;
 }
 
-export default function roadmapProgress({ text, done = "0", total = "0", isTotal=true, isScore=true, color = "var(--light-green)" }: roadmapProgressProps) {
+export default function roadmapProgress({ text, done = "0", total = "0", isTotal = true, isScore = true, color = "var(--light-green)" }: roadmapProgressProps) {
     return (<div
         style={{
             display: "flex",
-            width: "100%",
+            width: "fit-content",
             height: "fit-content",
+            gap: "var(--space-sm)",
         }}>
         <div
             style={{
                 maxHeight: "100%",
-                width: "0.5rem",
+                width: "var(--space-xxs)",
                 backgroundColor: color,
-                borderRadius: "99px",
-                marginRight: "1rem",
+                borderRadius: "999px",
             }}
         />
         <div
@@ -34,33 +34,33 @@ export default function roadmapProgress({ text, done = "0", total = "0", isTotal
             }}
         >
             {isScore &&
-            <>
-            <h2
-                style={{
-                    fontSize: "1.25rem",
-                    whiteSpace: "nowrap",
-                }}
-                >
-                <span
-                    style={{
-                        color: color,
-                    }}
-                >
-                    {done}
-                </span>
-                {isTotal && (
-                    <>
-                        {" / "}
-                        <span>{total}</span>
-                    </>
-                )}
-            </h2>
-            </>
-}
+                <>
+                    <h2
+                        style={{
+                            fontSize: "var(--text-md)",
+                            whiteSpace: "nowrap",
+                        }}
+                    >
+                        <span
+                            style={{
+                                color: color,
+                            }}
+                        >
+                            {done}
+                        </span>
+                        {isTotal && (
+                            <>
+                                {" / "}
+                                <span>{total}</span>
+                            </>
+                        )}
+                    </h2>
+                </>
+            }
 
             <p
                 style={{
-                    fontSize: "1rem",
+                    fontSize: "var(--text-base)",
                     whiteSpace: "nowrap",
                 }}
             >

@@ -63,6 +63,18 @@ export default function ChoiceCard({
         ...style
       }}
     >
+      <img
+        src={isBookmarked ? "/global/bookmark-filled.svg" : "/global/bookmark.svg"}
+        alt={"bookmark"}
+        onClick={onBookmark}
+        style={{
+          width: "var(--icon-sm)",
+          height: "auto",
+          display: "block",
+          cursor:"pointer",
+          marginLeft:"auto",
+        }}
+      />
       {/* 1. Icon Section */}
       <div
         style={{
@@ -79,17 +91,6 @@ export default function ChoiceCard({
             width: "var(--icon-xl)",
             height: "auto",
             display: "block",
-          }}
-        />
-        <img
-          src={isBookmarked ? "/global/bookmark-filled.svg" : "/global/bookmark.svg"}
-          alt={"bookmark"}
-          onClick={onBookmark}
-          style={{
-            width: "var(--icon-sm)",
-            height: "auto",
-            display: "block",
-            cursor:"pointer",
           }}
         />
       </div>

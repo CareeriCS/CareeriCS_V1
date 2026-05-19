@@ -40,6 +40,7 @@ class User(Base):
     city = Column(String)
     country = Column(String)
     linkedin = Column(String)
+    github = Column(String)
     portfolio = Column(String)
     summary = Column(Text)
     username = Column(String)

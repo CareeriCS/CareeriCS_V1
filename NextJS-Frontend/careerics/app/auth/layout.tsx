@@ -101,7 +101,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
 
     <div
       style={{
-        overflowY: "auto",
+        overflowY: "clip",
         backgroundColor: "var(--bg-color)",
         display: "grid",
         gridTemplateColumns: layout.gridTemplateColumns,
@@ -116,15 +116,15 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
       <div
         style={{
           width: "100%",
-          height: "100vh",
+          height: "100%",
           gridArea: layout.RightArea,
           background:
             "radial-gradient(circle at center, var(--phase5-color) -10%, rgba(0,0,0,0) 65%)",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          justifyContent: "space-between",
-          paddingTop: "15vh",
+          justifyContent: "flex-start",
+          paddingTop: "10vh",
         }}
       >
 
@@ -132,7 +132,8 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
         {/* careeri CS */}
         <div
           style={{
-            width: "60%",
+            width: "50%",
+            maxWidth: "320px",
             height: "fit-content",
           }}
         >
@@ -154,7 +155,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
           <div
             style={{
               width: "100%",
-              height: "100vh",
+              height: isLarge?"100vh":"100%",
               gridArea: layout.LeftArea,
               display: "flex",
               alignItems: "center",
@@ -256,18 +257,20 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
         }
 
         {/* robot */}
-        <div
-          style={{
-            height: "fit-content",
-            maxWidth: isMedium ? "50%" : "70%",
-          }}
-        >
-          <img
-            src="/landing/robot.svg"
-            alt="Our Robot"
-            style={{ width: "100%", display: "block" }}
-          />
-        </div>
+        {isLarge &&
+          <div
+            style={{
+              height: "fit-content",
+              maxWidth: isMedium ? "50%" : "70%",
+            }}
+          >
+            <img
+              src="/landing/robot.svg"
+              alt="Our Robot"
+              style={{ width: "100%", display: "block" }}
+            />
+          </div>
+        }
       </div>
 
       {isLarge &&
