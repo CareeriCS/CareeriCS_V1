@@ -4,7 +4,6 @@
 import React, { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { authService } from "@/services/auth.service";
 import { useAuth } from "@/providers/auth-provider";
 import { useResponsive } from "@/hooks/useResponsive";
 
@@ -18,14 +17,7 @@ const Sidebar = () => {
   const [hoveredNav, setHoveredNav] = useState<number | null>(null);
   const [isOpen, setIsOpen] = useState(false);
 
-  async function handleLogout() {
-    try {
-      await authService.signOut();
-      router.push("/auth/login");
-    } catch (err: any) {
-      console.error("Logout failed:", err.message);
-    }
-  }
+  
 
   const profileName = isLoading
     ? "Loading..."
@@ -106,7 +98,7 @@ const Sidebar = () => {
               display: "flex",
               alignItems: "center",
               gap: "var(--space-md)",
-              padding: "var(--space-sm)",
+              padding: !isSmall?"var(--space-sm)":"var(--space-lg)",
               borderRadius: "var(--radius-lg)",
               cursor: "pointer",
               transition: "0.2s ease-in-out",
@@ -169,6 +161,7 @@ const Sidebar = () => {
         </nav>
 
         <div
+        onClick={()=>{router.push("/profile")}}
           style={{
             marginTop: "auto",
             display: "flex",
@@ -184,7 +177,7 @@ const Sidebar = () => {
             style={{ height: "var(--icon-md)" }}
           />
 
-          <div onClick={handleLogout} style={{ cursor: "pointer" }}>
+          <div style={{ cursor: "pointer" }}>
             {profileName}
           </div>
         </div>
@@ -232,9 +225,9 @@ const Sidebar = () => {
         </nav>
 
         <img
+        onClick={()=>{router.push("/profile")}}
           src="/sidebar/profile.svg"
           alt="User"
-          onClick={handleLogout}
           style={{
             height: "var(--icon-lg)",
             cursor: "pointer",
@@ -288,7 +281,7 @@ const Sidebar = () => {
               background: "#111",
               display: "flex",
               flexDirection: "column",
-              padding: "var(--space-md)",
+              padding: "var(--space-lg)",
               gap: "var(--space-md)",
               zIndex: 2000,
               color: "#fff",
@@ -332,26 +325,26 @@ const Sidebar = () => {
             </nav>
 
             <div
+              onClick={()=>{router.push("/profile")}}
               style={{
                 marginTop: "auto",
                 display: "flex",
                 alignItems: "center",
                 gap: "var(--space-md)",
                 borderTop: "2px solid #fff",
-                paddingTop: "var(--space-sm)",
+                padding: "var(--space-md)",
               }}
             >
               <img
                 src="/sidebar/profile.svg"
                 alt="User"
-                onClick={handleLogout}
                 style={{
-                  height: "var(--icon-md)",
+                  height: "var(--icon-xl)",
                   cursor: "pointer",
                 }}
               />
 
-              <div onClick={handleLogout} style={{ cursor: "pointer" }}>
+              <div style={{ cursor: "pointer" }}>
                 {profileName}
               </div>
             </div>

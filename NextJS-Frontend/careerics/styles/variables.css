@@ -1,100 +1,109 @@
 :root {
-    /*Color Palette*/
-    --bg-color: #0A0A0A;
-    --form-grey: #3D3D40;
-    --dark-grey: #28292B;
-    --medium-grey: #636771;
-    --bg-grey: #BABABA;
-    --dark-blue: #142143;
-    --medium-blue: #1C427B;
-    --light-blue: #C1CBE6;
-    --primary-green: #B8EF46;
-    --light-green: #E6FFB2;
-    --light-red: #FFB2B2;
-    --light-orange: #FFBC6A;
+  /*Color Palette*/
+  --bg-color: #0A0A0A;
+  --form-grey: #3D3D40;
+  --dark-grey: #28292B;
+  --medium-grey: #636771;
+  --bg-grey: #BABABA;
+  --dark-blue: #142143;
+  --medium-blue: #1C427B;
+  --light-blue: #C1CBE6;
+  --primary-green: #B8EF46;
+  --light-green: #E6FFB2;
+  --light-red: #FFB2B2;
+  --light-orange: #FFBC6A;
 
-    /*text Colors*/
-    --text-grey: #AAAAAA;
+  /*text Colors*/
+  --text-grey: #AAAAAA;
 
-    /*Landing Page Colors*/
-    --phase1-color: #FEF355;
-    --phase2-color: #B5E554;
-    --phase3-color: #52E996;
-    --phase4-color: #1FA1BB;
-    --phase5-color: #1152CA;
+  /*Landing Page Colors*/
+  --phase1-color: #FEF355;
+  --phase2-color: #B5E554;
+  --phase3-color: #52E996;
+  --phase4-color: #1FA1BB;
+  --phase5-color: #1152CA;
 
 
 
-    /* =========================
+  /* =========================
      TYPOGRAPHY SCALE
   ========================== */
 
-    --text-xxs: clamp(0.55rem, 0.6vw, 0.6rem);
-    --text-xs: clamp(0.7rem, 0.8vw, 0.8rem);
-    --text-sm: clamp(0.75rem, 1vw, 0.9rem);
-    --text-base: clamp(0.85rem, 1.2vw, 1rem);
-    --text-md: clamp(0.95rem, 1.5vw, 1.15rem);
-    --text-lg: clamp(1.1rem, 2vw, 1.4rem);
-    --text-xl: clamp(1.3rem, 3vw, 2rem);
-    --text-2xl: clamp(1.6rem, 4vw, 2.6rem);
-    --text-3xl: clamp(2rem, 5vw, 3.5rem);
+  --text-xxs: clamp(0.55rem, 0.6vw, 0.6rem);
+  --text-xs: clamp(0.7rem, 0.8vw, 0.8rem);
+  --text-sm: clamp(0.75rem, 1vw, 0.9rem);
+  --text-base: clamp(0.85rem, 1.2vw, 1rem);
+  --text-md: clamp(0.95rem, 1.5vw, 1.15rem);
+  --text-lg: clamp(1.1rem, 2vw, 1.4rem);
+  --text-xl: clamp(1.3rem, 3vw, 2rem);
+  --text-2xl: clamp(1.6rem, 4vw, 2.6rem);
+  --text-3xl: clamp(2rem, 5vw, 3.5rem);
 
-    /* =========================
+  /* =========================
      SPACING SCALE (padding / margin / gaps)
   ========================== */
 
-    --space-xxs: clamp(0.2rem, 0.4vw, 0.3rem);
-    --space-xs: clamp(0.3rem, 0.6vw, 0.5rem);
-    --space-sm: clamp(0.4rem, 0.8vw, 0.7rem);
-    --space-md: clamp(0.5rem, 1vw, 0.9rem);
-    --space-lg: clamp(0.75rem, 1.4vw, 1rem);
-    --space-xl: clamp(1rem, 2vw, 1.6rem);
-    --space-2xl: clamp(1.5rem, 3vw, 2.5rem);
+  --space-xxs: clamp(0.2rem, 0.4vw, 0.3rem);
+  --space-xs: clamp(0.3rem, 0.6vw, 0.5rem);
+  --space-sm: clamp(0.4rem, 0.8vw, 0.7rem);
+  --space-md: clamp(0.5rem, 1vw, 0.9rem);
+  --space-lg: clamp(0.75rem, 1.4vw, 1rem);
+  --space-xl: clamp(1rem, 2vw, 1.6rem);
+  --space-2xl: clamp(1.5rem, 3vw, 2.5rem);
 
-    /* =========================
+  /* =========================
      INPUT + COMPONENT SIZING
   ========================== */
 
-    --input-padding: clamp(0.55rem, 1vw, 0.9rem);
-    --button-padding-y: clamp(0.2rem, 0.4vw, 0.3rem);
-    --button-padding-x: clamp(0.8rem, 2vw, 1.5rem);
+  --input-padding: clamp(0.55rem, 1vw, 0.9rem);
+  --button-padding-y: clamp(0.2rem, 0.4vw, 0.3rem);
+  --button-padding-x: clamp(0.8rem, 2vw, 1.5rem);
 
-    --min-touch-target: 2.75rem;
+  --min-touch-target: 2.75rem;
 
-    /* =========================
+  /* =========================
      BORDER RADIUS SCALE
   ========================== */
 
-    --radius-xs: clamp(0.2rem, 0.4vw, 0.3rem);
-    --radius-sm: clamp(0.3rem, 0.6vw, 0.5rem);
-    --radius-md: clamp(0.4rem, 0.8vw, 0.7rem);
-    --radius-lg: clamp(0.6rem, 1vw, 1rem);
-    --radius-xl: clamp(0.8rem, 1.5vw, 1.5rem);
+  --radius-xs: clamp(0.2rem, 0.4vw, 0.3rem);
+  --radius-sm: clamp(0.3rem, 0.6vw, 0.5rem);
+  --radius-md: clamp(0.4rem, 0.8vw, 0.7rem);
+  --radius-lg: clamp(0.6rem, 1vw, 1rem);
+  --radius-xl: clamp(0.8rem, 1.5vw, 1.5rem);
 
-    /* =========================
+  /* =========================
      LINE HEIGHT
   ========================== */
 
-    --line-tight: 1.2;
-    --line-normal: 1.4;
-    --line-relaxed: 1.6;
+  --line-tight: 1.2;
+  --line-normal: 1.4;
+  --line-relaxed: 1.6;
 
-    /* =========================
+  /* =========================
      WIDTHS / LAYOUT
   ========================== */
 
-    --container-sm: clamp(20rem, 90vw, 30rem);
-    --container-md: clamp(25rem, 85vw, 45rem);
-    --container-lg: clamp(30rem, 80vw, 65rem);
+  --container-3xs: clamp(10rem, 98vw, 14rem);
+  --container-2xs: clamp(12rem, 96vw, 18rem);
+  --container-xs: clamp(16rem, 94vw, 24rem);
 
-    /* =========================
+  --container-sm: clamp(20rem, 90vw, 30rem);
+  --container-md: clamp(25rem, 85vw, 45rem);
+  --container-lg: clamp(30rem, 80vw, 65rem);
+
+  /* =========================
      ICON SIZES
   ========================== */
 
-    --icon-sm: clamp(0.9rem, 1.5vw, 1.1rem);
-    --icon-md: clamp(1.1rem, 2vw, 1.4rem);
-    --icon-lg: clamp(1.4rem, 3vw, 2rem);
-    --icon-xl: clamp(2rem, 4vw, 2.5rem);
-    --icon-2xl: clamp(2.8rem, 4vw, 3.2rem);
+  --icon-sm: clamp(0.9rem, 1.5vw, 1.1rem);
+  --icon-md: clamp(1.1rem, 2vw, 1.4rem);
+  --icon-lg: clamp(1.4rem, 3vw, 2rem);
+  --icon-xl: clamp(2rem, 4vw, 2.5rem);
+  --icon-2xl: clamp(2.8rem, 4vw, 3.2rem);
+
+  --icon-3xl: clamp(3.5rem, 5vw, 4.5rem);
+  --icon-4xl: clamp(5rem, 7vw, 6rem);
+  --icon-5xl: clamp(7rem, 9vw, 8.5rem);
+
 
 }

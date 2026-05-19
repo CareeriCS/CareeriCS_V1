@@ -1,7 +1,7 @@
 "use client";
 import { forwardRef, type ButtonHTMLAttributes, CSSProperties, useState } from "react";
 
-type ButtonVariant = "primary" | "secondary" | "outline" | "ghost" | "danger" | "text" | "primary-inverted" | "popup" | "popup-inverted";
+type ButtonVariant = "primary" | "secondary" | "secondary-inverted" | "outline" | "ghost" | "danger" | "text" | "primary-inverted" | "popup" | "popup-inverted";
 type ButtonSize = "sm" | "md" | "lg";
 
 interface TextButtonContent {
@@ -42,6 +42,16 @@ const variantStyles: Record<ButtonVariant, { default: CSSProperties; hover: CSSP
     default: { backgroundColor: "white", color: "#18181b" },
     hover: { backgroundColor: "var(--light-blue)" }
   },
+  "secondary-inverted": {
+    default: {
+      backgroundColor: "var(--light-blue)",
+      color: "#18181b",
+    },
+    hover: {
+      backgroundColor: "white",
+      color: "#18181b",
+    },
+  },
   outline: {
     default: { backgroundColor: "transparent", border: "0.3vh solid white", color: "white" },
     hover: { backgroundColor: "white", color: "black" }
@@ -51,8 +61,8 @@ const variantStyles: Record<ButtonVariant, { default: CSSProperties; hover: CSSP
     hover: { backgroundColor: "white" }
   },
   danger: {
-    default: { backgroundColor: "#dc2626", color: "white" },
-    hover: { backgroundColor: "#b91c1c" }
+    default: { backgroundColor: "var(--light-red)", color: "black" },
+    hover: { backgroundColor: "#e16767" }
   },
   text: {
     default: { color: "var(--primary-green)", background: "transparent", fontWeight: 700 },
@@ -75,7 +85,7 @@ const variantStyles: Record<ButtonVariant, { default: CSSProperties; hover: CSSP
 const sizeStyles: Record<ButtonSize, CSSProperties> = {
   sm: { fontSize: "var(--text-sm)", paddingBlock: "var(--button-padding-y)", paddingInline: "var(--space-md)" },
   md: { fontSize: "var(--text-base)", paddingBlock: "var(--button-padding-y)", paddingInline: "var(--space-xl)" },
-  lg: { fontSize: "var(--text-lg)", paddingBlock: "var(--button-padding-y)", paddingInline: "var(--space-2xl)" },
+  lg: { fontSize: "var(--text-md)", paddingBlock: "var(--button-padding-y)", paddingInline: "var(--space-2xl)" },
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
