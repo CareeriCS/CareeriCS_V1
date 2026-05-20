@@ -129,6 +129,7 @@ export const CareerCardsContainer = ({
                         gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
                         gridTemplateRows: gridRows,
                         gap: "var(--space-md)",
+                        alignItems:"center",
                     }}
                 >
                     {visibleCards}

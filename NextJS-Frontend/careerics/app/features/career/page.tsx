@@ -134,7 +134,7 @@ export default function CareerDiscoveryPage() {
     [careerTracks, safeStartIndex],
   );
 
-  
+
   const closeReplacePopup = useCallback(() => {
     if (isReplacingBookmark) {
       return;
@@ -218,19 +218,19 @@ export default function CareerDiscoveryPage() {
 
     const candidate = resolvedRoadmapId
       ? createRoadmapUnifiedBookmark({
-          roadmapId: resolvedRoadmapId,
-          title: resolvedRoadmapLink?.roadmapTitle || track.name,
-          description: track.description ?? null,
-          savedAt: new Date().toISOString(),
-          trackId: track.id,
-          trackName: track.name,
-        })
+        roadmapId: resolvedRoadmapId,
+        title: resolvedRoadmapLink?.roadmapTitle || track.name,
+        description: track.description ?? null,
+        savedAt: new Date().toISOString(),
+        trackId: track.id,
+        trackName: track.name,
+      })
       : createCareerUnifiedBookmark({
-          trackId: track.id,
-          title: track.name,
-          description: track.description ?? null,
-          savedAt: new Date().toISOString(),
-        });
+        trackId: track.id,
+        title: track.name,
+        description: track.description ?? null,
+        savedAt: new Date().toISOString(),
+      });
 
     if (latestBookmarks.length >= MAX_UNIFIED_BOOKMARKS) {
       setPendingCareerBookmark(candidate);
@@ -373,7 +373,7 @@ export default function CareerDiscoveryPage() {
       {/* TRACKS */}
       <CareerCardsContainer
         type="career"
-        columns={isSmall ? 2 : 4}
+        columns={isSmall ? 2 : isMedium ? 3 : 4}
         isScrollable
         Title="Discover more career paths"
         style={{
