@@ -54,7 +54,6 @@ const JobCard: React.FC<JobProps> = ({
       return;
     }
 
-    router.push(detailsHref ?? buildJobDetailsHref(job.id));
   };
 
   const handleBookmark = async (e: React.MouseEvent) => {
@@ -76,36 +75,37 @@ const JobCard: React.FC<JobProps> = ({
     <div
       onClick={handleCardClick}
       style={{
-        backgroundColor: "#b8b8b8",
-        borderRadius: "15px",
-        padding: "20px 30px",
+        backgroundColor: "var(--bg-grey)",
+        borderRadius: "var(--radius-xl)",
+        padding: "var(--space-lg) ",
         display: "flex",
         flexDirection: "column",
-        gap: "15px",
+        gap: "var(--space-md)",
         position: "relative",
-        width: "104%",
+        width: "100%",
+        maxWidth: "var(--container-sm)",
         boxSizing: "border-box",
         fontFamily: "'Nova Square', sans-serif",
         cursor: "pointer",
         transition: "0.2s ease",
       }}
-      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#c5c5c5a9")}
-      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#b8b8b8")}
+      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "var(--light-blue)")}
+      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "var(--bg-grey)")}
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <div>
-          <h3 style={{ margin: 0, fontSize: "1.4rem", fontWeight: "100", color: "#000" }}>
+          <h3 style={{ margin: 0, fontSize: "var(--text-md)", fontWeight: "500", color: "var(--bg-color)" }}>
             {job.title}
           </h3>
-          <div style={{ marginTop: "8px" }}>
-            <p style={{ margin: 0, fontSize: "1rem", color: "#000", opacity: 0.8 }}>{job.company}</p>
-            <p style={{ margin: "4px 0 0 0", fontSize: "0.9rem", color: "#000", opacity: 0.6 }}>{job.location}</p>
+          <div style={{ display: "flex",  gap: "var(--space-sm)", flexDirection: "column", alignItems: "flex-start" }}>
+            <p style={{ margin: 0, fontSize: "var(--text-base)", color: "var(--bg-color)", opacity: 0.8 }}>{job.company}</p>
+            <p style={{  fontSize: "var(--text-sm)", color: "var(--bg-color)", opacity: 0.6 }}>{job.location}</p>
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-md)" }}>
           {job.salary ? (
-            <span style={{ fontSize: "1.1rem", fontWeight: "100", color: "#000" }}>{job.salary}</span>
+            <span style={{ fontSize: "var(--text-md)", fontWeight: "100", color: "var(--bg-color)" }}>{job.salary}</span>
           ) : null}
           <div
             onClick={handleBookmark}
@@ -113,34 +113,43 @@ const JobCard: React.FC<JobProps> = ({
               cursor: isBookmarkLoading ? "wait" : "pointer",
               transition: "transform 0.15s ease",
               opacity: isBookmarkLoading ? 0.7 : 1,
+              width: "var(--icon-md)",
+              height: "var(--icon-md)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center"
             }}
             onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.15)")}
             onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
           >
             {bookmarked ? (
               // Filled bookmark
-              <svg width="25" height="25" viewBox="0 0 24 24" fill="#000" xmlns="http://www.w3.org/2000/svg">
+              <svg width="100%" height="100%" viewBox="0 0 24 24" fill="var(--bg-color)" xmlns="http://www.w3.org/2000/svg">
                 <path d="M5 3C5 2.44772 5.44772 2 6 2H18C18.5523 2 19 2.44772 19 3V21L12 17.5L5 21V3Z" />
               </svg>
             ) : (
-              // Outline bookmark
-              <svg width="25" height="25" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M5 3C5 2.44772 5.44772 2 6 2H18C18.5523 2 19 2.44772 19 3V21L12 17.5L5 21V3Z"
-                  stroke="#000" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  stroke="var(--bg-color)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             )}
           </div>
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: "12px", marginTop: "10px", flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: "var(--space-md)",  flexWrap: "wrap", width: "100%" }}>
         {job.tags.map((tag, index) => (
           <div key={index} style={{
-            backgroundColor: "#444444",
+            backgroundColor: "var(--form-grey)",
             color: "white",
-            padding: "6px 20px",
-            borderRadius: "20px",
-            fontSize: "0.75rem",
+            padding: "var(--button-padding-y) var(--button-padding-x)",
+            borderRadius: "var(--radius-xl)",
+            flex:1,
+            maxWidth: "100px",
+            whiteSpace: "nowrap",
+            textAlign: "center",
+            fontSize: "var(--text-xs)",
+            width: "fit-content",
           }}>
             {tag}
           </div>

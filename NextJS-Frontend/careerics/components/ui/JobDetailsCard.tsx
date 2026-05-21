@@ -41,47 +41,49 @@ const JobDetailsCard: React.FC<JobDetailsProps> = ({
     return (
       <div style={{
         border: "1px solid rgba(255, 255, 255, 0.4)",
-        marginBottom: "5px",
+        marginBottom: "var(--space-xs)",
         overflow: "auto",
       }}>
         <div 
           onClick={() => toggleSection(title)}
           style={{
-            padding: "15px 25px",
+            padding: "var(--space-md) ",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
             cursor: "pointer",
-            backgroundColor: isOpen ? "rgba(255,255,255,0.05)" : "transparent",
+            backgroundColor: isOpen ? "rgba(255, 255, 255, 0.05)" : "transparent",
             transition: "0.3s"
           }}
         >
-          <span style={{ fontSize: "1rem" }}>{title}</span>
+          <span style={{ fontSize: "var(--text-base)" }}>{title}</span>
           <span style={{ 
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             transform: isOpen ? "rotate(180deg)" : "rotate(270deg)", 
-            }}>
+            width: "var(--icon-sm)",
+            height: "var(--icon-sm)"
+          }}>
             <img 
-                src="/auth/Back Arrow.svg" 
-                alt="arrow"
-                style={{ 
-                width: "14px",  
-                height: "14px",
+              src="/auth/Back Arrow.svg" 
+              alt="arrow"
+              style={{ 
+                width: "100%",  
+                height: "100%",
                 opacity: 0.8,  
                 pointerEvents: "none" 
-                }} 
+              }} 
             />
-            </span>
+          </span>
         </div>
 
         {isOpen && (
           <div style={{
-            padding: "20px 25px",
-            fontSize: "0.95rem",
-            lineHeight: "1.6",
-            color: "#ccc",
+            padding: "var(--space-md) ",
+            fontSize: "var(--text-sm)",
+            lineHeight: "var(--line-relaxed)",
+            color: "var(--text-grey)",
             wordBreak: "break-word", 
             overflowWrap: "break-word"
           }}>
@@ -94,17 +96,18 @@ const JobDetailsCard: React.FC<JobDetailsProps> = ({
 
   return (
     <div style={{
-      backgroundColor: "rgba(57, 66, 88, 0.8)", 
+     backgroundColor: "rgba(57, 66, 88, 0.8)", 
       backdropFilter: "blur(20px)",
       WebkitBackdropFilter: "blur(20px)", 
       border: "1px solid rgba(255, 255, 255, 0.1)",
       backgroundImage: "linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(0, 0, 0, 0.05) 100%)",
-      borderRadius: 65,
-      padding: "40px",
+      borderRadius: "var(--radius-2xl)",
+      padding: "var(--space-md)",
       color: "white",
-      width: "110%",
-      maxWidth: "1000px",
-      height: "470px",      
+      width: "100%",
+      maxWidth: "400px",
+      height: "100%",
+      maxHeight: "100%",      
       flexShrink: 0,        
       overflow: "hidden",
       display: "flex",
@@ -122,45 +125,34 @@ const JobDetailsCard: React.FC<JobDetailsProps> = ({
           display: "flex",
           flexDirection: "column",
           minHeight: 0, 
+          gap: "var(--space-md)",
         }}
       >
-        <style>{`.no-scrollbar::-webkit-scrollbar { display: none; }`}</style>
-
         {/* 1. Header Section */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "20px", marginBottom: "30px", flexWrap: "wrap" }}>
-          <div style={{ minWidth: 0, flex: "1 1 320px" }}>
-            <h2 style={{ fontSize: "1.5rem", marginRight: "20px", paddingRight: "5px", wordBreak: "break-word" }}>{jobData.title}</h2>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "10px", flexWrap: "wrap" }}>
-              <span style={{ fontSize: "1.4rem", opacity: 0.9, whiteSpace: "normal", wordBreak: "break-word" }}>{jobData.company}</span>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginLeft: "0", flexWrap: "wrap" }}> 
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "var(--space-md)", flexWrap: "wrap" }}>
+          <div style={{ minWidth: 0, }}>
+            <h2 style={{ fontSize: "var(--text-md)", paddingRight: "var(--space-xxs)", wordBreak: "break-word" }}>{jobData.title}</h2>
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-md)", flexWrap: "wrap" }}>
+              <span style={{ fontSize: "var(--text-base)", opacity: 0.9, whiteSpace: "normal", wordBreak: "break-word" }}>{jobData.company}</span>
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-xs)", flexWrap: "wrap" }}> 
                 <img 
-                    src="/job/map pin.svg" 
-                    alt="location"
-                    style={{ opacity: 0.6, width: "16px", height: "16px" }} 
+                  src="/job/map pin.svg" 
+                  alt="location"
+                  style={{ opacity: 0.6, width: "var(--icon-sm)", height: "var(--icon-sm)" }} 
                 />
-                <span style={{ fontSize: "0.9rem", opacity: 0.6, color: "white", whiteSpace: "normal", wordBreak: "break-word" }}> 
-                    {jobData.location}
+                <span style={{ fontSize: "var(--text-sm)", opacity: 0.6, color: "white", whiteSpace: "normal", wordBreak: "break-word" }}> 
+                  {jobData.location}
                 </span>
               </div>
             </div>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "15px", flex: "0 1 auto", maxWidth: "100%" }}>
-            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", justifyContent: "flex-end", maxWidth: "100%" }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start",  maxWidth: "100%" }}>
+            <div style={{ display: "flex", gap: "var(--space-md)", flexWrap: "wrap", justifyContent: "flex-start", maxWidth: "100%" }}>
               {jobData.tags.map(tag => (
                 <Button 
                   key={tag} 
                   variant="secondary" 
-                  style={{ 
-                    padding: "5px 15px", 
-                    fontSize: "0.75rem",
-                    borderRadius: "15px",
-                    backgroundColor: "#B8B8B8", 
-                    color: "#2A2D3A",
-                    whiteSpace: "nowrap",
-                    width: "fit-content",
-                    height: "30px"
-                  }}
                 >
                   {tag}
                 </Button>
@@ -168,7 +160,15 @@ const JobDetailsCard: React.FC<JobDetailsProps> = ({
             </div>
             
             {jobData.salary ? (
-              <div style={{ backgroundColor: "#d4ff8e", color: "black", padding: "8px 25px", borderRadius: "25px", fontWeight: "bold", maxWidth: "100%", wordBreak: "break-word" }}>
+              <div style={{ 
+                backgroundColor: "var(--primary-green)", 
+                color: "var(--bg-color)", 
+                padding: "var(--space-md) ", 
+                borderRadius: "var(--radius-xl)", 
+                fontWeight: "bold", 
+                maxWidth: "100%", 
+                wordBreak: "break-word" 
+              }}>
                 Salary: {jobData.salary}
               </div>
             ) : null}
@@ -176,7 +176,7 @@ const JobDetailsCard: React.FC<JobDetailsProps> = ({
         </div>
 
         {/* 2. Accordions Section */}
-        <div style={{ flex: 1, paddingRight: "10px" }}>
+        <div style={{ overflowY: "auto", scrollbarWidth: "none" }}>
           {renderSection("About the Role", jobData.description)}
           {jobData.responsibilities && renderSection("Key Responsibilities", jobData.responsibilities)}
           {jobData.requirements && renderSection("Requirements", jobData.requirements)}
@@ -185,26 +185,14 @@ const JobDetailsCard: React.FC<JobDetailsProps> = ({
         </div>
 
         {/* 3. Apply Button */}
-        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "20px", paddingBottom: "10px",  }}>
+        <div style={{ display: "flex", justifyContent: "flex-end",marginTop: "auto" }}>
           <Button 
-              variant="primary" 
-              isLoading={isApplying}
-              disabled={isApplyDisabled}
-              onClick={onApply}
-              style={{ 
-                width: "auto", 
-                minWidth: "180px",
-                maxWidth: "200px",
-                display: "inline-flex", 
-                alignItems: "center",
-                justifyContent: "center",
-                padding: "20px 30px", 
-                fontSize: "1.1rem",
-                borderRadius: "12px",
-                whiteSpace: "nowrap"
-              }}
+            variant="primary" 
+            isLoading={isApplying}
+            disabled={isApplyDisabled}
+            onClick={onApply}
           >
-              {actionLabel}
+            {actionLabel}
           </Button>
         </div>
       </div>
