@@ -13,8 +13,10 @@ import {
 import { useAuth } from "@/providers/auth-provider";
 import { jobService } from "@/services";
 import type { JobApplicationStatus, JobUiModel } from "@/types";
+import { useResponsive } from "@/hooks/useResponsive";
 
 export default function BookmarkedJobs() {
+  const { isLarge, isMedium, isSmall } = useResponsive();
   const { user, isLoading: isAuthLoading } = useAuth();
   const [jobs, setJobs] = useState<JobUiModel[]>([]);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
@@ -154,7 +156,6 @@ export default function BookmarkedJobs() {
 
     const nextStatus = (selectedJob.applicationStatus ?? "applied") as JobApplicationStatus;
 
-    // Open external job URL in a new tab if available (user action)
     try {
       if (selectedJob.jobUrl && typeof window !== "undefined") {
         window.open(selectedJob.jobUrl, "_blank", "noopener,noreferrer");
@@ -182,11 +183,11 @@ export default function BookmarkedJobs() {
 
   const renderBookmarkCards = () => {
     if (isLoading) {
-      return <p style={{ color: "white", margin: 0, paddingLeft: "20px" }}>Loading jobs...</p>;
+      return <p style={{ color: "white", margin: 0, }}>Loading jobs...</p>;
     }
 
     if (!filteredJobs.length) {
-      return <p style={{ color: "white", margin: 0, paddingLeft: "20px" }}>No bookmarked jobs found.</p>;
+      return <p style={{ color: "white", margin: 0, }}>No bookmarked jobs found.</p>;
     }
 
     return filteredJobs.map((job) => (
@@ -204,7 +205,7 @@ export default function BookmarkedJobs() {
   const renderDefaultGrid = () => (
     <div style={{
       display: "grid",
-      gridTemplateColumns: "repeat(3, 1fr)",
+      gridTemplateColumns: isLarge ? "repeat(3, 1fr)" : isMedium ? "repeat(2, 1fr)" : "repeat(1, 1fr)",
       gap: "10px",
       paddingRight: "20px",
       width: "100%",
@@ -218,51 +219,57 @@ export default function BookmarkedJobs() {
   );
 
   const renderSelectedLayout = () => (
-    <div style={{ display: "flex", gap: "20px", height: "calc(100vh - 200px)" }}>
+    <div style={{ display: isLarge ? "flex" : "grid", gridTemplateColumns:"1fr", gridTemplateRows:"1fr", gap: "var(--space-lg)", height: "100%", overflow: "hidden", justifyContent:"space-around", position: "relative" }}>
+      
+      {/* Cards List Panel */}
       <div style={{
-        width: "520px",
-        height: "110%",
+        width: "fit-content",
+        height: "100%",
         display: "flex",
         flexDirection: "column",
         position: "relative",
-        gap: "20px",
-        top: "0",
+        gap: "var(--space-md)",
         overflowY: "auto",
-        paddingRight: "30px",
         scrollbarWidth: "none",
-        zIndex: 5,
+        gridArea: "1 / 1 / 2 / 2",
+        zIndex: 0,
       }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)", }}>
+          <h2 style={{ color: "var(--light-blue)", fontFamily: "Nova Square, sans-serif", fontSize: "var(--text-xl)" }}>
+            Bookmarked Jobs
+          </h2>
+
           {renderBookmarkCards()}
         </div>
       </div>
 
-      <div style={{
-        width: "1.5px",
-        backgroundColor: "rgb(255,255,255)",
-        height: "100%",
-        alignSelf: "center",
-        flexShrink: 0,
-        position: "relative",
-        top: "0",
-      }} />
+      {/* Vertical Divider Separator */}
+      {isLarge && (
+        <div style={{
+          width: "1.5px",
+          backgroundColor: "var(--medium-grey)",
+          height: "90%",
+          alignSelf: "center",
+          flexShrink: 0,
+          position: "relative",
+        }} />
+      )}
 
+
+      {/* Floating/Side Details Card Container */}
       <div style={{
-        flex: 1,
-        height: "99%",
-        width: "100%",
+        height: "100%",
+        width: "fit-content",
         justifyContent: "center",
         alignItems: "flex-start",
-        paddingLeft: "220px",
-        paddingRight: "0px",
-        minWidth: 0,
         position: "relative",
-        zIndex: 1,
-        top: "2vh",
+        zIndex: isLarge ? 1 : 10,
         display: "flex",
+        gridArea: "1 / 1 / 2 / 2",
+        marginLeft: isLarge ? "0" : "auto",
         scrollbarWidth: "none",
       }}>
-        <div style={{ position: "relative", width: "100%", display: "flex", justifyContent: "center", alignItems: "flex-start" }}>
+        <div style={{ position: "relative", width: "fit-content", display: "flex", justifyContent: "center", alignItems: "flex-start", height: "100%",maxWidth:"70vw" }}>
           {selectedJob && (
             <JobDetailsCard
               jobData={selectedJob}
@@ -279,28 +286,46 @@ export default function BookmarkedJobs() {
 
   return (
     <div style={{
-      padding: "0 40px",
-      height: "100vh",
+      padding: "var(--space-lg)",
+      height: "100dvh",
+      width: "100%",
       overflowY: "auto",
       overflowX: "hidden",
       boxSizing: "border-box",
       scrollbarWidth: "none",
+      display: "flex",
+      flexDirection: "column",
+      gap: "var(--space-lg)",
     }}>
+
+      {/* Dimming Backdrop Overlay (Triggers when card is active on smaller screens over the whole viewport) */}
+      {selectedJob && !isLarge && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100vw",
+          height: "100vh",
+          backgroundColor: "var(--bg-color)",
+          opacity: 0.65,
+          zIndex: 5,
+          pointerEvents: "auto",
+        }} />
+      )}
+
       <div style={{
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
-        paddingTop: selectedJob ? "5vh" : "12vh",
-        marginBottom: "1vh",
         position: "relative",
-        left: "20px",
-        top: 0,
         zIndex: 1,
-        paddingBottom: "20px",
       }}>
-        <h2 style={{ color: "white", fontFamily: "Nova Square", fontSize: "2.5rem", margin: 0 }}>
-          Bookmarked Jobs
-        </h2>
+
+        {!selectedJob && (
+          <h2 style={{ color: "var(--light-blue)", fontFamily: "Nova Square, sans-serif", fontSize: "var(--text-xl)" }}>
+            Bookmarked Jobs
+          </h2>
+        )}
 
         {!selectedJob && (
           <div style={{ position: "relative" }}>
@@ -311,14 +336,16 @@ export default function BookmarkedJobs() {
               onChange={(event) => setSearchTerm(event.target.value)}
               style={{
                 backgroundColor: "transparent",
-                border: "1px solid white",
-                borderRadius: "25px",
-                color: "white",
-                width: "400px",
-                height: "40px",
-                padding: "0 45px 0 15px",
+                border: "1px solid var(--light-blue)",
+                borderRadius: "var(--radius-xl)",
+                color: "var(--light-blue)",
+                width: "var(--container-xxs)",
+                maxWidth: "200px",
+                height: "var(--min-touch-target)",
                 outline: "none",
-                fontFamily: "Nova Square",
+                padding: " var(--space-lg)",
+                fontFamily: "Nova Square, sans-serif",
+                fontSize: "var(--text-base)",
               }}
             />
             <img
@@ -326,10 +353,10 @@ export default function BookmarkedJobs() {
               alt="search"
               style={{
                 position: "absolute",
-                right: "15px",
+                right: "0",
                 top: "50%",
                 transform: "translateY(-50%)",
-                width: "30px",
+                width: "var(--icon-lg)",
                 pointerEvents: "none",
               }}
             />
@@ -338,7 +365,7 @@ export default function BookmarkedJobs() {
       </div>
 
       {error && (
-        <p style={{ color: "#ffb4b4", paddingLeft: "20px", marginTop: 0 }}>
+        <p style={{ color: "var(--light-red)", marginTop: 0, fontSize: "var(--text-sm)" }}>
           {error}
         </p>
       )}

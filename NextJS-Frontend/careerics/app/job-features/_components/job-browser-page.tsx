@@ -718,33 +718,33 @@ export default function JobBrowserPage({
     ));
   };
 //job card
-  return (
+return (
     <div style={{
       display: "flex",
+      width: "100%",
+      maxHeight: "100%",
       height: "100%",
-      padding: "60px",
-      paddingLeft: "50px",
+      padding: "var(--space-lg)",
       boxSizing: "border-box",
+      justifyContent: "space-around",
       overflow: "hidden",
       scrollbarWidth: "none",
       position: "relative",
-      paddingBottom: "60px",
-      paddingTop: "0px",
+      gap: "var(--space-lg)",
     }}>
+
       <div style={{
-        width: "500px",
+        width: "var(--container-sm)",
         minHeight: "0",
         display: "flex",
         flexDirection: "column",
         position: "relative",
-        gap: "18px",
-        top: "10vh",
+        gap: "var(--space-lg)",
+        overflowX: "hidden",
         overflowY: "auto",
-        paddingRight: "60px",
         scrollbarWidth: "none",
         zIndex: 1,
       }}>
-
 
         <div style={{ position: "relative", width: "100%" }}>
           <input
@@ -757,12 +757,12 @@ export default function JobBrowserPage({
             }}
             style={{
               width: "100%",
-              padding: "12px 20px",
-              borderRadius: "25px",
-              border: "1.5px solid white",
+              padding: "var(--input-padding)",
+              borderRadius: "var(--radius-xl)",
+              border: "1.5px solid var(--light-blue)",
               backgroundColor: "transparent",
-              color: "white",
-              fontSize: "1rem",
+              color: "var(--light-blue)",
+              fontSize: "var(--text-base)",
               outline: "none",
               boxSizing: "border-box",
             }}
@@ -772,15 +772,15 @@ export default function JobBrowserPage({
             alt="search"
             style={{
               position: "absolute",
-              right: "15px",
+              right: "var(--space-lg)",
               top: "50%",
               transform: "translateY(-50%)",
-              width: "35px",
+              width: "var(--icon-lg)",
             }}
           />
         </div>
 
-        <div style={{ display: "flex", gap: "8px", zIndex: 10, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: "var(--space-sm)", zIndex: 10, flexWrap: "wrap" }}>
           <MultiSelectDropdown
             placeholder="Country"
             options={countryOptions}
@@ -856,21 +856,23 @@ export default function JobBrowserPage({
             onClick={resetFilters}
             disabled={!hasActiveFilters}
             style={{
-              height: "34px",
-              padding: "0 14px",
-              borderRadius: "999px",
-              border: "1.5px solid rgba(255,255,255,0.5)",
-              backgroundColor: hasActiveFilters ? "transparent" : "rgba(255,255,255,0.08)",
-              color: hasActiveFilters ? "white" : "rgba(255,255,255,0.45)",
-              cursor: hasActiveFilters ? "pointer" : "default",
+              height: "fit-content",
+              padding: " var(--space-sm)",
+              borderRadius: "var(--radius-xl)",
+              border: "1.5px solid var(--medium-grey)",
+              backgroundColor: "transparent",
+              color: hasActiveFilters ? "var(--light-blue)" : "var(--text-grey)",
+              cursor: hasActiveFilters ? "pointer" : "not-allowed",
               whiteSpace: "nowrap",
+               fontSize: "var(--text-sm)",
+              fontFamily: "var(--font-jura)",
             }}
           >
             Reset Filters
           </button>
         </div>
 
-        <div style={{ display: "flex", gap: "10px", fontSize: "0.85rem", color: "white", alignItems: "center", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: "var(--space-md)", fontSize: "var(--text-sm)", color: "var(--light-blue)", alignItems: "center", flexWrap: "wrap" }}>
           <span style={{ opacity: 0.7, flexShrink: 0 }}>Sort By:</span>
           <SortLink label="Relevance" isActive={activeSort === "relevance"} onClick={() => {
             setCurrentPage(1);
@@ -888,60 +890,47 @@ export default function JobBrowserPage({
           }} />
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", color: "white", gap: "10px", flexWrap: "wrap" }}>
-          <span style={{ opacity: 0.8, fontSize: "0.85rem" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", color: "var(--light-blue)", gap: "var(--space-md)", flexWrap: "wrap" }}>
+          <span style={{ opacity: 0.8, fontSize: "var(--text-sm)" }}>
             {totalJobs
               ? `Showing ${pageStart}-${pageEnd} of ${totalJobs} jobs`
               : isLoading
                 ? "Loading jobs..."
                 : "No jobs found"}
           </span>
-          <span style={{ opacity: 0.6, fontSize: "0.8rem" }}>
+          <span style={{ opacity: 0.6, fontSize: "var(--text-xs)" }}>
             Page {Math.min(currentPage, Math.max(totalPages, 1))} of {Math.max(totalPages, 1)}
           </span>
         </div>
 
         {error && (
-          <p style={{ color: "#ffb4b4", margin: 0 }}>
+          <p style={{ color: "var(--light-red)", margin: 0, fontSize: "var(--text-sm)" }}>
             {error}
           </p>
         )}
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2xl)" }}>
           {renderLeftPanelContent()}
         </div>
 
-        <div style={{ display: "flex", gap: "10px", justifyContent: "space-between", alignItems: "center", paddingBottom: "20px" }}>
+        <div style={{ display: "flex", gap: "var(--space-md)", justifyContent: "space-between", alignItems: "center", paddingBottom: "var(--space-xl)" }}>
           <Button
-          variant="outline"
+            variant="outline"
             type="button"
             onClick={() => setCurrentPage((page) => Math.max(page - 1, 1))}
             disabled={currentPage <= 1 || isLoading}
             style={{
-              width: "20px",
-              minWidth: "20px",
-              height: "40px",
-              borderRadius: "999px",
-              border: "1px solid rgba(255,255,255,0.35)",
-              // backgroundColor: currentPage > 1 && !isLoading ? "transparent" : "rgba(255,255,255,0.08)",
-              // color: currentPage > 1 && !isLoading ? "white" : "rgba(255,255,255,0.45)",
               cursor: currentPage > 1 && !isLoading ? "pointer" : "default",
             }}
           >
             Previous
           </Button>
           <Button
-          variant="primary"
+            variant="primary"
             type="button"
             onClick={() => setCurrentPage((page) => Math.min(page + 1, Math.max(totalPages, 1)))}
             disabled={currentPage >= totalPages || isLoading || !totalPages}
             style={{
-              minWidth: "120px",
-              height: "40px",
-              borderRadius: "999px",
-              border: "1px solid rgba(255,255,255,0.35)",
-              // backgroundColor: currentPage < totalPages && !isLoading ? "transparent" : "rgba(255,255,255,0.08)",
-              // color: currentPage < totalPages && !isLoading ? "white" : "rgba(255,255,255,0.45)",
               cursor: currentPage < totalPages && !isLoading ? "pointer" : "default",
             }}
           >
@@ -952,30 +941,14 @@ export default function JobBrowserPage({
 
       <div style={{
         width: "1.5px",
-        backgroundColor: "rgb(255,255,255)",
-        height: "85%",
-        alignSelf: "center",
+        backgroundColor: "var(--medium-grey)",
+        height: "95%",
         flexShrink: 0,
         position: "relative",
-        top: "40px",
       }} />
-{/* job details */}
-      <div style={{
-        flex: 1,
-        width: "100%",
-        justifyContent: "center",
-        alignItems: "flex-start",
-        paddingLeft: "100px",
-        paddingRight: "10px",
-        minWidth: 0,
-        position: "relative",
-        zIndex: 1,
-        top: "10vh",
-        display: "flex",
-        scrollbarWidth: "none",
-        right: "2vw",
-      }}>
-        <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-start", width: "100%" }}>
+
+      {/* job details */}
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-start", maxWidth: "100%" }}>
           {selectedJob ? (
             <JobDetailsCard
               jobData={selectedJob}
@@ -985,12 +958,11 @@ export default function JobBrowserPage({
               isApplyDisabled={false}
             />
           ) : (
-            <div style={{ color: "white", paddingTop: "60px" }}>
+            <div style={{ color: "var(--light-blue)", paddingTop: "var(--space-2xl)" }}>
               {isLoading ? "Loading job details..." : "No job selected yet."}
             </div>
           )}
         </div>
       </div>
-    </div>
   );
 }

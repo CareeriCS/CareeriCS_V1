@@ -70,6 +70,7 @@
   --radius-md: clamp(0.4rem, 0.8vw, 0.7rem);
   --radius-lg: clamp(0.6rem, 1vw, 1rem);
   --radius-xl: clamp(0.8rem, 1.5vw, 1.5rem);
+  --radius-2xl: clamp(2rem, 2vw, 2rem);  
 
   /* =========================
      LINE HEIGHT
