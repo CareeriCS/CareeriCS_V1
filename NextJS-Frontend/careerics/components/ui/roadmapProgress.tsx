@@ -4,12 +4,11 @@ interface roadmapProgressProps {
     text?: string | null;
     done?: string | "0";
     total?: string | "0";
-    isTotal?: boolean;
     color?: string;
     isScore?: boolean;
 }
 
-export default function roadmapProgress({ text, done = "0", total = "0", isTotal = true, isScore = true, color = "var(--light-green)" }: roadmapProgressProps) {
+export default function roadmapProgress({ text, done = "0", total , isScore = true, color = "var(--light-green)" }: roadmapProgressProps) {
     return (<div
         style={{
             display: "flex",
@@ -48,7 +47,7 @@ export default function roadmapProgress({ text, done = "0", total = "0", isTotal
                         >
                             {done}
                         </span>
-                        {isTotal && (
+                        {total && (
                             <>
                                 {" / "}
                                 <span>{total}</span>

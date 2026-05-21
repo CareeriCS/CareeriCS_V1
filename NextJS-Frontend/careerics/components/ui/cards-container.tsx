@@ -187,8 +187,8 @@ export const CardsContainer = ({
             style={
               variant === "vertical"
                 ? {
-                  display: "grid",
-                  gridTemplateColumns: `repeat(${Columns}, 1fr)`,
+                  display: "flex",
+                  flexWrap: "wrap",
                   gap: "1rem",
                   overflowY: "auto",
                   scrollbarWidth: "none",

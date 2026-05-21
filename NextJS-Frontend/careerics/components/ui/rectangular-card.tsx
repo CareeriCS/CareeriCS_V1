@@ -47,14 +47,14 @@ export const RectangularCard = ({
             }}
             style={{
                 backgroundColor,
-                borderRadius: "3vh",
+                borderRadius: "var(--radius-lg)",
                 cursor: selectable ? "pointer" : "default",
-
+                height:"fit-content",
                 display: "flex",
                 alignItems: "center",
-                justifyContent: variant === "radio" ? "space-between" : "center ",
+                justifyContent: "center ",
                 gap: "1rem",
-                padding: "1rem",
+                padding: "var(--space-sm)",
                 width: "fit-content",
                 
                 ...style,
@@ -72,7 +72,7 @@ export const RectangularCard = ({
                 <p
                     style={{
                         color: textColor,
-                        fontSize: "0.8rem",
+                        fontSize: "var(--text-sm)",
                         maxWidth: variant === "normal"?"30ch":"fit-content",
                         textAlign: "center",
                         whiteSpace: variant === "radio" ? "nowrap" : "normal",
@@ -88,7 +88,7 @@ export const RectangularCard = ({
                     <p
                         style={{
                             color: textColor,
-                            fontSize: "0.875rem",
+                            fontSize: "var(--text-sm)",
                             whiteSpace: "nowrap",
                             marginRight:"auto",
                             fontFamily:font==="jura"?"var(--font-jura)":"var(--font-nova-square)",

@@ -60,9 +60,11 @@ export default function ChoiceCard({
         gap: "var(--space-md)",
         width: "100%",
         height: "100%",
+        maxHeight:"40vh",
         ...style
       }}
     >
+      <div style={{width:"100%"}}>
       <img
         src={isBookmarked ? "/global/bookmark-filled.svg" : "/global/bookmark.svg"}
         alt={"bookmark"}
@@ -94,6 +96,7 @@ export default function ChoiceCard({
           }}
         />
       </div>
+      </div>
 
       {/* 2. Title Section */}
       <h3
@@ -112,6 +115,8 @@ export default function ChoiceCard({
           fontSize: "var(--text-sm)",
           textAlign: "left",
           marginRight: "auto",
+          overflow:"hidden",
+          textOverflow:"ellipsis",
         }}
       >
         {description}

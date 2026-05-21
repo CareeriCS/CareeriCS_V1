@@ -162,7 +162,8 @@ export default function CourseActionPopup({
             style={{
               display: "flex",
               width: "100%",
-              justifyContent: "space-between",
+              justifyContent: "flex-start",
+              gap: "var(--space-md)",
               alignItems: "center",
             }}
           >
@@ -172,8 +173,8 @@ export default function CourseActionPopup({
               isLoading={isLoading}
               disabled={isLoading}
               style={{
-                minWidth: "45%",
-                flex: 0,
+                minWidth: 0,
+                flex: 1,
                 whiteSpace: "nowrap",
               }}
             >
@@ -185,8 +186,8 @@ export default function CourseActionPopup({
               variant="popup"
               disabled={isLoading}
               style={{
-                minWidth: "45%",
-                flex: 0,
+                minWidth: 0,
+                flex: 1,
                 whiteSpace: "nowrap",
               }}
             >
@@ -200,22 +201,38 @@ export default function CourseActionPopup({
             style={{
               display: "flex",
               width: "100%",
-              justifyContent: "space-between",
+              justifyContent: "flex-start",
               alignItems: "center",
+              gap: "var(--space-md)"
             }}
           >
+              <Button
+                onClick={onCancel}
+                variant="popup-inverted"
+                disabled={isLoading}
+                style={{
+                  minWidth: 0,
+                  flex: 1,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Cancel
+              </Button>
+              
             <Button
               onClick={onConfirm}
               variant="popup"
               isLoading={isLoading}
               disabled={isLoading}
               style={{
+                minWidth: 0,
                 flex: 1,
                 whiteSpace: "nowrap",
               }}
             >
               Enroll
             </Button>
+
           </div>
         ) : null}
 
@@ -224,7 +241,8 @@ export default function CourseActionPopup({
             style={{
               display: "flex",
               width: "100%",
-              justifyContent: "space-between",
+              justifyContent: "flex-start",
+              gap: "var(--space-md)",
               alignItems: "center",
             }}
           >
@@ -234,8 +252,8 @@ export default function CourseActionPopup({
               isLoading={isLoading}
               disabled={isLoading}
               style={{
-                minWidth: "45%",
-                flex: 0,
+                minWidth: 0,
+                flex: 1,
                 whiteSpace: "nowrap",
               }}
             >
@@ -247,8 +265,8 @@ export default function CourseActionPopup({
               variant="popup-inverted"
               disabled={isLoading}
               style={{
-                minWidth: "45%",
-                flex: 0,
+                minWidth: 0,
+                flex: 1,
                 whiteSpace: "nowrap",
               }}
             >
