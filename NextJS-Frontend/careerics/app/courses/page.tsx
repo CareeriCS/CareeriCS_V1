@@ -274,7 +274,7 @@ export default function CourseLibraryPage() {
           <div
             style={{
               display: "flex",
-              alignItems: "center",
+              alignItems: "flex-start",
               gap: "30px",
               marginBottom: "20px",
               justifyContent:"space-between",
@@ -372,6 +372,7 @@ export default function CourseLibraryPage() {
           minHeight: 0,
           flex: 1,
           scrollbarWidth: "none",
+          paddingBottom: "var(--space-lg)",
         }}
       >
         {filteredSections.length ? (
@@ -397,7 +398,8 @@ export default function CourseLibraryPage() {
                 style={{
                   display: "flex",
                   flexWrap: "wrap",
-                  gap: "25px",
+                  gap: "var(--space-md)",
+                  marginBottom:"var(--space-lg)"
                 }}
               >
                 {section.courses.map((course) => (
@@ -422,7 +424,6 @@ export default function CourseLibraryPage() {
               color: "#D7E3FF",
               fontFamily: "var(--font-jura)",
               textAlign: "center",
-              paddingBottom: "20px",
             }}
           >
             No courses matched your search.
