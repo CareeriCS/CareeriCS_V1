@@ -4,8 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { LoaderCircle } from "lucide-react";
 
+import RoadmapProgress from "@/components/ui/roadmapProgress";
 import CourseActionPopup from "@/components/ui/course-action-popup";
-import { CourseCards } from "@/components/ui/courseCards";
+import { CourseCard } from "@/components/ui/courseCards";
 import { useAuth } from "@/providers/auth-provider";
 import { roadmapService } from "@/services";
 import {
@@ -22,9 +23,9 @@ function LoadingState({ label }: { label: string }) {
     <div
       style={{
         width: "100%",
-        minHeight: "300px",
+        marginBottom:"auto",
         display: "flex",
-        alignItems: "center",
+        alignItems: "flex-start",
         justifyContent: "center",
         gap: "12px",
         color: "#D7E3FF",
@@ -248,22 +249,53 @@ export default function CourseLibraryPage() {
     <div
       style={{
         width: "100%",
-        padding: "50px 40px",
+        height: "100%",
+        padding: "var(--space-md)",
         color: "white",
-        boxSizing: "border-box",
         display: "flex",
         flexDirection: "column",
         fontFamily: "var(--font-nova-square)",
       }}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "25px" }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "30px", marginBottom: "20px" }}>
-            <h1 style={{ fontSize: "24px", margin: 0 }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          marginBottom: "25px",
+        }}
+      >
+        <div
+          style={{
+            flex: 1,
+          }}
+        >
+          {/* Title / Search bar */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "30px",
+              marginBottom: "20px",
+              justifyContent:"space-between",
+            }}
+          >
+            <h1
+              style={{
+                fontSize: "var(--text-lg)",
+                margin: 0,
+              }}
+            >
               {roadmapCourses?.roadmap_title || "Courses"}
             </h1>
 
-            <div style={{ position: "relative", width: "300px",marginLeft: "auto" }}>
+            <div
+              style={{
+                position: "relative",
+                width: "300px",
+                maxWidth:"40vw",
+              }}
+            >
               <input
                 type="text"
                 placeholder="search"
@@ -274,11 +306,12 @@ export default function CourseLibraryPage() {
                   backgroundColor: "transparent",
                   border: "1px solid rgb(255, 255, 255)",
                   borderRadius: "18px",
-                  padding: "8px 15px 8px 15px",
+                  padding: "var(--space-md)",
                   color: "white",
                   outline: "none",
                 }}
               />
+
               <img
                 src="/global/search.svg"
                 alt="search"
@@ -294,69 +327,93 @@ export default function CourseLibraryPage() {
             </div>
           </div>
 
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "35px", alignItems: "center" }}>
-            
-            {/* 1. Total Topics */}
-            <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-              <div style={{ width: "2px", height: "35px", backgroundColor: "#E6FFB2" }} />
-              <div>
-                <span style={{ fontSize: "15px", fontWeight: "bold" }}>{totalTopics} topics</span>
-                <br />
-                <span style={{ fontSize: "11px", opacity: 0.6 }}>- by Top Courses</span>
-              </div>
-            </div>
-
-            {/* 2. Total Courses */}
-            <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-              <div style={{ width: "2px", height: "35px", backgroundColor: "#E6FFB2" }} />
-              <div>
-                <span style={{ fontSize: "15px", fontWeight: "bold" }}>{totalCourses} courses</span>
-                <br />
-                <span style={{ fontSize: "11px", opacity: 0.6 }}>- by Top Courses</span>
-              </div>
-            </div>
-
-            {/* 3. Courses Completed (The new unified style) */}
-            <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-              <div style={{ width: "2px", height: "35px", backgroundColor: "#E6FFB2" }} />
-              <div>
-                <span style={{ fontSize: "15px", fontWeight: "bold" }}>
-                  <span style={{ color: "#D4FF47" }}>{completedCount}</span>
-                  <span style={{ opacity: 0.7 }}>/{totalCourses}</span> Completed
-                </span>
-                <br />
-                <span style={{ fontSize: "11px", opacity: 0.6 }}>- Your Progress</span>
-              </div>
-            </div>
-
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "var(--space-xl)",
+              alignItems: "center",
+            }}
+          >
+            <RoadmapProgress
+              text="All Topics"
+              done={String(totalTopics)}
+            />
+            <RoadmapProgress
+              text="All Courses"
+              done={String(totalCourses)}
+            />
+            <RoadmapProgress
+              text="Completed Courses"
+              done={String(completedCount)}
+              total={String(totalCourses)}
+            />
           </div>
         </div>
+      </div>
 
-      
-          </div>
-        
-        <hr
-          style={{
-            border: "none",
-            borderTop: "2px solid rgba(255, 251, 251, 0.72)", 
-            marginBottom: "20px",
-            opacity: 1, // 3ashan n-ensure eno msh faded
-            width: "100%"
-          }}
-        />
+      <hr
+        style={{
+          border: "none",
+          borderTop: "2px solid rgba(255, 251, 251, 0.72)",
+          marginBottom: "20px",
+          opacity: 1,
+          width: "100%",
+        }}
+      />
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "45px" }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "var(--space-md)",
+          overflowY: "auto",
+          overflowX: "hidden",
+          minHeight: 0,
+          flex: 1,
+          scrollbarWidth: "none",
+        }}
+      >
         {filteredSections.length ? (
           filteredSections.map((section) => (
-            <div key={section.section_id}>
-              <h3 style={{ fontSize: "20px", marginBottom: "40px", fontWeight: "400" }}>
+            <div
+              key={section.section_id}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "var(--space-md)",
+              }}
+            >
+              <h3
+                style={{
+                  fontSize: "var(--text-md)",
+                  fontWeight: "400",
+                }}
+              >
                 {section.section_title}:
               </h3>
-              <CourseCards
-                courses={section.courses}
-                onCourseClick={handleCourseClick}
-                statusByCourseId={courseStatusById}
-              />
+
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "25px",
+                }}
+              >
+                {section.courses.map((course) => (
+                  <CourseCard
+                    key={course.id}
+                    title={course.title}
+                    provider={course.provider}
+                    status={courseStatusById?.[course.id] ?? "default"}
+                    onSelect={
+                      handleCourseClick
+                        ? () => handleCourseClick(course)
+                        : undefined
+                    }
+                  />
+                ))}
+              </div>
             </div>
           ))
         ) : (
@@ -378,12 +435,20 @@ export default function CourseLibraryPage() {
           mode={activePopupMode}
           courseTitle={activePopupCourse.title}
           courseOrg={activePopupCourse.provider}
-          onConfirm={activePopupMode === "enroll" ? confirmEnrollment : confirmCompletion}
+          onConfirm={
+            activePopupMode === "enroll"
+              ? confirmEnrollment
+              : confirmCompletion
+          }
           onCancel={() => {
             setActivePopupCourse(null);
             setActivePopupMode(null);
           }}
-          onContinue={activePopupMode === "complete" ? handleContinueCourse : undefined}
+          onContinue={
+            activePopupMode === "complete"
+              ? handleContinueCourse
+              : undefined
+          }
         />
       ) : null}
     </div>

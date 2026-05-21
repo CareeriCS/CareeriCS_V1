@@ -1,6 +1,7 @@
 import React from "react";
 
 import { CircleScore } from "@/components/ui/circle-score";
+import { useResponsive } from "@/hooks/useResponsive";
 
 type Variant = "download" | "retake" | "progress";
 
@@ -31,35 +32,58 @@ export const ActivityCard = ({
   const isRetake = variant === "retake";
   const isProgress = variant === "progress";
 
+  const { isLarge, isMedium, isSmall } = useResponsive();
+
   return (
     <div
       style={{
         backgroundColor: "#C1CBE6",
-        borderRadius: "2vh",
-        padding: "0.6rem",
+        borderRadius: "var(--radius-lg)",
+        padding: "var(--space-sm)",
+
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
+
         color: "black",
         fontFamily: "var(--font-nova-square)",
+
         width: "100%",
-        height: "fit-content",
+        minHeight:"70px",
+        gap: "var(--space-sm)",
+
         ...style,
       }}
     >
-      <div>
+      {/* TEXT SECTION */}
+      <div
+        style={{
+          width:"fit-content",
+
+          display: "flex",
+          flexDirection: "column",
+          gap: "2px",
+        }}
+      >
+        {/* TITLE */}
         <div
           style={{
-            fontWeight: "bold",
-            fontSize: "0.8rem",
+            fontSize: "var(--text-sm)",
+            whiteSpace:isSmall?"nowrap":"normal",
+            width:"fit-content",
           }}
         >
           {title ?? id}
         </div>
 
+        {/* SUBTITLE */}
         <div
           style={{
-            fontSize: "0.75rem",
+            fontSize: "var(--text-xs)",
+
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
           }}
         >
           {isProgress
@@ -70,56 +94,88 @@ export const ActivityCard = ({
         </div>
       </div>
 
-      {isProgress ? (
-        <CircleScore score={score ?? 0} />
-      ) : isDownload ? (
-        <button
-          type="button"
-          onClick={onClick}
-          style={{
-            background: "none",
-            border: "none",
-            cursor: onClick ? "pointer" : "default",
-            opacity: onClick ? 1 : 0.55,
-          }}
-          disabled={!onClick}
-          aria-label={`Download ${id}`}
-        >
-          <img
-            src="/global/download.svg"
-            alt=""
+      {/* RIGHT SECTION */}
+      <div
+        style={{
+          flexShrink: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        {isProgress ? (
+          <CircleScore score={score ?? 0} />
+        ) : isDownload ? (
+          <button
+            type="button"
+            onClick={onClick}
             style={{
-              maxHeight: "4vh",
+              background: "none",
+              border: "none",
+
+              cursor: onClick ? "pointer" : "default",
+              opacity: onClick ? 1 : 0.55,
+
+              width: "var(--icon-sm)",
+              height: "var(--icon-sm)",
+
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+
+              padding: 0,
+              flexShrink: 0,
             }}
-          />
-        </button>
-      ) : (
-        <button
-          type="button"
-          onClick={onClick}
-          style={{
-            background: "none",
-            border: "none",
-            cursor: onClick ? "pointer" : "default",
-            opacity: onClick ? 1 : 0.55,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-          disabled={!onClick}
-          aria-label={`Retake ${title}`}
-        >
-          <img
-            src="/interview/retake.svg"
-            alt=""
-            aria-hidden="true"
+            disabled={!onClick}
+            aria-label={`Download ${id}`}
+          >
+            <img
+              src="/global/download.svg"
+              alt=""
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "contain",
+              }}
+            />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={onClick}
             style={{
-              width: "20px",
-              height: "20px",
+              background: "none",
+              border: "none",
+
+              cursor: onClick ? "pointer" : "default",
+
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+
+              width: "var(--icon-sm)",
+              height: "var(--icon-sm)",
+
+              padding: 0,
+              flexShrink: 0,
             }}
-          />
-        </button>
-      )}
+            disabled={!onClick}
+            aria-label={`Retake ${title}`}
+          >
+            <img
+              src="/interview/retake.svg"
+              alt=""
+              aria-hidden="true"
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "contain",
+                filter: "brightness(0)",
+              }}
+            />
+          </button>
+        )}
+      </div>
     </div>
   );
 };

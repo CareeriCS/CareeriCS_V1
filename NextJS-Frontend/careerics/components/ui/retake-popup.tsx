@@ -99,17 +99,16 @@ export default function RetakePopup({
                     style={{
                         display: "flex",
                         width: "100%",
-                        justifyContent: "space-between",
-                        alignItems: "center",
+                        gap:"var(--space-md)",
                     }}
                 >
                     <Button
                         onClick={onCancel}
                         variant="popup-inverted"
                         style={{
-                            minWidth: "45%",
-                            flex: 0,
                             whiteSpace: "nowrap",
+                            minWidth:0,
+                            flex:1,
                         }}
                     >
                         Cancel
@@ -117,11 +116,11 @@ export default function RetakePopup({
 
                     <Button
                         onClick={onConfirm}
-                        variant="popup"
+                        variant="popup-inverted"
                         style={{
-                            minWidth: "45%",
-                            flex: 0,
                             whiteSpace: "nowrap",
+                            minWidth:0,
+                            flex:1,
                         }}
                     >
                         Retake

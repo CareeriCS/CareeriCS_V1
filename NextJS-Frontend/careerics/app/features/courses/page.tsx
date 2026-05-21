@@ -8,7 +8,6 @@ import { CardsContainer } from "@/components/ui/cards-container";
 import { RectangularCard } from "@/components/ui/rectangular-card";
 import { ActivityCard } from "@/components/ui/activity-card";
 import CourseActionPopup from "@/components/ui/course-action-popup";
-import { CurrentCoursesCard } from "@/components/ui/courseCards";
 import { useAuth } from "@/providers/auth-provider";
 import { roadmapService } from "@/services";
 import type { RoadmapListItem } from "@/types";
@@ -19,6 +18,7 @@ import {
   retakeCourse as restartCourse,
   type CourseProgressItem,
 } from "@/lib/course-progress";
+import { useResponsive } from "@/hooks/useResponsive";
 
 function LoadingState({ label }: { label: string }) {
   return (
@@ -188,71 +188,49 @@ export default function CoursesPage() {
     }
   };
 
+  const { isLarge, isMedium, isSmall } = useResponsive();
+
   return (
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "repeat(2, 1fr) repeat(2, 2fr)",
-        gridTemplateRows: "1.5fr repeat(5, 1fr)",
-        gridColumnGap: "25px",
-        gridRowGap: "20px",
+        gridTemplateColumns: !isSmall ? isMedium ? "1.5fr 1fr" : "repeat(2, 1fr) repeat(2, 2fr)" : "1fr",
+        gridTemplateRows: !isSmall ? isMedium ? "1fr 2fr" : "1.5fr repeat(5, 1fr)" : "repeat(2, 1fr) 2fr",
+        gridColumnGap: "var(--space-lg)",
+        gridRowGap: "var(--space-lg)",
         height: "100%",
         width: "100%",
-        padding: "40px",
+        padding: "var(--space-lg)",
       }}
     >
-      {currentCourses.length ? (
-        <CurrentCoursesCard
-          courses={currentCourses.map((course) => ({
-            id: course.id,
-            title: course.title,
-            provider: course.provider,
-            completed: false,
-          }))}
-          selected={selectedCourseId}
-          onSelect={(courseId) => {
-            const course = currentCourses.find((item) => item.id === courseId);
-            if (course) {
-              handleCurrentCourseClick(course);
-            }
-          }}
-          style={{ gridArea: "1 /1 /3 /5", width: "100%", height: "100%" }}
-        />
-      ) : (
-        <div
-          style={{
-            gridArea: "1 /1 /3 /5",
-            width: "100%",
-            height: "100%",
-            backgroundColor: "var(--medium-blue)",
-            borderRadius: "4vh",
-            padding: "20px 30px",
-            color: "white",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "center",
-            boxSizing: "border-box",
-          }}
-        >
-          <h3
+      <CardsContainer
+        Title="Courses you are currently taking"
+        variant="horizontal"
+        style={{ gridArea: isSmall ? "1 / 1 / 2 / 2" : isMedium ? "1 / 1 / 2 / 3" : "1 /1 /3 /5", width: "100%" }}
+      >
+        {currentCourses.map((course) => (
+          <RectangularCard
+            key={course.id}
+            Title={course.title}
+            variant="radio"
+            theme="light"
+            subtext={`by ${course.provider}`}
+            isSubtextVisible={true}
+            selectable
+            selected={selectedCourseId === course.id}
+            onSelect={() => handleCurrentCourseClick(course)}
             style={{
-              fontSize: "18px",
-              marginBottom: "15px",
-              fontFamily: "var(--font-nova-square)",
-              fontWeight: "200",
-            }}
-          >
-            Courses you are currently taking
-          </h3>
-          <EmptyCoursesState label="You are not enrolled in any courses yet. Explore a roadmap to start learning." />
-        </div>
-      )}
+                height:"80%",
+              }}
+          />
+        ))}
+      </CardsContainer>
 
       <CardsContainer
         Title="More fields to discover"
         Columns={3}
         variant="vertical"
-        style={{ gridArea: "3 / 1 / 7 / 4", backgroundColor: "var(--dark-blue)" }}
+        style={{ gridArea: isSmall ? "3 / 1 / 4 / 2" : isMedium ? "2 / 1 / 3 / 2" : "3 / 1 / 7 / 4", backgroundColor: "var(--dark-blue)" }}
       >
         {isLoadingRoadmaps ? <LoadingState label="Loading roadmaps..." /> : null}
 
@@ -286,30 +264,31 @@ export default function CoursesPage() {
 
         {!isLoadingRoadmaps && !roadmapsError
           ? roadmaps.map((roadmap) => (
-              <RectangularCard
-                key={roadmap.id}
-                Title={roadmap.title}
-                theme="dark"
-                selectable
-                selected={selectedRoadmapId === roadmap.id}
-                onSelect={() => {
-                  setSelectedRoadmapId(roadmap.id);
-                  router.push(`/courses?roadmapId=${encodeURIComponent(roadmap.id)}`);
-                }}
-                style={{
-                  width: "100%",
-                }}
-              />
-            ))
+            <RectangularCard
+              key={roadmap.id}
+              Title={roadmap.title}
+              theme="dark"
+              selectable
+              selected={selectedRoadmapId === roadmap.id}
+              onSelect={() => {
+                setSelectedRoadmapId(roadmap.id);
+                router.push(`/courses?roadmapId=${encodeURIComponent(roadmap.id)}`);
+              }}
+              variant="radio"
+              style={{
+                flex: 1,
+                whiteSpace: "nowrap",
+              }}
+            />
+          ))
           : null}
       </CardsContainer>
 
       <CardsContainer
         Title="Completed Courses"
-        variant="vertical"
-        Columns={1}
+        variant={isSmall ? "horizontal" : "vertical"}
         centerTitle
-        style={{ gridArea: "3 / 4 / 7 / 5", width: "100%", backgroundColor: "var(--dark-blue)" }}
+        style={{ gridArea: isSmall ? "2 / 1 / 3 / 2" :isMedium ? "2 / 2 / 3 / 3" : "3 / 4 / 7 / 5", width: "100%", backgroundColor: "var(--dark-blue)" }}
       >
         {completedCourses.length ? (
           completedCourses.map((course) => (
