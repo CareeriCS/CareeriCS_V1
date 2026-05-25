@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LoaderCircle } from "lucide-react";
 
-import { CardsContainer } from "@/components/ui/cards-container";
+import { InlineContainer } from "@/components/ui/containers/inline";
+import { StackContainer } from "@/components/ui/containers/stack";
+import { FlexContainer } from "@/components/ui/containers/flex";
 import { RectangularCard } from "@/components/ui/rectangular-card";
 import { ActivityCard } from "@/components/ui/activity-card";
 import CourseActionPopup from "@/components/ui/course-action-popup";
@@ -190,12 +192,14 @@ export default function CoursesPage() {
 
   const { isLarge, isMedium, isSmall } = useResponsive();
 
+  const CompletedCourses = isSmall ? InlineContainer : StackContainer;
+
   return (
     <div
       style={{
         display: "grid",
         gridTemplateColumns: !isSmall ? isMedium ? "1.5fr 1fr" : "repeat(2, 1fr) repeat(2, 2fr)" : "1fr",
-        gridTemplateRows: !isSmall ? isMedium ? "1fr 2fr" : "1.5fr repeat(5, 1fr)" : "repeat(2, 1fr) 2fr",
+        gridTemplateRows: !isSmall ? isMedium ? "1fr 2fr" : "1fr repeat(5, 1fr)" : "repeat(2, 1fr) 2fr",
         gridColumnGap: "var(--space-lg)",
         gridRowGap: "var(--space-lg)",
         height: "100%",
@@ -203,9 +207,8 @@ export default function CoursesPage() {
         padding: "var(--space-lg)",
       }}
     >
-      <CardsContainer
+      <InlineContainer
         Title="Courses you are currently taking"
-        variant="horizontal"
         style={{ gridArea: isSmall ? "1 / 1 / 2 / 2" : isMedium ? "1 / 1 / 2 / 3" : "1 /1 /3 /5", width: "100%" }}
       >
         {currentCourses.map((course) => (
@@ -219,17 +222,13 @@ export default function CoursesPage() {
             selectable
             selected={selectedCourseId === course.id}
             onSelect={() => handleCurrentCourseClick(course)}
-            style={{
-                height:"80%",
-              }}
+
           />
         ))}
-      </CardsContainer>
+      </InlineContainer>
 
-      <CardsContainer
+      <FlexContainer
         Title="More fields to discover"
-        Columns={3}
-        variant="vertical"
         style={{ gridArea: isSmall ? "3 / 1 / 4 / 2" : isMedium ? "2 / 1 / 3 / 2" : "3 / 1 / 7 / 4", backgroundColor: "var(--dark-blue)" }}
       >
         {isLoadingRoadmaps ? <LoadingState label="Loading roadmaps..." /> : null}
@@ -282,11 +281,10 @@ export default function CoursesPage() {
             />
           ))
           : null}
-      </CardsContainer>
+      </FlexContainer>
 
-      <CardsContainer
+      <CompletedCourses
         Title="Completed Courses"
-        variant={isSmall ? "horizontal" : "vertical"}
         centerTitle
         style={{ gridArea: isSmall ? "2 / 1 / 3 / 2" :isMedium ? "2 / 2 / 3 / 3" : "3 / 4 / 7 / 5", width: "100%", backgroundColor: "var(--dark-blue)" }}
       >
@@ -303,7 +301,7 @@ export default function CoursesPage() {
         ) : (
           <EmptyCoursesState label="Complete a course and it will show up here." />
         )}
-      </CardsContainer>
+      </CompletedCourses>
 
       {pendingCompletionCourse ? (
         <CourseActionPopup

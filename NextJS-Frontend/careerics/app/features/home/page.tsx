@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { RecentActivityCard } from "@/components/ui/home/recent-activity";
 import { JourneyProgressCard } from "@/components/ui/home/journey-progress-card";
 import { PhaseCard } from "@/components/ui/home/phase-card";
-import { CareerCardsContainer } from "@/components/ui/career-cards-container";
+import { CareerCardsContainer } from "@/components/ui/containers/career";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/providers/auth-provider";
 import {
