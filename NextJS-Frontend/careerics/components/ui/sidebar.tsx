@@ -252,7 +252,7 @@ const Sidebar = () => {
             border: "none",
             cursor: "pointer",
             color: "#fff",
-            fontSize: "var(--text-lg)",
+            fontSize: "var(--text-xl)",
           }}
         >
           ☰
