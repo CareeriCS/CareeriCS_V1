@@ -25,9 +25,11 @@ import type {
   RoadmapListItem,
   RoadmapRead,
 } from "@/types";
-import { CardsContainer } from "@/components/ui/cards-container";
 import { RectangularCard } from "@/components/ui/rectangular-card";
 import { ActivityCard } from "@/components/ui/activity-card";
+import { InlineContainer } from "@/components/ui/containers/inline";
+import { FlexContainer } from "@/components/ui/containers/flex";
+import { StackContainer } from "@/components/ui/containers/stack";
 
 type AssessmentTarget = {
   id: string;
@@ -1025,9 +1027,8 @@ export default function SkillAssessment() {
         />
          
 
-        <CardsContainer
+        <InlineContainer
           Title="Skill you are currently learning"
-          variant="horizontal"
           style={{
             backgroundColor: "var(--dark-blue)",
             width: "100%",
@@ -1074,12 +1075,10 @@ export default function SkillAssessment() {
               There are no skills you are currently learning.
             </div>
           )}
-        </CardsContainer>
+        </InlineContainer>
 
-        <CardsContainer
+        <FlexContainer
           Title="More Skills to test"
-          variant="vertical"
-          Columns={3}
           searchBar
           searchValue={search}
           onSearchChange={setSearch}
@@ -1114,18 +1113,17 @@ export default function SkillAssessment() {
                   });
                 }}
                 style={{
-                  width: "100%",
+                  minWidth: "fit-content",
+                  flex:1,
                 }}
               />
             );
           })}
-        </CardsContainer>
+        </FlexContainer>
 
 
-        <CardsContainer
+        <StackContainer
           Title="Past Tests"
-          variant="vertical"
-          Columns={1}
           centerTitle
           style={{
             gridArea: "3 / 4 / 7 / 5",
@@ -1141,7 +1139,7 @@ export default function SkillAssessment() {
               variant="progress"
             />
           ))}
-        </CardsContainer>
+        </StackContainer>
 
       </div>
 

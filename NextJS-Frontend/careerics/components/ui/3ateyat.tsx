@@ -28,7 +28,7 @@ export default function TipCard({ icon, title, description, style, variant = "ti
                 backgroundColor: "var(--medium-blue)",
                 borderRadius: "var(--radius-xl)",
                 display: "flex",
-                padding: "var(--space-md)",
+                padding: "var(--space-xl)",
                 overflow: "hidden",
                 justifyContent: "flex-start",
                 alignItems: "center",
@@ -47,7 +47,7 @@ export default function TipCard({ icon, title, description, style, variant = "ti
                     gap: "var(--space-md)",
                 }}
             >
-                <img src={displayIcon} alt={title} style={{ height: "var(--icon-2xl)" }} />
+                <img src={displayIcon} alt={title} style={{ width: "var(--icon-xl)" }} />
 
                 <div
                     style={{
@@ -59,7 +59,7 @@ export default function TipCard({ icon, title, description, style, variant = "ti
                 >
                     <p
                         style={{
-                            fontSize: "var(--text-lg)",
+                            fontSize: "var(--text-md)",
                             marginRight: "auto"
                         }}
                     >

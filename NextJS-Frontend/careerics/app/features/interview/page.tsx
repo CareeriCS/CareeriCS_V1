@@ -6,13 +6,13 @@ import { useRouter } from "next/navigation";
 import ChoiceCard from "@/components/ui/choice-card";
 import TipCard from "@/components/ui/3ateyat";
 import CustomizeInterviewPopup from "@/components/ui/popup";
-import { CardsContainer } from "@/components/ui/cards-container";
 import { ActivityCard } from "@/components/ui/activity-card";
 import { normalizeInterviewType, buildInterviewRecordingRoute, buildInterviewSessionName, formatInterviewArchiveDate, getTechnicalInterviewTypes } from "@/lib/interview";
 import { useAuth } from "@/providers/auth-provider";
 import { interviewService } from "@/services/interview.service";
 import { reportsService } from "@/services/reports.service";
 import type { APIInterviewArchiveItem } from "@/types";
+import { StackContainer } from "@/components/ui/containers/stack";
 
 export default function Interview() {
   const router = useRouter();
@@ -208,10 +208,8 @@ export default function Interview() {
           style={{ gridArea: "1 / 2 / 3 / 3" }}
         />
 
-        <CardsContainer
+        <StackContainer
           Title="Interviews Archive"
-          variant="vertical"
-          Columns={1}
           centerTitle
           style={{ gridArea: "1 / 3 / 3 / 4" }}
         >
@@ -239,7 +237,7 @@ export default function Interview() {
                 : archiveError || "No completed interview reports yet."}
             </div>
           )}
-        </CardsContainer>
+        </StackContainer>
 
         <TipCard
           title="Tip of the day"

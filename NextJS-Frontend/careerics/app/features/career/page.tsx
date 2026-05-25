@@ -34,7 +34,7 @@ import type {
   UnifiedBookmarkEntry,
 } from "@/types";
 import { useResponsive } from "@/hooks/useResponsive";
-import { CareerCardsContainer } from "@/components/ui/career-cards-container";
+import { CareerCardsContainer } from "@/components/ui/containers/career";
 import TipCard from "@/components/ui/3ateyat";
 
 const VISIBLE_TRACKS_COUNT = 4;

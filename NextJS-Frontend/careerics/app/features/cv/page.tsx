@@ -5,11 +5,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/providers/auth-provider";
 import type { APIReport } from "@/types";
 import { cvService, reportsService } from "@/services";
-import { CardsContainer } from "@/components/ui/cards-container";
 import { ActivityCard } from "@/components/ui/activity-card";
 import { Button } from "@/components/ui/button";
 import ChoiceCard from "@/components/ui/choice-card";
 import CVPop from "@/components/ui/cvPopup";
+import { StackContainer } from "@/components/ui/containers/stack";
 
 function formatReportDate(dateIso: string): string {
   const parsedDate = new Date(dateIso);
@@ -159,11 +159,9 @@ export default function CVCrafting() {
           style={{ gridArea: "1 / 3 / 5 / 5" }}
         />
 
-        <CardsContainer
+        <StackContainer
           Title="Old Versions"
           style={{ gridArea: "1 / 5 / 7 / 7", backgroundColor: "var(--medium-blue)" }}
-          variant="vertical"
-          Columns={1}
           centerTitle
         >
           {archiveItems.length ? (
@@ -190,7 +188,7 @@ export default function CVCrafting() {
                 : reportsError || "No saved CV versions yet."}
             </div>
           )}
-        </CardsContainer>
+        </StackContainer>
 
         <div
           style={{
