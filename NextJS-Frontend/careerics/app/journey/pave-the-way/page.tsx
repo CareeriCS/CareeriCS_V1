@@ -24,6 +24,7 @@ import {
   completeCourse,
   enrollCourse,
   loadCourseProgress,
+  syncCourseProgressFromServer,
   type CourseProgressState,
 } from "@/lib/course-progress";
 import { useAuth } from "@/providers/auth-provider";
@@ -88,6 +89,7 @@ export default function JourneyPaveTheWayPage() {
   const [isLoadingRoadmap, setIsLoadingRoadmap] = useState(false);
   const [roadmapError, setRoadmapError] = useState<string | null>(null);
   const [assessmentError, setAssessmentError] = useState<string | null>(null);
+  const [courseProgressError, setCourseProgressError] = useState<string | null>(null);
 
   const inFlightStepIdsRef = useRef<Set<string>>(new Set());
 
@@ -164,20 +166,33 @@ export default function JourneyPaveTheWayPage() {
   }, [selectedTrack?.roadmapId, user?.id]);
 
   useEffect(() => {
-    const syncCourseProgress = () => {
+    let alive = true;
+
+    const syncCourseProgressState = async () => {
+      if (user?.id) {
+        const synced = await syncCourseProgressFromServer(user.id);
+        if (!alive) {
+          return;
+        }
+
+        setCourseProgress(synced);
+        return;
+      }
+
       setCourseProgress(loadCourseProgress(user?.id));
     };
 
-    syncCourseProgress();
+    void syncCourseProgressState();
 
     const handleCourseProgressUpdated = () => {
-      syncCourseProgress();
+      setCourseProgress(loadCourseProgress(user?.id));
     };
 
     window.addEventListener(COURSE_PROGRESS_UPDATED_EVENT, handleCourseProgressUpdated as EventListener);
     window.addEventListener("storage", handleCourseProgressUpdated);
 
     return () => {
+      alive = false;
       window.removeEventListener(
         COURSE_PROGRESS_UPDATED_EVENT,
         handleCourseProgressUpdated as EventListener,
@@ -244,7 +259,7 @@ export default function JourneyPaveTheWayPage() {
   const remainingTopics = Math.max(0, totalTopics - completedTopics);
   const currentLevel = resolveRoadmapLevel(completionPercent);
   const selectedSectionStatus = selectedSection ? formatCompletionStatus(selectedSection.completionStatus) : "";
-  const activeSystemError = trackError || roadmapError || assessmentError;
+  const activeSystemError = trackError || roadmapError || assessmentError || courseProgressError;
 
   const handleSectionSelect = (index: number) => {
     const nextSection = sections[index];
@@ -347,34 +362,52 @@ export default function JourneyPaveTheWayPage() {
     setActivePopupMode("enroll");
   };
 
-  const confirmEnrollment = () => {
+  const confirmEnrollment = async () => {
     if (!activePopupCourse) {
       return;
     }
 
-    const nextProgress = enrollCourse(
-      {
-        id: activePopupCourse.id,
-        title: activePopupCourse.title,
-        provider: activePopupCourse.provider,
-        url: activePopupCourse.url,
-      },
-      user?.id,
-    );
+    try {
+      setCourseProgressError(null);
+      const nextProgress = await enrollCourse(
+        {
+          id: activePopupCourse.id,
+          title: activePopupCourse.title,
+          provider: activePopupCourse.provider,
+          url: activePopupCourse.url,
+        },
+        user?.id,
+      );
 
-    setCourseProgress(nextProgress);
-    setActivePopupMode("complete");
+      setCourseProgress(nextProgress);
+      setActivePopupMode("complete");
+    } catch (error) {
+      setCourseProgressError(
+        error instanceof Error
+          ? error.message
+          : "Unable to sync course progress right now.",
+      );
+    }
   };
 
-  const confirmCompletion = () => {
+  const confirmCompletion = async () => {
     if (!activePopupCourse) {
       return;
     }
 
-    const nextProgress = completeCourse(activePopupCourse.id, user?.id);
-    setCourseProgress(nextProgress);
-    setActivePopupCourse(null);
-    setActivePopupMode(null);
+    try {
+      setCourseProgressError(null);
+      const nextProgress = await completeCourse(activePopupCourse.id, user?.id);
+      setCourseProgress(nextProgress);
+      setActivePopupCourse(null);
+      setActivePopupMode(null);
+    } catch (error) {
+      setCourseProgressError(
+        error instanceof Error
+          ? error.message
+          : "Unable to sync course progress right now.",
+      );
+    }
   };
 
   const handleContinueCourse = () => {
