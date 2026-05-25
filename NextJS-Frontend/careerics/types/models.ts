@@ -214,11 +214,14 @@ export interface CVProfile {
   full_name: string;
   professional_title?: string | null;
   email?: string | null;
+  secondary_email?: string | null;
   phone?: string | null;
   city?: string | null;
   country?: string | null;
   linkedin?: string | null;
+  github?: string | null;
   portfolio?: string | null;
+  username?: string | null;
   summary?: string | null;
   skills: CVSkillEntry[];
   experiences: CVExperience[];
@@ -228,6 +231,39 @@ export interface CVProfile {
   languages: CVLanguage[];
   awards: CVAward[];
   references: CVReference[];
+}
+
+export interface UserProfile {
+  id: string;
+  full_name: string;
+  professional_title?: string | null;
+  email?: string | null;
+  secondary_email?: string | null;
+  phone?: string | null;
+  city?: string | null;
+  country?: string | null;
+  linkedin?: string | null;
+  portfolio?: string | null;
+  github?: string | null;
+  username?: string | null;
+  summary?: string | null;
+  created_at: string;
+}
+
+export interface UserProfileUpsertRequest {
+  full_name?: string | null;
+  professional_title?: string | null;
+  email?: string | null;
+  secondary_email?: string | null;
+  phone?: string | null;
+  city?: string | null;
+  country?: string | null;
+  linkedin?: string | null;
+  portfolio?: string | null;
+  github?: string | null;
+  username?: string | null;
+  summary?: string | null;
+  auth_display_name?: string | null;
 }
 
 // ── FastAPI Roadmap domain ─────────────────────────
@@ -405,6 +441,32 @@ export interface CurrentRoadmapLearning {
   progress_percent: number;
 }
 
+export interface JourneyTrackProgress {
+  track_id: string;
+  roadmap_id?: string | null;
+  current_phase: number;
+  max_reached_phase: number;
+  has_started: boolean;
+  is_selected: boolean;
+  last_visited_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface JourneyTrackProgressList {
+  user_id: string;
+  tracks: JourneyTrackProgress[];
+}
+
+export interface JourneyTrackProgressUpsertRequest {
+  roadmap_id?: string | null;
+  current_phase: number;
+  max_reached_phase: number;
+  has_started?: boolean;
+  is_selected?: boolean;
+  last_visited_at?: string | null;
+}
+
 // ── FastAPI Skills domain ───────────────────────────────
 
 export interface APISkill {
@@ -574,4 +636,40 @@ export interface CourseProgressTimeline {
   started_at?: string | null;
   completed_at?: string | null;
   updated_at?: string | null;
+}
+
+export type CourseProgressStatus = "saved" | "enrolled" | "completed";
+
+export interface CourseProgressResponse {
+  id: string;
+  course_id: string;
+  user_id: string;
+  status: CourseProgressStatus;
+  started_at?: string | null;
+  completed_at?: string | null;
+  saved_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserCourseProgressItem {
+  course_id: string;
+  status: CourseProgressStatus;
+  title: string;
+  provider?: string | null;
+  url: string;
+  started_at?: string | null;
+  completed_at?: string | null;
+  saved_at?: string | null;
+  updated_at: string;
+}
+
+export interface UserCourseProgressList {
+  user_id: string;
+  current: UserCourseProgressItem[];
+  completed: UserCourseProgressItem[];
+}
+
+export interface CourseStatusUpdateRequest {
+  status: CourseProgressStatus;
 }
