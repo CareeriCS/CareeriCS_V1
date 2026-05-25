@@ -7,6 +7,9 @@ import { useAuth } from "@/providers/auth-provider";
 import { UNIFIED_BOOKMARKS_UPDATED_EVENT } from "@/lib/unified-bookmarks";
 import {
   JOURNEY_PHASE_STATE_UPDATED_EVENT,
+  getJourneyPhaseStateFromSnapshot,
+  loadJourneyProgressSnapshot,
+  type JourneyProgressSnapshot,
   type JourneyPhaseNumber,
   type JourneyPhaseState,
   type JourneyTrackCard,
@@ -15,7 +18,7 @@ import {
   loadJourneyTrackCards,
   persistSelectedJourneyTrackId,
   readSelectedJourneyTrackId,
-  readJourneyPhaseState,
+  syncSelectedJourneyTrackProgress,
   visitJourneyPhase,
 } from "@/lib/journey";
 
@@ -48,6 +51,10 @@ export function useJourneyPhase(
   const [isLoadingTracks, setIsLoadingTracks] = useState(true);
   const [trackError, setTrackError] = useState<string | null>(null);
   const [refreshToken, setRefreshToken] = useState(0);
+  const [journeyProgressSnapshot, setJourneyProgressSnapshot] = useState<JourneyProgressSnapshot>({
+    byTrackId: new Map(),
+    selectedTrackId: null,
+  });
 
   // -------------------------
   // Load tracks
@@ -62,16 +69,29 @@ export function useJourneyPhase(
       setTrackError(null);
 
       try {
-        const nextTracks = await loadJourneyTrackCards(userId);
+        const [nextTracks, nextSnapshot] = await Promise.all([
+          loadJourneyTrackCards(userId),
+          userId
+            ? loadJourneyProgressSnapshot(userId)
+            : Promise.resolve<JourneyProgressSnapshot>({
+                byTrackId: new Map(),
+                selectedTrackId: null,
+              }),
+        ]);
 
         if (!alive) return;
 
         setTracks(nextTracks);
+        setJourneyProgressSnapshot(nextSnapshot);
         setIsLoadingTracks(false);
       } catch {
         if (!alive) return;
 
         setTracks([]);
+        setJourneyProgressSnapshot({
+          byTrackId: new Map(),
+          selectedTrackId: null,
+        });
         setTrackError("Unable to load your journey tracks right now.");
         setIsLoadingTracks(false);
       }
@@ -95,21 +115,43 @@ export function useJourneyPhase(
       : null;
     if (fromQuery) return fromQuery;
 
+    const fromSnapshot = journeyProgressSnapshot.selectedTrackId
+      ? getTrackById(tracks, journeyProgressSnapshot.selectedTrackId)
+      : null;
+    if (fromSnapshot) return fromSnapshot;
+
     const stored = readSelectedJourneyTrackId(userId);
     const fromStorage = stored ? getTrackById(tracks, stored) : null;
     if (fromStorage) return fromStorage;
 
     return tracks[0] || null;
-  }, [queryTrackId, tracks, userId]);
+  }, [journeyProgressSnapshot.selectedTrackId, queryTrackId, tracks, userId]);
 
   const selectedTrackId = selectedTrack?.id ?? null;
+  const selectedPhaseState = selectedTrackId
+    ? getJourneyPhaseStateFromSnapshot(
+        journeyProgressSnapshot,
+        selectedTrackId,
+        userId,
+      )
+    : { maxReached: 1 as JourneyPhaseNumber, hasStarted: false };
 
   // -------------------------
   // Persist selected track
   // -------------------------
   useEffect(() => {
     persistSelectedJourneyTrackId(selectedTrackId, userId);
-  }, [selectedTrackId, userId]);
+    if (!selectedTrackId || !selectedTrack) {
+      return;
+    }
+
+    void syncSelectedJourneyTrackProgress({
+      trackId: selectedTrackId,
+      userId,
+      roadmapId: selectedTrack.roadmapId,
+      maxReached: selectedPhaseState.maxReached,
+    });
+  }, [selectedPhaseState.maxReached, selectedTrack, selectedTrackId, userId]);
 
   // -------------------------
   // Visit tracking (IMPORTANT)
@@ -117,14 +159,56 @@ export function useJourneyPhase(
   useEffect(() => {
     if (!selectedTrackId || !selectedTrack) return;
 
-    visitJourneyPhase(selectedTrackId, currentPhase, userId);
+    void visitJourneyPhase(
+      selectedTrackId,
+      currentPhase,
+      userId,
+      selectedTrack.roadmapId,
+    );
   }, [currentPhase, selectedTrack, selectedTrackId, userId]);
 
   // -------------------------
   // React to storage updates
   // -------------------------
   useEffect(() => {
-    const handlePhaseUpdate = () => setRefreshToken((previous) => previous + 1);
+    const handlePhaseUpdate = (event: Event) => {
+      const customEvent = event as CustomEvent<{
+        trackId?: string;
+        userId?: string;
+        state?: JourneyPhaseState;
+      }>;
+      const eventUserId = customEvent.detail?.userId;
+
+      if (eventUserId && userId && eventUserId !== userId && eventUserId !== "guest") {
+        return;
+      }
+
+      const trackId = customEvent.detail?.trackId;
+      const state = customEvent.detail?.state;
+
+      if (!trackId || !state) {
+        setRefreshToken((previous) => previous + 1);
+        return;
+      }
+
+        setJourneyProgressSnapshot((previous) => {
+          const nextMap = new Map(previous.byTrackId);
+          const existing = nextMap.get(trackId);
+          nextMap.set(trackId, {
+            currentPhase: existing?.currentPhase || state.maxReached,
+            maxReached: state.maxReached,
+            hasStarted: state.hasStarted,
+            isSelected: existing?.isSelected || false,
+            roadmapId: existing?.roadmapId || null,
+            updatedAt: new Date().toISOString(),
+          });
+
+        return {
+          ...previous,
+          byTrackId: nextMap,
+        };
+      });
+    };
     const handleBookmarksUpdated = () => {
       invalidateJourneyTrackCardsCache(userId);
       setRefreshToken((previous) => previous + 1);
@@ -156,9 +240,7 @@ export function useJourneyPhase(
   // -------------------------
   // Phase state
   // -------------------------
-  const phaseState: JourneyPhaseState = selectedTrackId
-    ? readJourneyPhaseState(selectedTrackId, userId)
-    : { maxReached: 1 };
+  const phaseState: JourneyPhaseState = selectedPhaseState;
 
   // -------------------------
   // Return
