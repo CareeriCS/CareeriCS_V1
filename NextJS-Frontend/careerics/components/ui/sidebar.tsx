@@ -1,11 +1,12 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/providers/auth-provider";
 import { useResponsive } from "@/hooks/useResponsive";
+import { profileService } from "@/services/profile.service";
 
 const Sidebar = () => {
   const pathname = usePathname();
@@ -16,12 +17,48 @@ const Sidebar = () => {
 
   const [hoveredNav, setHoveredNav] = useState<number | null>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [profileNameOverride, setProfileNameOverride] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+
+    const loadProfileName = async () => {
+      if (!user?.id) {
+        if (alive) {
+          setProfileNameOverride(null);
+        }
+        return;
+      }
+
+      const response = await profileService.getUserProfile(user.id);
+      if (!alive) {
+        return;
+      }
+
+      if (response.success && response.data) {
+        const nextName =
+          response.data.full_name?.trim() ||
+          response.data.username?.trim() ||
+          null;
+        setProfileNameOverride(nextName);
+        return;
+      }
+
+      setProfileNameOverride(null);
+    };
+
+    void loadProfileName();
+
+    return () => {
+      alive = false;
+    };
+  }, [user?.id]);
 
   
 
   const profileName = isLoading
     ? "Loading..."
-    : user?.displayName?.trim() || "Guest";
+    : profileNameOverride || user?.displayName?.trim() || "Guest";
 
   const navItems = [
     {
