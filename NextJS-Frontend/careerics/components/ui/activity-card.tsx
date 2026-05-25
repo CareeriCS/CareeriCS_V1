@@ -56,43 +56,59 @@ export const ActivityCard = ({
       }}
     >
       {/* TEXT SECTION */}
-      <div
-        style={{
-          width:"fit-content",
+<div
+  style={{
+    flex: 1,
+    minWidth: 0,
 
-          display: "flex",
-          flexDirection: "column",
-          gap: "2px",
-        }}
-      >
-        {/* TITLE */}
-        <div
-          style={{
-            fontSize: "var(--text-sm)",
-            whiteSpace:isSmall?"nowrap":"normal",
-            width:"fit-content",
-          }}
-        >
-          {title ?? id}
-        </div>
+    display: "flex",
+    flexDirection: "column",
+    gap: "2px",
+  }}
+>
+  {/* TITLE */}
+  <div
+    title={title ?? id}
+    style={{
+      fontSize: "var(--text-sm)",
 
-        {/* SUBTITLE */}
-        <div
-          style={{
-            fontSize: "var(--text-xs)",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
 
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {isProgress
-            ? `on ${skill ?? "unknown skill"}`
-            : isRetake
-              ? `By ${provider ?? "unknown provider"}`
-              : `Created on ${date}`}
-        </div>
-      </div>
+      whiteSpace: isSmall ? "nowrap" : "normal",
+
+      display: "-webkit-box",
+      WebkitBoxOrient: "vertical",
+
+      ...(isSmall
+        ? {
+            WebkitLineClamp: 1,
+          }
+        : {
+            WebkitLineClamp: 2,
+          }),
+    }}
+  >
+    {title ?? id}
+  </div>
+
+  {/* SUBTITLE */}
+  <div
+    style={{
+      fontSize: "var(--text-xs)",
+
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap",
+    }}
+  >
+    {isProgress
+      ? `on ${skill ?? "unknown skill"}`
+      : isRetake
+        ? `By ${provider ?? "unknown provider"}`
+        : `Created on ${date}`}
+  </div>
+</div>
 
       {/* RIGHT SECTION */}
       <div
