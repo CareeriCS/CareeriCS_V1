@@ -69,13 +69,43 @@ export default function CareerDiscoveryPage() {
 
   const [startIndex, setStartIndex] = useState(0);
   useEffect(() => {
-    if (isAuthLoading) {
-      setUnifiedBookmarks([]);
-      return;
-    }
+    let alive = true;
 
-    setUnifiedBookmarks(getUnifiedBookmarks(userId));
-  }, [isAuthLoading, userId]);
+    const loadBookmarks = async () => {
+      if (isAuthLoading) {
+        return;
+      }
+
+      let nextBookmarks: UnifiedBookmarkEntry[] = [];
+
+      if (!userId) {
+        nextBookmarks = getUnifiedBookmarks(userId);
+      }
+
+      if (userId && roadmaps.length) {
+        const backendBookmarksResponse = await roadmapService.getUserRoadmapBookmarks(userId);
+        if (backendBookmarksResponse.success && backendBookmarksResponse.data?.bookmarks) {
+          nextBookmarks = syncBackendRoadmapBookmarksToUnifiedList({
+            userId,
+            backendBookmarks: backendBookmarksResponse.data.bookmarks,
+            roadmaps,
+          });
+        }
+      }
+
+      if (!alive) {
+        return;
+      }
+
+      setUnifiedBookmarks(nextBookmarks);
+    };
+
+    void loadBookmarks();
+
+    return () => {
+      alive = false;
+    };
+  }, [isAuthLoading, roadmaps, userId]);
 
   const bookmarkedTrackIds = useMemo(() => {
     return unifiedBookmarks.flatMap((bookmark) => {
