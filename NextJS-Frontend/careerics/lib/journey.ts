@@ -2,6 +2,7 @@ import {
   careerService,
   interviewService,
   jobService,
+  journeyService,
   reportsService,
   roadmapService,
   skillAssessmentService,
@@ -18,6 +19,7 @@ import {
 import { getUnifiedBookmarks } from "@/lib/unified-bookmarks";
 import type {
   APICareerTrackScore,
+  JourneyTrackProgress,
   RoadmapListItem,
   RoadmapProgressSummary,
   UnifiedBookmarkEntry,
@@ -58,6 +60,21 @@ export type JourneyTrackSummary = {
 
 export type JourneyPhaseState = {
   maxReached: JourneyPhaseNumber;
+  hasStarted: boolean;
+};
+
+type JourneyTrackProgressRecord = {
+  currentPhase: JourneyPhaseNumber;
+  maxReached: JourneyPhaseNumber;
+  hasStarted: boolean;
+  isSelected: boolean;
+  roadmapId: string | null;
+  updatedAt: string | null;
+};
+
+export type JourneyProgressSnapshot = {
+  byTrackId: Map<string, JourneyTrackProgressRecord>;
+  selectedTrackId: string | null;
 };
 
 type JourneyUserSignals = {
@@ -74,8 +91,10 @@ type JourneyUserSignals = {
 
 const JOURNEY_SELECTED_TRACK_STORAGE_KEY = "journey:selected-track-id";
 const JOURNEY_PHASE_STATE_STORAGE_KEY = "journey:phase-state";
+const JOURNEY_PROGRESS_MIGRATION_KEY = "journey:progress-migrated";
 export const JOURNEY_PHASE_STATE_UPDATED_EVENT = "journey-phase-state-updated";
 const JOURNEY_TRACK_CARDS_CACHE_TTL_MS = 5_000;
+const JOURNEY_PROGRESS_CACHE_TTL_MS = 5_000;
 const journeyTrackCardsCache = new Map<
   string,
   {
@@ -84,6 +103,14 @@ const journeyTrackCardsCache = new Map<
   }
 >();
 const journeyTrackCardsPromiseCache = new Map<string, Promise<JourneyTrackCard[]>>();
+const journeyProgressCache = new Map<
+  string,
+  {
+    data: JourneyProgressSnapshot;
+    expiresAt: number;
+  }
+>();
+const journeyProgressPromiseCache = new Map<string, Promise<JourneyProgressSnapshot>>();
 
 export const JOURNEY_PHASES: JourneyPhaseDefinition[] = [
   {
@@ -171,6 +198,10 @@ function getJourneyTrackCardsCacheKey(userId: string): string {
   return userId.trim();
 }
 
+function getJourneyProgressCacheKey(userId: string): string {
+  return userId.trim();
+}
+
 function getCachedJourneyTrackCards(
   userId: string,
 ): JourneyTrackCard[] | null {
@@ -203,6 +234,18 @@ export function invalidateJourneyTrackCardsCache(
   journeyTrackCardsPromiseCache.delete(cacheKey);
 }
 
+export function invalidateJourneyProgressCache(userId?: string | null): void {
+  if (!userId) {
+    journeyProgressCache.clear();
+    journeyProgressPromiseCache.clear();
+    return;
+  }
+
+  const cacheKey = getJourneyProgressCacheKey(userId);
+  journeyProgressCache.delete(cacheKey);
+  journeyProgressPromiseCache.delete(cacheKey);
+}
+
 export function persistSelectedJourneyTrackId(
   trackId: string | null,
   userId?: string | null,
@@ -218,6 +261,10 @@ export function persistSelectedJourneyTrackId(
   }
 
   window.localStorage.setItem(scopedKey, trackId);
+}
+
+function getJourneyProgressMigrationKey(userId?: string | null): string {
+  return `${JOURNEY_PROGRESS_MIGRATION_KEY}:${userId ?? "guest"}`;
 }
 
 function getJourneyPhaseStateStorageKey(
@@ -242,13 +289,18 @@ export function hasJourneyPhaseState(
 
 function normalizeJourneyPhaseState(raw: unknown): JourneyPhaseState {
   if (!raw || typeof raw !== "object") {
-    return { maxReached: 1 };
+    return { maxReached: 1, hasStarted: false };
   }
 
   const maybe = raw as Partial<JourneyPhaseState>;
+  const maxReached = normalizeJourneyPhaseNumber(maybe.maxReached);
+  const hasStarted = typeof maybe.hasStarted === "boolean"
+    ? maybe.hasStarted
+    : maxReached > 1;
 
   return {
-    maxReached: normalizeJourneyPhaseNumber(maybe.maxReached),
+    maxReached,
+    hasStarted,
   };
 }
 
@@ -277,7 +329,7 @@ export function readJourneyPhaseState(
   userId?: string | null,
 ): JourneyPhaseState {
   if (typeof window === "undefined" || !trackId) {
-    return { maxReached: 1 };
+    return { maxReached: 1, hasStarted: false };
   }
 
   const raw = window.localStorage.getItem(
@@ -285,13 +337,13 @@ export function readJourneyPhaseState(
   );
 
   if (!raw) {
-    return { maxReached: 1 };
+    return { maxReached: 1, hasStarted: false };
   }
 
   try {
     return normalizeJourneyPhaseState(JSON.parse(raw));
   } catch {
-    return { maxReached: 1 };
+    return { maxReached: 1, hasStarted: false };
   }
 }
 
@@ -299,6 +351,7 @@ export function persistJourneyPhaseState(
   trackId: string,
   state: JourneyPhaseState,
   userId?: string | null,
+  shouldNotify = true,
 ): JourneyPhaseState {
   const normalizedState = normalizeJourneyPhaseState(state);
 
@@ -315,15 +368,315 @@ export function persistJourneyPhaseState(
   }
 
   window.localStorage.setItem(storageKey, nextRaw);
-  notifyJourneyPhaseStateUpdated(trackId, normalizedState, userId);
+  if (shouldNotify) {
+    notifyJourneyPhaseStateUpdated(trackId, normalizedState, userId);
+  }
   return normalizedState;
 }
 
-export function visitJourneyPhase(
+function normalizeJourneyTrackProgressRecord(raw: JourneyTrackProgress): JourneyTrackProgressRecord {
+  return {
+    currentPhase: normalizeJourneyPhaseNumber(raw.current_phase),
+    maxReached: normalizeJourneyPhaseNumber(raw.max_reached_phase),
+    hasStarted: Boolean(raw.has_started),
+    isSelected: Boolean(raw.is_selected),
+    roadmapId: normalizeTrackKey(raw.roadmap_id) || null,
+    updatedAt: raw.updated_at || null,
+  };
+}
+
+function buildJourneyProgressSnapshot(rows: JourneyTrackProgress[]): JourneyProgressSnapshot {
+  const byTrackId = new Map<string, JourneyTrackProgressRecord>();
+  let selectedTrackId: string | null = null;
+
+  for (const row of rows) {
+    const trackId = normalizeTrackKey(row.track_id);
+    if (!trackId) {
+      continue;
+    }
+
+    const normalized = normalizeJourneyTrackProgressRecord(row);
+    byTrackId.set(trackId, normalized);
+
+    if (normalized.isSelected && !selectedTrackId) {
+      selectedTrackId = trackId;
+    }
+  }
+
+  return {
+    byTrackId,
+    selectedTrackId,
+  };
+}
+
+function writeJourneySnapshotToLocal(
+  snapshot: JourneyProgressSnapshot,
+  userId: string,
+): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  if (snapshot.selectedTrackId) {
+    persistSelectedJourneyTrackId(snapshot.selectedTrackId, userId);
+  }
+
+  for (const [trackId, record] of snapshot.byTrackId.entries()) {
+    persistJourneyPhaseState(trackId, {
+      maxReached: record.maxReached,
+      hasStarted: record.hasStarted,
+    }, userId, false);
+  }
+}
+
+function getStoredJourneyPhaseEntries(userId?: string | null): Array<{
+  trackId: string;
+  state: JourneyPhaseState;
+}> {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  const prefix = `${JOURNEY_PHASE_STATE_STORAGE_KEY}:${userId ?? "guest"}:`;
+  const entries: Array<{
+    trackId: string;
+    state: JourneyPhaseState;
+  }> = [];
+
+  for (let index = 0; index < window.localStorage.length; index += 1) {
+    const key = window.localStorage.key(index);
+    if (!key || !key.startsWith(prefix)) {
+      continue;
+    }
+
+    const trackId = key.slice(prefix.length).trim();
+    if (!trackId) {
+      continue;
+    }
+
+    entries.push({
+      trackId,
+      state: readJourneyPhaseState(trackId, userId),
+    });
+  }
+
+  return entries;
+}
+
+async function migrateLocalJourneyProgressToServer(
+  userId: string,
+  snapshot: JourneyProgressSnapshot,
+): Promise<boolean> {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  const migrationKey = getJourneyProgressMigrationKey(userId);
+  if (window.localStorage.getItem(migrationKey) === "1") {
+    return false;
+  }
+
+  const localEntries = getStoredJourneyPhaseEntries(userId);
+  const localSelectedTrackId = readSelectedJourneyTrackId(userId);
+  let migratedAny = false;
+
+  for (const { trackId, state } of localEntries) {
+    const remote = snapshot.byTrackId.get(trackId);
+    const remoteMaxReached = remote?.maxReached ?? 1;
+    const remoteHasStarted = remote?.hasStarted ?? false;
+    const nextHasStarted = remoteHasStarted || state.hasStarted;
+    const nextMaxReached = normalizeJourneyPhaseNumber(
+      Math.max(remoteMaxReached, state.maxReached),
+    );
+
+    const shouldSelectTrack =
+      localSelectedTrackId === trackId &&
+      (!snapshot.selectedTrackId || snapshot.selectedTrackId === trackId);
+
+    if (
+      remote &&
+      nextMaxReached === remoteMaxReached &&
+      nextHasStarted === remoteHasStarted &&
+      !shouldSelectTrack
+    ) {
+      continue;
+    }
+
+    const response = await journeyService.upsertTrackProgress(userId, trackId, {
+      roadmap_id: remote?.roadmapId ?? null,
+      current_phase: nextHasStarted
+        ? normalizeJourneyPhaseNumber(
+            Math.max(remote?.currentPhase ?? 1, nextMaxReached),
+          )
+        : 1,
+      max_reached_phase: nextMaxReached,
+      has_started: nextHasStarted,
+      is_selected: shouldSelectTrack,
+    });
+
+    if (!response.success) {
+      return false;
+    }
+
+    migratedAny = true;
+  }
+
+  if (
+    !migratedAny &&
+    localSelectedTrackId &&
+    !snapshot.selectedTrackId &&
+    snapshot.byTrackId.has(localSelectedTrackId)
+  ) {
+    const remote = snapshot.byTrackId.get(localSelectedTrackId)!;
+    const response = await journeyService.upsertTrackProgress(userId, localSelectedTrackId, {
+      roadmap_id: remote.roadmapId,
+      current_phase: remote.currentPhase,
+      max_reached_phase: remote.maxReached,
+      has_started: remote.hasStarted,
+      is_selected: true,
+    });
+    if (!response.success) {
+      return false;
+    }
+
+    migratedAny = true;
+  }
+
+  window.localStorage.setItem(migrationKey, "1");
+  return migratedAny;
+}
+
+export async function loadJourneyProgressSnapshot(
+  userId?: string | null,
+  force = false,
+): Promise<JourneyProgressSnapshot> {
+  const normalizedUserId = normalizeTrackKey(userId);
+  if (!normalizedUserId) {
+    return {
+      byTrackId: new Map(),
+      selectedTrackId: null,
+    };
+  }
+
+  if (!force) {
+    const cached = journeyProgressCache.get(normalizedUserId);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.data;
+    }
+  }
+
+  const pending = journeyProgressPromiseCache.get(normalizedUserId);
+  if (pending) {
+    return pending;
+  }
+
+  const nextRequest = (async () => {
+    const response = await journeyService.getUserJourneyProgress(normalizedUserId);
+    const initialSnapshot = response.success && response.data?.tracks
+      ? buildJourneyProgressSnapshot(response.data.tracks)
+      : {
+          byTrackId: new Map<string, JourneyTrackProgressRecord>(),
+          selectedTrackId: null,
+        };
+
+    const migrated = await migrateLocalJourneyProgressToServer(
+      normalizedUserId,
+      initialSnapshot,
+    );
+
+    const finalResponse = migrated
+      ? await journeyService.getUserJourneyProgress(normalizedUserId)
+      : response;
+    const finalSnapshot = finalResponse.success && finalResponse.data?.tracks
+      ? buildJourneyProgressSnapshot(finalResponse.data.tracks)
+      : initialSnapshot;
+
+    journeyProgressCache.set(normalizedUserId, {
+      data: finalSnapshot,
+      expiresAt: Date.now() + JOURNEY_PROGRESS_CACHE_TTL_MS,
+    });
+    writeJourneySnapshotToLocal(finalSnapshot, normalizedUserId);
+    return finalSnapshot;
+  })().finally(() => {
+    journeyProgressPromiseCache.delete(normalizedUserId);
+  });
+
+  journeyProgressPromiseCache.set(normalizedUserId, nextRequest);
+  return nextRequest;
+}
+
+export function getJourneyPhaseStateFromSnapshot(
+  snapshot: JourneyProgressSnapshot | null | undefined,
+  trackId?: string | null,
+  userId?: string | null,
+): JourneyPhaseState {
+  const normalizedTrackId = normalizeTrackKey(trackId);
+  const trackedState = normalizedTrackId
+    ? snapshot?.byTrackId.get(normalizedTrackId)
+    : null;
+
+  if (trackedState) {
+    return {
+      maxReached: trackedState.maxReached,
+      hasStarted: trackedState.hasStarted,
+    };
+  }
+
+  return readJourneyPhaseState(normalizedTrackId, userId);
+}
+
+export async function syncSelectedJourneyTrackProgress(options: {
+  trackId: string;
+  userId?: string | null;
+  roadmapId?: string | null;
+  maxReached?: JourneyPhaseNumber;
+}): Promise<void> {
+  const { trackId, userId, roadmapId, maxReached } = options;
+  const normalizedUserId = normalizeTrackKey(userId);
+  if (!normalizedUserId) {
+    persistSelectedJourneyTrackId(trackId, userId);
+    return;
+  }
+
+  const localState = readJourneyPhaseState(trackId, normalizedUserId);
+  const hadLocalState = hasJourneyPhaseState(trackId, normalizedUserId);
+  const nextMaxReached = maxReached
+    ? normalizeJourneyPhaseNumber(Math.max(localState.maxReached, maxReached))
+    : localState.maxReached;
+
+  persistSelectedJourneyTrackId(trackId, normalizedUserId);
+  if (hadLocalState || localState.hasStarted) {
+    persistJourneyPhaseState(trackId, {
+      maxReached: nextMaxReached,
+      hasStarted: localState.hasStarted,
+    }, normalizedUserId);
+  }
+
+  const response = await journeyService.upsertTrackProgress(normalizedUserId, trackId, {
+    roadmap_id: roadmapId ?? null,
+    current_phase: nextMaxReached,
+    max_reached_phase: nextMaxReached,
+    has_started: localState.hasStarted,
+    is_selected: true,
+  });
+
+  if (!response.success || !response.data) {
+    return;
+  }
+
+  invalidateJourneyProgressCache(normalizedUserId);
+  persistJourneyPhaseState(trackId, {
+    maxReached: normalizeJourneyPhaseNumber(response.data.max_reached_phase),
+    hasStarted: Boolean(response.data.has_started),
+  }, normalizedUserId);
+}
+
+export async function visitJourneyPhase(
   trackId: string,
   phase: JourneyPhaseNumber,
   userId?: string | null,
-): JourneyPhaseState {
+  roadmapId?: string | null,
+): Promise<JourneyPhaseState> {
   const currentState = readJourneyPhaseState(trackId, userId);
 
   const nextMaxReached: JourneyPhaseNumber = Math.max(
@@ -331,11 +684,35 @@ export function visitJourneyPhase(
     phase
   ) as JourneyPhaseNumber;
 
-  return persistJourneyPhaseState(
+  const nextState = persistJourneyPhaseState(
     trackId,
-    { maxReached: nextMaxReached },
+    { maxReached: nextMaxReached, hasStarted: true },
     userId
   );
+
+  const normalizedUserId = normalizeTrackKey(userId);
+  if (!normalizedUserId) {
+    return nextState;
+  }
+
+  const response = await journeyService.upsertTrackProgress(normalizedUserId, trackId, {
+    roadmap_id: roadmapId ?? null,
+    current_phase: phase,
+    max_reached_phase: nextMaxReached,
+    has_started: true,
+    is_selected: true,
+    last_visited_at: new Date().toISOString(),
+  });
+
+  if (!response.success || !response.data) {
+    return nextState;
+  }
+
+  invalidateJourneyProgressCache(normalizedUserId);
+  return persistJourneyPhaseState(trackId, {
+    maxReached: normalizeJourneyPhaseNumber(response.data.max_reached_phase),
+    hasStarted: Boolean(response.data.has_started),
+  }, normalizedUserId);
 }
 
 function toTimestamp(value?: string | null): number {
@@ -514,6 +891,57 @@ function normalizeTrackCards(
   return order
     .map((trackId) => byTrackId.get(trackId))
     .filter((item): item is JourneyTrackCard => Boolean(item));
+}
+
+function mergeJourneyProgressTracks(options: {
+  tracks: JourneyTrackCard[];
+  journeyProgress: JourneyTrackProgress[];
+  roadmaps: RoadmapListItem[];
+  careerTracks: Array<{ id: string; name: string; description?: string | null }>;
+}): JourneyTrackCard[] {
+  const { tracks, journeyProgress, roadmaps, careerTracks } = options;
+  const byTrackId = new Map(tracks.map((track) => [normalizeTrackKey(track.id), track] as const));
+  const roadmapsById = new Map(roadmaps.map((roadmap) => [roadmap.id, roadmap] as const));
+  const careerTracksById = new Map(careerTracks.map((track) => [track.id, track] as const));
+
+  for (const progress of journeyProgress) {
+    const trackId = normalizeTrackKey(progress.track_id);
+    if (!trackId) {
+      continue;
+    }
+
+    const roadmapId = normalizeTrackKey(progress.roadmap_id) || null;
+    const existing = byTrackId.get(trackId);
+    if (existing) {
+      if (!existing.roadmapId && roadmapId) {
+        byTrackId.set(trackId, {
+          ...existing,
+          roadmapId,
+        });
+      }
+      continue;
+    }
+
+    const matchedCareerTrack = careerTracksById.get(trackId);
+    const matchedRoadmap = roadmapId ? roadmapsById.get(roadmapId) : null;
+
+    byTrackId.set(trackId, {
+      id: trackId,
+      title:
+        matchedCareerTrack?.name ||
+        matchedRoadmap?.title ||
+        "Career Track",
+      description:
+        matchedCareerTrack?.description ||
+        matchedRoadmap?.description ||
+        "Continue your journey where you left off.",
+      roadmapId,
+      score: null,
+      source: "recommendation",
+    });
+  }
+
+  return Array.from(byTrackId.values());
 }
 
 async function getLatestCareerRecommendations(userId: string): Promise<APICareerTrackScore[]> {
@@ -706,8 +1134,16 @@ export async function loadJourneyTrackCards(
     roadmapService.getUserRoadmapBookmarks(userId),
     roadmapService.listRoadmaps(),
     getLatestCareerRecommendations(userId),
+    journeyService.getUserJourneyProgress(userId),
+    careerService.listTracks(),
   ])
-    .then(([roadmapBookmarksResponse, roadmapListResponse, recommendations]) => {
+    .then(([
+      roadmapBookmarksResponse,
+      roadmapListResponse,
+      recommendations,
+      journeyProgressResponse,
+      careerTracksResponse,
+    ]) => {
       const roadmaps = roadmapListResponse.success
         ? normalizeRoadmapListPayload(roadmapListResponse.data)
         : [];
@@ -726,7 +1162,16 @@ export async function loadJourneyTrackCards(
         });
       }
 
-      const tracks = normalizeTrackCards(bookmarks, recommendations, roadmaps);
+      const tracks = mergeJourneyProgressTracks({
+        tracks: normalizeTrackCards(bookmarks, recommendations, roadmaps),
+        journeyProgress: journeyProgressResponse.success && journeyProgressResponse.data?.tracks
+          ? journeyProgressResponse.data.tracks
+          : [],
+        roadmaps,
+        careerTracks: careerTracksResponse.success && careerTracksResponse.data
+          ? careerTracksResponse.data
+          : [],
+      });
       journeyTrackCardsCache.set(cacheKey, {
         data: tracks,
         expiresAt: Date.now() + JOURNEY_TRACK_CARDS_CACHE_TTL_MS,
