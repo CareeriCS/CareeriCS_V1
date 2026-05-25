@@ -8,10 +8,12 @@ import { useAuth } from "@/providers/auth-provider";
 import {
   buildJourneyFirstPhaseHref,
   buildJourneyPhaseHref,
+  getJourneyPhaseStateFromSnapshot,
+  loadJourneyProgressSnapshot,
   loadJourneyTrackCards,
   persistSelectedJourneyTrackId,
-  readJourneyPhaseState,
   readSelectedJourneyTrackId,
+  syncSelectedJourneyTrackProgress,
 } from "@/lib/journey";
 
 export default function JourneyPage() {
@@ -44,7 +46,10 @@ export default function JourneyPage() {
       setError(null);
 
       try {
-        const tracks = await loadJourneyTrackCards(userId);
+        const [tracks, journeySnapshot] = await Promise.all([
+          loadJourneyTrackCards(userId),
+          loadJourneyProgressSnapshot(userId),
+        ]);
 
         if (!alive) {
           return;
@@ -61,12 +66,26 @@ export default function JourneyPage() {
           tracks.find((track) => track.id === persistedTrackId) || tracks[0];
 
         persistSelectedJourneyTrackId(activeTrack.id, userId);
+        void syncSelectedJourneyTrackProgress({
+          trackId: activeTrack.id,
+          userId,
+          roadmapId: activeTrack.roadmapId,
+          maxReached: getJourneyPhaseStateFromSnapshot(
+            journeySnapshot,
+            activeTrack.id,
+            userId,
+          ).maxReached,
+        });
 
         if (!alive) {
           return;
         }
 
-        const phaseState = readJourneyPhaseState(activeTrack.id, userId);
+        const phaseState = getJourneyPhaseStateFromSnapshot(
+          journeySnapshot,
+          activeTrack.id,
+          userId,
+        );
         router.replace(buildJourneyPhaseHref(phaseState.maxReached, activeTrack.id));
       } catch {
         if (!alive) {
