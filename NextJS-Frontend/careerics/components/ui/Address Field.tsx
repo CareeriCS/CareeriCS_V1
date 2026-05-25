@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Country, City } from "country-state-city";
 
 interface AddressFieldProps {
@@ -8,6 +8,10 @@ interface AddressFieldProps {
   isMargin?: boolean;
   layout?: "column" | "row";
   disabled?: boolean;
+  country?: string;
+  city?: string;
+  onCountryChange?: (country: string, countryCode: string) => void;
+  onCityChange?: (city: string) => void;
 }
 
 export default function AddressField({
@@ -15,22 +19,70 @@ export default function AddressField({
   isMargin = true,
   layout = "column",
   disabled = false,
+  country,
+  city,
+  onCountryChange,
+  onCityChange,
 }: AddressFieldProps) {
   const isRow = layout === "row";
 
   const countries = useMemo(() => Country.getAllCountries(), []);
 
-  const [countryCode, setCountryCode] = useState<string>("");
-  const [city, setCity] = useState<string>("");
+  const [internalCountryCode, setInternalCountryCode] = useState<string>("");
+  const [internalCity, setInternalCity] = useState<string>("");
+
+  const resolvedCountryCode = useMemo(() => {
+    if (country === undefined) {
+      return internalCountryCode;
+    }
+
+    const normalizedCountry = country.trim().toLowerCase();
+    if (!normalizedCountry) {
+      return "";
+    }
+
+    const byIsoCode = countries.find(
+      (entry) => entry.isoCode.toLowerCase() === normalizedCountry,
+    );
+    if (byIsoCode) {
+      return byIsoCode.isoCode;
+    }
+
+    const byName = countries.find(
+      (entry) => entry.name.trim().toLowerCase() === normalizedCountry,
+    );
+    return byName?.isoCode ?? "";
+  }, [countries, country, internalCountryCode]);
+
+  const resolvedCity = city === undefined ? internalCity : city;
 
   const cities = useMemo(() => {
-    if (!countryCode) return [];
-    return City.getCitiesOfCountry(countryCode) || [];
-  }, [countryCode]);
+    if (!resolvedCountryCode) return [];
+    return City.getCitiesOfCountry(resolvedCountryCode) || [];
+  }, [resolvedCountryCode]);
 
-  useEffect(() => {
-    setCity("");
-  }, [countryCode]);
+  const handleCountryChange = (value: string) => {
+    if (country === undefined) {
+      setInternalCountryCode(value);
+    }
+    if (city === undefined) {
+      setInternalCity("");
+    }
+
+    if (!onCountryChange) {
+      return;
+    }
+
+    const selectedCountry = countries.find((entry) => entry.isoCode === value);
+    onCountryChange(selectedCountry?.name ?? "", value);
+  };
+
+  const handleCityChange = (value: string) => {
+    if (city === undefined) {
+      setInternalCity(value);
+    }
+    onCityChange?.(value);
+  };
 
   return (
     <div
@@ -74,9 +126,9 @@ export default function AddressField({
         >
           {/* Country */}
           <select
-            value={countryCode}
+            value={resolvedCountryCode}
             disabled={disabled}
-            onChange={(e) => setCountryCode(e.target.value)}
+            onChange={(e) => handleCountryChange(e.target.value)}
             style={{
               flex: 1,
               width: "100%",
@@ -101,9 +153,9 @@ export default function AddressField({
 
           {/* City */}
           <select
-            value={city}
-            disabled={!countryCode || disabled}
-            onChange={(e) => setCity(e.target.value)}
+            value={resolvedCity}
+            disabled={!resolvedCountryCode || disabled}
+            onChange={(e) => handleCityChange(e.target.value)}
             style={{
               flex: 1,
               width: "100%",
@@ -115,7 +167,7 @@ export default function AddressField({
               backgroundColor: "white",
               outline: "none",
               minWidth: 0,
-              cursor: !countryCode || disabled ? "not-allowed" : "pointer",
+              cursor: !resolvedCountryCode || disabled ? "not-allowed" : "pointer",
             }}
           >
             <option value="">City</option>
