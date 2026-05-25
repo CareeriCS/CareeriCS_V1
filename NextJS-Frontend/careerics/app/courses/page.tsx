@@ -14,6 +14,7 @@ import {
   completeCourse,
   enrollCourse,
   loadCourseProgress,
+  syncCourseProgressFromServer,
   type CourseProgressState,
 } from "@/lib/course-progress";
 import type { RoadmapCoursesRead } from "@/types";
@@ -61,6 +62,7 @@ export default function CourseLibraryPage() {
   const [courseProgress, setCourseProgress] = useState<CourseProgressState>({ current: [], completed: [] });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [courseProgressError, setCourseProgressError] = useState<string | null>(null);
   const [activePopupMode, setActivePopupMode] = useState<"enroll" | "complete" | null>(null);
   const [activePopupCourse, setActivePopupCourse] = useState<
     RoadmapCoursesRead["sections"][number]["courses"][number] | null
@@ -104,20 +106,33 @@ export default function CourseLibraryPage() {
   }, [roadmapId]);
 
   useEffect(() => {
-    const syncCourseProgress = () => {
+    let alive = true;
+
+    const syncCourseProgress = async () => {
+      if (user?.id) {
+        const synced = await syncCourseProgressFromServer(user.id);
+        if (!alive) {
+          return;
+        }
+
+        setCourseProgress(synced);
+        return;
+      }
+
       setCourseProgress(loadCourseProgress(user?.id));
     };
 
-    syncCourseProgress();
+    void syncCourseProgress();
 
     const handleCourseProgressUpdated = () => {
-      syncCourseProgress();
+      setCourseProgress(loadCourseProgress(user?.id));
     };
 
     window.addEventListener(COURSE_PROGRESS_UPDATED_EVENT, handleCourseProgressUpdated as EventListener);
     window.addEventListener("storage", handleCourseProgressUpdated);
 
     return () => {
+      alive = false;
       window.removeEventListener(
         COURSE_PROGRESS_UPDATED_EVENT,
         handleCourseProgressUpdated as EventListener,
@@ -182,34 +197,52 @@ export default function CourseLibraryPage() {
     setActivePopupMode("enroll");
   };
 
-  const confirmEnrollment = () => {
+  const confirmEnrollment = async () => {
     if (!activePopupCourse) {
       return;
     }
 
-    const nextProgress = enrollCourse(
-      {
-        id: activePopupCourse.id,
-        title: activePopupCourse.title,
-        provider: activePopupCourse.provider,
-        url: activePopupCourse.url,
-      },
-      user?.id,
-    );
+    try {
+      setCourseProgressError(null);
+      const nextProgress = await enrollCourse(
+        {
+          id: activePopupCourse.id,
+          title: activePopupCourse.title,
+          provider: activePopupCourse.provider,
+          url: activePopupCourse.url,
+        },
+        user?.id,
+      );
 
-    setCourseProgress(nextProgress);
-    setActivePopupMode("complete");
+      setCourseProgress(nextProgress);
+      setActivePopupMode("complete");
+    } catch (syncError) {
+      setCourseProgressError(
+        syncError instanceof Error
+          ? syncError.message
+          : "Unable to sync course progress right now.",
+      );
+    }
   };
 
-  const confirmCompletion = () => {
+  const confirmCompletion = async () => {
     if (!activePopupCourse) {
       return;
     }
 
-    const nextProgress = completeCourse(activePopupCourse.id, user?.id);
-    setCourseProgress(nextProgress);
-    setActivePopupCourse(null);
-    setActivePopupMode(null);
+    try {
+      setCourseProgressError(null);
+      const nextProgress = await completeCourse(activePopupCourse.id, user?.id);
+      setCourseProgress(nextProgress);
+      setActivePopupCourse(null);
+      setActivePopupMode(null);
+    } catch (syncError) {
+      setCourseProgressError(
+        syncError instanceof Error
+          ? syncError.message
+          : "Unable to sync course progress right now.",
+      );
+    }
   };
 
   const handleContinueCourse = () => {
@@ -257,6 +290,17 @@ export default function CourseLibraryPage() {
         fontFamily: "var(--font-nova-square)",
       }}
     >
+      {courseProgressError ? (
+        <div
+          style={{
+            color: "#FFD3D3",
+            fontFamily: "var(--font-jura)",
+            marginBottom: "12px",
+          }}
+        >
+          {courseProgressError}
+        </div>
+      ) : null}
       <div
         style={{
           display: "flex",
