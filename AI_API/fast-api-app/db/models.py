@@ -36,6 +36,7 @@ class User(Base):
     full_name = Column(String, nullable=False)
     professional_title = Column(String)
     email = Column(String)
+    secondary_email = Column(String)
     phone = Column(String)
     city = Column(String)
     country = Column(String)
@@ -63,6 +64,7 @@ class User(Base):
     reports = relationship("Report", back_populates="user",cascade="all, delete-orphan")
     assessment = relationship("RoadmapAssessmentResult", back_populates="user", cascade="all, delete-orphan")
     bookmarks = relationship("UserRoadmapBookmark", back_populates="user", cascade="all, delete-orphan")
+    journey_progress = relationship("UserJourneyProgress", back_populates="user", cascade="all, delete-orphan")
     career_sessions = relationship("CareerSession", back_populates="user", cascade="all, delete-orphan")
 
 
@@ -430,6 +432,7 @@ class Roadmap(Base):
     section = relationship("RoadmapSection", back_populates="roadmap", cascade="all, delete-orphan")
     assessment = relationship("RoadmapAssessmentResult", back_populates="roadmap")
     bookmarks = relationship("UserRoadmapBookmark", back_populates="roadmap", cascade="all, delete-orphan")
+    journey_progress = relationship("UserJourneyProgress", back_populates="roadmap", cascade="all, delete-orphan")
 
 
 # =========================
@@ -571,6 +574,41 @@ class RoadmapAssessmentResult(Base):
             "step_id",
             unique=True,
         ),
+    )
+
+
+# =========================
+# USER JOURNEY PROGRESS
+# =========================
+class UserJourneyProgress(Base):
+    __tablename__ = "user_journey_progress"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    track_id = Column(UUID(as_uuid=True), nullable=False)
+    roadmap_id = Column(UUID(as_uuid=True), ForeignKey("roadmaps.id", ondelete="SET NULL"), nullable=True)
+    current_phase = Column(Integer, nullable=False, default=1)
+    max_reached_phase = Column(Integer, nullable=False, default=1)
+    has_started = Column(Boolean, nullable=False, default=False)
+    is_selected = Column(Boolean, nullable=False, default=False)
+    last_visited_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    user = relationship("User", back_populates="journey_progress")
+    roadmap = relationship("Roadmap", back_populates="journey_progress")
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "track_id", name="uq_user_journey_progress_user_track"),
+        CheckConstraint("current_phase >= 1 AND current_phase <= 5", name="ck_user_journey_progress_current_phase"),
+        CheckConstraint(
+            "max_reached_phase >= 1 AND max_reached_phase <= 5",
+            name="ck_user_journey_progress_max_reached_phase",
+        ),
+        Index("ix_user_journey_progress_user_id", "user_id"),
+        Index("ix_user_journey_progress_track_id", "track_id"),
+        Index("ix_user_journey_progress_roadmap_id", "roadmap_id"),
+        Index("ix_user_journey_progress_user_selected", "user_id", "is_selected"),
     )
 
 

@@ -10,8 +10,10 @@ from routers.skill_assessment.sa import routers as skill_assessment_routers
 from routers.reports.report_router import router as report_router
 from routers.roadmaps.roadmap import routers as roadmap_routers
 from routers.career.career import routers as career_quiz_routers
+from routers.journey.journey import routers as journey_routers
 from routers.job.job import router as job_router
 from routers.course import router as course_router
+from routers.profile import router as profile_router
 
 app = FastAPI()
 
@@ -48,6 +50,9 @@ for router in skill_assessment_routers:
 for router in roadmap_routers:
     app.include_router(router)
 
+for router in journey_routers:
+    app.include_router(router)
+
 app.include_router(report_router)
 
 for router in career_quiz_routers:
@@ -55,3 +60,4 @@ for router in career_quiz_routers:
 
 app.include_router(job_router)
 app.include_router(course_router)
+app.include_router(profile_router)

@@ -256,6 +256,7 @@ class UserSchema(BaseModel):
     full_name: str
     professional_title: Optional[str] = None
     email: Optional[EmailStr] = None
+    secondary_email: Optional[EmailStr] = None
     phone: Optional[str] = None
     city: Optional[str] = None
     country: Optional[str] = None
@@ -263,6 +264,7 @@ class UserSchema(BaseModel):
     github: Optional[str] = None
     portfolio: Optional[str] = None
     summary: Optional[str] = None
+    username: Optional[str] = None
 
     skills: List[UserSkillWithSkillRead] = Field(default_factory=list)
     experiences: List[ExperienceSchema] = Field(default_factory=list)
@@ -650,6 +652,68 @@ class CurrentRoadmapLearningSchema(BaseModel):
     progress_percent: int
 
 
+class JourneyTrackProgressReadSchema(BaseModel):
+    track_id: UUID
+    roadmap_id: Optional[UUID] = None
+    current_phase: int
+    max_reached_phase: int
+    has_started: bool = False
+    is_selected: bool
+    last_visited_at: datetime
+    created_at: datetime
+    updated_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+class UserProfileReadSchema(BaseModel):
+    id: UUID
+    full_name: str
+    professional_title: Optional[str] = None
+    email: Optional[EmailStr] = None
+    secondary_email: Optional[EmailStr] = None
+    phone: Optional[str] = None
+    city: Optional[str] = None
+    country: Optional[str] = None
+    linkedin: Optional[str] = None
+    portfolio: Optional[str] = None
+    github: Optional[str] = None
+    username: Optional[str] = None
+    summary: Optional[str] = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class UserProfileUpsertSchema(BaseModel):
+    full_name: Optional[str] = None
+    professional_title: Optional[str] = None
+    email: Optional[EmailStr] = None
+    secondary_email: Optional[EmailStr] = None
+    phone: Optional[str] = None
+    city: Optional[str] = None
+    country: Optional[str] = None
+    linkedin: Optional[str] = None
+    portfolio: Optional[str] = None
+    github: Optional[str] = None
+    username: Optional[str] = None
+    summary: Optional[str] = None
+    auth_display_name: Optional[str] = None
+
+
+class JourneyTrackProgressUpsertSchema(BaseModel):
+    roadmap_id: Optional[UUID] = None
+    current_phase: int = Field(ge=1, le=5)
+    max_reached_phase: int = Field(ge=1, le=5)
+    has_started: bool = False
+    is_selected: bool = False
+    last_visited_at: Optional[datetime] = None
+
+
+class JourneyTrackProgressListSchema(BaseModel):
+    user_id: UUID
+    tracks: List[JourneyTrackProgressReadSchema] = Field(default_factory=list)
+
+
 # =====================================================
 # CAREER QUIZ SCHEMAS
 # =====================================================
@@ -910,6 +974,24 @@ class CourseProgressResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     model_config = ConfigDict(from_attributes=True)
+
+
+class CourseProgressItemRead(BaseModel):
+    course_id: UUID
+    status: CourseStatus
+    title: str
+    provider: Optional[str] = None
+    url: str
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    saved_at: Optional[datetime] = None
+    updated_at: datetime
+
+
+class UserCourseProgressListResponse(BaseModel):
+    user_id: UUID
+    current: List[CourseProgressItemRead] = Field(default_factory=list)
+    completed: List[CourseProgressItemRead] = Field(default_factory=list)
 
 
 class BulkCourseImportResult(BaseModel):

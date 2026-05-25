@@ -5,11 +5,18 @@ from typing import List
 from uuid import UUID
 
 from dependencies import get_db
-from schemas import BulkCourseImportResult, CourseProgressResponse, CourseResponse, CourseStatusUpdateRequest
+from schemas import (
+    BulkCourseImportResult,
+    CourseProgressResponse,
+    CourseResponse,
+    CourseStatusUpdateRequest,
+    UserCourseProgressListResponse,
+)
 from services.course_service import (
     bulk_import_courses as bulk_import_courses_service,
     fetch_course_by_id,
     get_courses_by_category,
+    get_user_course_progress,
     get_courses_by_skill,
     get_courses_grouped,
     update_course_status,
@@ -96,6 +103,19 @@ def update_status_endpoint(
         user_uuid = _parse_user_uuid(user_id)
         progress = update_course_status(db, user_uuid, course_id, payload.status)
         return progress
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/progress/{user_id}", response_model=UserCourseProgressListResponse)
+def get_user_course_progress_endpoint(
+    user_id: UUID,
+    db: Session = Depends(get_db),
+):
+    try:
+        return get_user_course_progress(db, user_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

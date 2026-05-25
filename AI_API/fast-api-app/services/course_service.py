@@ -7,6 +7,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
 from db.models import Course, CourseUserProgress, User
+from schemas import CourseProgressItemRead, UserCourseProgressListResponse
 
 
 VALID_COURSE_STATUSES = {"saved", "enrolled", "completed"}
@@ -183,6 +184,47 @@ def update_course_status(db: Session, user_id: UUID, course_id: UUID, status: st
         raise ValueError("Failed to fetch updated course progress")
 
     return progress
+
+
+def get_user_course_progress(db: Session, user_id: UUID) -> UserCourseProgressListResponse:
+    user_exists = db.query(User.id).filter(User.id == user_id).first()
+    if not user_exists:
+        raise ValueError(f"User with ID {user_id} not found")
+
+    progress_rows = (
+        db.query(CourseUserProgress, Course)
+        .join(Course, Course.id == CourseUserProgress.course_id)
+        .filter(CourseUserProgress.user_id == user_id)
+        .order_by(CourseUserProgress.updated_at.desc(), Course.title.asc())
+        .all()
+    )
+
+    current: List[CourseProgressItemRead] = []
+    completed: List[CourseProgressItemRead] = []
+
+    for progress, course in progress_rows:
+        item = CourseProgressItemRead(
+            course_id=progress.course_id,
+            status=progress.status,
+            title=course.title,
+            provider=course.platform,
+            url=course.url,
+            started_at=progress.started_at,
+            completed_at=progress.completed_at,
+            saved_at=progress.saved_at,
+            updated_at=progress.updated_at,
+        )
+
+        if progress.status == "completed":
+            completed.append(item)
+        else:
+            current.append(item)
+
+    return UserCourseProgressListResponse(
+        user_id=user_id,
+        current=current,
+        completed=completed,
+    )
 
 
 def bulk_import_courses(db: Session, courses_data: List[dict]) -> Dict[str, Any]:
