@@ -16,6 +16,7 @@ import {
 import {
   COURSE_PROGRESS_UPDATED_EVENT,
   loadCourseProgress,
+  syncCourseProgressFromServer,
 } from "@/lib/course-progress";
 import { UNIFIED_BOOKMARKS_UPDATED_EVENT } from "@/lib/unified-bookmarks";
 import { removeTrackBookmarksFromUnifiedList } from "@/lib/unified-bookmark-actions";
@@ -29,14 +30,17 @@ import { buildJobDetailsHref, mapApiJobToUiModel } from "@/lib/jobs";
 import {
   JOURNEY_PHASE_STATE_UPDATED_EVENT,
   JOURNEY_PHASES,
+  type JourneyProgressSnapshot,
   type JourneyTrackCard,
   buildJourneyPhaseHref,
-  hasJourneyPhaseState,
+  getJourneyPhaseStateFromSnapshot,
+  invalidateJourneyProgressCache,
   invalidateJourneyTrackCardsCache,
+  loadJourneyProgressSnapshot,
   loadJourneyTrackCards,
   persistSelectedJourneyTrackId,
-  readJourneyPhaseState,
   readSelectedJourneyTrackId,
+  syncSelectedJourneyTrackProgress,
   toProgressBucket,
 } from "@/lib/journey";
 import { useResponsive } from "@/hooks/useResponsive";
@@ -126,10 +130,14 @@ export default function HomePage() {
   const [bookmarkActionError, setBookmarkActionError] = useState<string | null>(null);
   const [activityRefreshNonce, setActivityRefreshNonce] = useState(0);
   const [bookmarkRefreshNonce, setBookmarkRefreshNonce] = useState(0);
-  const [, setPhaseStateRefreshNonce] = useState(0);
+  const [phaseStateRefreshNonce, setPhaseStateRefreshNonce] = useState(0);
   const [isLoadingActivities, setIsLoadingActivities] = useState(true);
 
   const [journeyTracks, setJourneyTracks] = useState<JourneyTrackCard[]>([]);
+  const [journeyProgressSnapshot, setJourneyProgressSnapshot] = useState<JourneyProgressSnapshot>({
+    byTrackId: new Map(),
+    selectedTrackId: null,
+  });
   const [isLoadingJourneyTracks, setIsLoadingJourneyTracks] = useState(false);
   const [journeyError, setJourneyError] = useState<string | null>(null);
 
@@ -162,6 +170,7 @@ export default function HomePage() {
 
   useEffect(() => {
     const handleJourneyPhaseStateUpdated = () => {
+      invalidateJourneyProgressCache(userId);
       setPhaseStateRefreshNonce((previous) => previous + 1);
     };
 
@@ -231,6 +240,8 @@ export default function HomePage() {
       }
 
       try {
+        await syncCourseProgressFromServer(userId);
+
         const [
           assessmentSessionsResponse,
           interviewSessionsResponse,
@@ -400,6 +411,10 @@ export default function HomePage() {
 
       if (!userId) {
         setJourneyTracks([]);
+        setJourneyProgressSnapshot({
+          byTrackId: new Map(),
+          selectedTrackId: null,
+        });
         setSelectedTrackId(null);
         setJourneyError(null);
         setIsLoadingJourneyTracks(false);
@@ -410,16 +425,20 @@ export default function HomePage() {
       setJourneyError(null);
 
       try {
-        const tracks = await loadJourneyTrackCards(userId);
+        const [tracks, snapshot] = await Promise.all([
+          loadJourneyTrackCards(userId),
+          loadJourneyProgressSnapshot(userId),
+        ]);
 
         if (!alive) {
           return;
         }
 
         setJourneyTracks(tracks);
+        setJourneyProgressSnapshot(snapshot);
         const bookmarkedTracks = tracks.filter((track) => track.source === "bookmark");
 
-        const persistedTrackId = readSelectedJourneyTrackId(userId);
+        const persistedTrackId = snapshot.selectedTrackId || readSelectedJourneyTrackId(userId);
         const selectedFromStorage = persistedTrackId
           ? bookmarkedTracks.find((track) => track.id === persistedTrackId) || null
           : null;
@@ -435,6 +454,10 @@ export default function HomePage() {
         }
 
         setJourneyTracks([]);
+        setJourneyProgressSnapshot({
+          byTrackId: new Map(),
+          selectedTrackId: null,
+        });
         setSelectedTrackId(null);
         setJourneyError("Unable to load your journey tracks right now.");
         setIsLoadingJourneyTracks(false);
@@ -446,7 +469,7 @@ export default function HomePage() {
     return () => {
       alive = false;
     };
-  }, [bookmarkRefreshNonce, isAuthLoading, userId]);
+  }, [bookmarkRefreshNonce, isAuthLoading, phaseStateRefreshNonce, userId]);
 
   const recentActivities = useMemo<RecentActivityItem[]>(() => {
     if (!projectActivities.length) {
@@ -476,11 +499,12 @@ export default function HomePage() {
   }, [bookmarkedJourneyTracks, selectedTrackId]);
 
   const activePhaseState = activeTrack?.id
-    ? readJourneyPhaseState(activeTrack.id, userId)
-    : { maxReached: 1 as const };
-  const hasJourneyProgressData = activeTrack?.id
-    ? hasJourneyPhaseState(activeTrack.id, userId)
-    : false;
+    ? getJourneyPhaseStateFromSnapshot(
+        journeyProgressSnapshot,
+        activeTrack.id,
+        userId,
+      )
+    : { maxReached: 1 as const, hasStarted: false };
 
   const dashboardData = useMemo(() => {
     if (!activeTrack) {
@@ -495,7 +519,7 @@ export default function HomePage() {
 
     const currentPhase = activePhaseState.maxReached;
     const nextPhase = currentPhase >= 5 ? 5 : currentPhase + 1;
-    const progressValue = hasJourneyProgressData
+    const progressValue = activePhaseState.hasStarted
       ? currentPhase <= 1
         ? 10
         : toProgressBucket(((currentPhase - 1) / 4) * 100)
@@ -508,20 +532,50 @@ export default function HomePage() {
       nextPhase,
       nextPhaseDesc: JOURNEY_PHASES[nextPhase - 1]?.description || "No next phase description available.",
     };
-  }, [activePhaseState.maxReached, activeTrack, hasJourneyProgressData, recentActivities]);
+  }, [activePhaseState.hasStarted, activePhaseState.maxReached, activeTrack, recentActivities]);
 
   const handleSelectTrack = (trackId: string) => {
     setBookmarkActionError(null);
     setSelectedTrackId(trackId);
     persistSelectedJourneyTrackId(trackId, userId);
+
+    const selectedTrack = bookmarkedJourneyTracks.find((track) => track.id === trackId);
+    if (!selectedTrack) {
+      return;
+    }
+
+    void syncSelectedJourneyTrackProgress({
+      trackId,
+      userId,
+      roadmapId: selectedTrack.roadmapId,
+      maxReached: getJourneyPhaseStateFromSnapshot(
+        journeyProgressSnapshot,
+        trackId,
+        userId,
+      ).maxReached,
+    });
   };
 
   const openTrackJourney = (track: JourneyTrackCard) => {
     setBookmarkActionError(null);
     persistSelectedJourneyTrackId(track.id, userId);
     setSelectedTrackId(track.id);
+    void syncSelectedJourneyTrackProgress({
+      trackId: track.id,
+      userId,
+      roadmapId: track.roadmapId,
+      maxReached: getJourneyPhaseStateFromSnapshot(
+        journeyProgressSnapshot,
+        track.id,
+        userId,
+      ).maxReached,
+    });
 
-    const targetPhase = readJourneyPhaseState(track.id, userId).maxReached;
+    const targetPhase = getJourneyPhaseStateFromSnapshot(
+      journeyProgressSnapshot,
+      track.id,
+      userId,
+    ).maxReached;
     router.push(buildJourneyPhaseHref(targetPhase, track.id));
   };
 
@@ -556,27 +610,25 @@ export default function HomePage() {
     if (selectedTrackId === track.id) {
       setSelectedTrackId(fallbackTrack?.id || null);
       persistSelectedJourneyTrackId(fallbackTrack?.id || null, userId);
+
+      if (fallbackTrack) {
+        void syncSelectedJourneyTrackProgress({
+          trackId: fallbackTrack.id,
+          userId,
+          roadmapId: fallbackTrack.roadmapId,
+          maxReached: getJourneyPhaseStateFromSnapshot(
+            journeyProgressSnapshot,
+            fallbackTrack.id,
+            userId,
+          ).maxReached,
+        });
+      }
     }
   };
 
   const showJourneyPlaceholder = !isLoadingJourneyTracks && !bookmarkedJourneyTracks.length;
   const showSavedCareerPlaceholder = showJourneyPlaceholder && journeyTracks.length > 0;
   const isLoadingJourneyWidgets = isAuthLoading || isLoadingJourneyTracks;
-
-  const LARGE = 1024;
-  const MEDIUM = 640;
-
-  const [width, setWidth] = useState(0);
-
-  useEffect(() => {
-    const handleResize = () => setWidth(window.innerWidth);
-
-    handleResize();
-
-    window.addEventListener("resize", handleResize);
-
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
 
   const {
     isLarge,
