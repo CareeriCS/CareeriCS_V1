@@ -46,6 +46,7 @@ export interface AuthService {
     session: import("@supabase/supabase-js").Session | null;
   }>;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updatePassword: (newPassword: string) => Promise<void>;
   signInWithGoogle: (callbackUrl?: string, options?: GoogleSignInOptions) => Promise<void>;
@@ -171,6 +172,29 @@ export const authService: AuthService = {
   async signOut() {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
+  },
+
+  async deleteAccount() {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    const headers: HeadersInit = {};
+    if (session?.access_token) {
+      headers.Authorization = `Bearer ${session.access_token}`;
+    }
+
+    const response = await fetch("/api/auth/delete-account", {
+      method: "POST",
+      headers,
+    });
+
+    if (response.ok) {
+      return;
+    }
+
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload?.detail || "Unable to delete account.");
   },
 
   /**
