@@ -18,6 +18,7 @@ import {
   completeCourse,
   loadCourseProgress,
   retakeCourse as restartCourse,
+  syncCourseProgressFromServer,
   type CourseProgressItem,
 } from "@/lib/course-progress";
 import { useResponsive } from "@/hooks/useResponsive";
@@ -87,6 +88,7 @@ export default function CoursesPage() {
   const [isLoadingRoadmaps, setIsLoadingRoadmaps] = useState(false);
   const [roadmapsError, setRoadmapsError] = useState<string | null>(null);
   const [pendingRetakeCourse, setPendingRetakeCourse] = useState<CourseProgressItem | null>(null);
+  const [courseProgressError, setCourseProgressError] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -120,7 +122,31 @@ export default function CoursesPage() {
   }, []);
 
   useEffect(() => {
-    const syncCourseProgress = () => {
+    let alive = true;
+
+    const syncCourseProgress = async () => {
+      const progress = user?.id
+        ? await syncCourseProgressFromServer(user.id)
+        : loadCourseProgress(user?.id);
+
+      if (!alive) {
+        return;
+      }
+
+      setCurrentCourses(progress.current);
+      setCompletedCourses(progress.completed);
+      setSelectedCourseId((previous) => {
+        if (progress.current.some((course) => course.id === previous)) {
+          return previous;
+        }
+
+        return progress.current[0]?.id || "";
+      });
+    };
+
+    void syncCourseProgress();
+
+    const handleCourseProgressUpdated = () => {
       const progress = loadCourseProgress(user?.id);
 
       setCurrentCourses(progress.current);
@@ -134,16 +160,11 @@ export default function CoursesPage() {
       });
     };
 
-    syncCourseProgress();
-
-    const handleCourseProgressUpdated = () => {
-      syncCourseProgress();
-    };
-
     window.addEventListener(COURSE_PROGRESS_UPDATED_EVENT, handleCourseProgressUpdated as EventListener);
     window.addEventListener("storage", handleCourseProgressUpdated);
 
     return () => {
+      alive = false;
       window.removeEventListener(
         COURSE_PROGRESS_UPDATED_EVENT,
         handleCourseProgressUpdated as EventListener,
@@ -157,16 +178,25 @@ export default function CoursesPage() {
     setPendingCompletionCourse(course);
   };
 
-  const confirmCompletion = () => {
+  const confirmCompletion = async () => {
     if (!pendingCompletionCourse) {
       return;
     }
 
-    const progress = completeCourse(pendingCompletionCourse.id, user?.id);
-    setCurrentCourses(progress.current);
-    setCompletedCourses(progress.completed);
-    setSelectedCourseId(progress.current[0]?.id || "");
-    setPendingCompletionCourse(null);
+    try {
+      setCourseProgressError(null);
+      const progress = await completeCourse(pendingCompletionCourse.id, user?.id);
+      setCurrentCourses(progress.current);
+      setCompletedCourses(progress.completed);
+      setSelectedCourseId(progress.current[0]?.id || "");
+      setPendingCompletionCourse(null);
+    } catch (syncError) {
+      setCourseProgressError(
+        syncError instanceof Error
+          ? syncError.message
+          : "Unable to sync course progress right now.",
+      );
+    }
   };
 
   const handleContinueCurrentCourse = () => {
@@ -177,16 +207,25 @@ export default function CoursesPage() {
     setPendingCompletionCourse(null);
   };
 
-  const confirmRetake = (course: CourseProgressItem) => {
-    const progress = restartCourse(course.id, user?.id);
+  const confirmRetake = async (course: CourseProgressItem) => {
+    try {
+      setCourseProgressError(null);
+      const progress = await restartCourse(course.id, user?.id);
 
-    setCurrentCourses(progress.current);
-    setCompletedCourses(progress.completed);
-    setSelectedCourseId(course.id);
-    setPendingRetakeCourse(null);
+      setCurrentCourses(progress.current);
+      setCompletedCourses(progress.completed);
+      setSelectedCourseId(course.id);
+      setPendingRetakeCourse(null);
 
-    if (course.url) {
-      window.open(course.url, "_blank", "noopener,noreferrer");
+      if (course.url) {
+        window.open(course.url, "_blank", "noopener,noreferrer");
+      }
+    } catch (syncError) {
+      setCourseProgressError(
+        syncError instanceof Error
+          ? syncError.message
+          : "Unable to sync course progress right now.",
+      );
     }
   };
 
@@ -207,6 +246,18 @@ export default function CoursesPage() {
         padding: "var(--space-lg)",
       }}
     >
+      {courseProgressError ? (
+        <div
+          style={{
+            gridColumn: "1 / -1",
+            color: "#FFD3D3",
+            fontFamily: "var(--font-jura)",
+            marginBottom: "-4px",
+          }}
+        >
+          {courseProgressError}
+        </div>
+      ) : null}
       <InlineContainer
         Title="Courses you are currently taking"
         style={{ gridArea: isSmall ? "1 / 1 / 2 / 2" : isMedium ? "1 / 1 / 2 / 3" : "1 /1 /3 /5", width: "100%" }}
