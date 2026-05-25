@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import ChoiceCard from "@/components/ui/choice-card";
 import CVPop from "@/components/ui/cvPopup";
 import { Button } from "@/components/ui/button";
-import { CardsContainer } from "@/components/ui/cards-container";
 import { ActivityCard } from "@/components/ui/activity-card";
 import JourneyTree from "@/components/ui/journey-tree";
 import { useJourneyPhase } from "@/hooks/use-journey-phase";
@@ -14,6 +13,7 @@ import { buildJourneyPhaseHref } from "@/lib/journey";
 import { useAuth } from "@/providers/auth-provider";
 import { cvService, reportsService } from "@/services";
 import type { APIReport } from "@/types";
+import { StackContainer } from "@/components/ui/containers/stack";
 
 function formatReportDate(dateIso: string): string {
   const parsedDate = new Date(dateIso);
@@ -272,11 +272,9 @@ export default function JourneyDocumentItPage() {
               style={{ gridArea: "1 / 3 / 5 / 5", backgroundColor: "var(--medium-blue)" }}
             />
 
-            <CardsContainer
+            <StackContainer
               Title="Old Versions"
               style={{ gridArea: "1 / 5 / 7 / 7", backgroundColor: "var(--medium-blue)" }}
-              variant="vertical"
-              Columns={1}
               centerTitle
             >
               {archiveItems.length ? (
@@ -303,7 +301,7 @@ export default function JourneyDocumentItPage() {
                     : reportsError || "No saved CV versions yet."}
                 </div>
               )}
-            </CardsContainer>
+            </StackContainer>
 
             <div
               style={{

@@ -7,7 +7,6 @@ import BookmarkCard from "@/components/ui/BookmarkCard";
 import ContinueCard from "@/components/ui/ContinueCard";
 import TipCard from "@/components/ui/3ateyat";
 import LevelCard from "@/components/ui/LevelCard";
-import { CardsContainer } from "@/components/ui/cards-container";
 import { RectangularCard } from "@/components/ui/rectangular-card";
 import JourneyTree from "@/components/ui/journey-tree";
 import { useJourneyPhase } from "@/hooks/use-journey-phase";
@@ -16,6 +15,7 @@ import { buildJobDetailsHref, mapApiJobToUiModel } from "@/lib/jobs";
 import { useAuth } from "@/providers/auth-provider";
 import { jobService } from "@/services";
 import type { JobUiModel } from "@/types";
+import { InlineContainer } from "@/components/ui/containers/inline";
 
 export default function JourneyJobHuntPage() {
   const router = useRouter();
@@ -240,10 +240,9 @@ export default function JourneyJobHuntPage() {
             />
           </div>
 
-          <CardsContainer
+          <InlineContainer
             style={{ gridArea: "3 / 2 / 4 / 5", backgroundColor: "var(--medium-blue)" }}
             Title="Recently Viewed"
-            variant="horizontal"
             centerTitle
           >
             {recentlyViewedJobs.length ? (
@@ -272,7 +271,7 @@ export default function JourneyJobHuntPage() {
                 Loading jobs...
               </div>
             )}
-          </CardsContainer>
+          </InlineContainer>
 
           {trackError || jobsError ? (
             <p style={{ margin: 0, color: "#FFD3D3", gridArea: "3 / 2 / 4 / 5", alignSelf: "end" }}>
