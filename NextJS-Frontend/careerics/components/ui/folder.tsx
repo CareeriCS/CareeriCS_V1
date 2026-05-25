@@ -144,7 +144,7 @@ const Folder = ({ children }: FolderProps) => {
               borderTopLeftRadius: "var(--radius-2xl)",
               width: "100%",
               gridArea: "1 / 1 / 2 / 2",
-              backgroundColor: "var(--dark-grey)",
+              backgroundColor: "var(--medium-grey)",
               zIndex: 1,
               boxShadow: "inset 0 -12px 16px -10px rgba(0, 0, 0, 0.5)",
             }}
@@ -177,7 +177,7 @@ const Folder = ({ children }: FolderProps) => {
                 style={{
                   height: "90%",
                   width: "100%",
-                  backgroundColor: "var(--dark-grey)",
+                  backgroundColor: "var(--medium-grey)",
                   
                   borderTopRightRadius: "var(--radius-xl)",
                   borderBottomRightRadius: 0,
@@ -204,7 +204,7 @@ const Folder = ({ children }: FolderProps) => {
         id="folder-body"
         style={{
           zIndex: 2,
-          backgroundColor: "var(--dark-grey)",
+          backgroundColor: "var(--medium-grey)",
           borderTopLeftRadius: isSmall ? "var(--radius-xl)" : 0,
           borderTopRightRadius: isSmall ? "var(--radius-xl)" : 0,
           borderBottomLeftRadius: "var(--radius-xl)",
