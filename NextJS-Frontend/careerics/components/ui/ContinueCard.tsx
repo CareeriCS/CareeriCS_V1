@@ -4,48 +4,62 @@ import { useRouter } from 'next/navigation';
 
 interface ContinueCardProps {
   description?: string;
+  style?: React.CSSProperties;
 }
 
 const ContinueCard: React.FC<ContinueCardProps> = ({
   description = "Your next opportunity awaits",
+  style = {},
 }) => {
   const router = useRouter();
 
   return (
     <div
       onClick={() => router.push('/job-features/application')}
-      style={{ 
-        backgroundColor: "var(--dark-blue)", 
-        borderRadius: "4vh", 
-        paddingInline: "1rem",
-        paddingBlock:"2rem", 
-        height: "100%", 
-        display: "flex", 
-        justifyContent: "space-between", 
+      style={{
+        backgroundColor: "var(--dark-blue)",
+        borderRadius: "var(--radius-xl)",
+        padding: "var(--space-xl)",
+        height: "100%",
+        display: "flex",
+        justifyContent: "flex-start",
         alignItems: "center",
+        gap: "var(--space-md)",
         cursor: "pointer",
+        ...style,
       }}
     >
-      <div style={{ display: "flex", flexDirection: "column", justifyContent:"space-between" }}>
-        <h3 style={{ 
-          color: "white", 
-          fontSize: "1.2rem", 
-          fontFamily: 'Nova Square', 
-          fontWeight: "400", 
-          marginBottom: "3vh",
+
+      <div>
+
+        <h3 style={{
+          color: "white",
+          fontSize: "var(--text-md)",
+          fontFamily: 'Nova Square',
+          fontWeight: "400",
         }}>
           Continue Applying
         </h3>
-        <p style={{ 
-          color: "rgba(255,255,255,0.6)", 
-          fontSize: "0.9rem", 
-          margin: 0,
+
+        <p style={{
+          color: "rgba(255,255,255,0.6)",
+          fontSize: "var(--text-base)",
         }}>
           {description}
         </p>
+
       </div>
 
-      <div style={{ color: "white", fontSize: "20px"}}>❯</div>
+      <div
+        style={{
+          color: "white",
+          fontSize: "var(--text-md)",
+          marginLeft: "auto",
+        }}
+      >
+        ❯
+      </div>
+
     </div>
   );
 };

@@ -23,15 +23,14 @@ const LevelCard: React.FC<LevelCardProps> = ({
     <div
       style={{
         backgroundColor: "var(--dark-blue)",
-        borderRadius: "4vh",
-        padding: "1rem",
+        borderRadius: "var(--radius-xl)",
+        padding: "var(--space-xl)",
         height: "100%",
         display: "flex",
-        flexDirection: "column",
         justifyContent: "space-between",
-        gap: "5px",
-        aspectRatio: "1/1",
-        boxSizing: "border-box",
+        alignItems: "center",
+        gap: "var(--space-md)",
+        flexDirection: "column",
 
         ...style,
       }}
@@ -42,20 +41,19 @@ const LevelCard: React.FC<LevelCardProps> = ({
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          flexGrow: 1,
-          paddingInline: "0.5rem",
+          width: "100%",
         }}
       >
         <img
           src={displayIconSrc}
           alt="Level Icon"
-          style={{ width: "60px", height: "60px", flexShrink: 0 }}
+          style={{ width: "var(--icon-xl)",}}
         />
 
         <div
           style={{
-            width: "1.7px",
-            height: "80px",
+            width: "2px",
+            height: "100%",
             backgroundColor: "#fff",
             flexShrink: 0,
           }}
@@ -67,7 +65,7 @@ const LevelCard: React.FC<LevelCardProps> = ({
             margin: 0,
             fontFamily: "Nova Square",
             fontWeight: "400",
-            fontSize: "1.2rem",
+            fontSize: "var(--text-md)",
             lineHeight: "1.5",
             maxWidth: "min-content",
             textTransform: "capitalize",
@@ -82,9 +80,7 @@ const LevelCard: React.FC<LevelCardProps> = ({
         variant="primary-inverted"
         style={{
           width: "100%",
-          paddingBlock: "1.2rem",
-          borderRadius:"2vh",
-          flex:0,
+          whiteSpace: "nowrap",
         }}
         onClick={onClick}
       >
