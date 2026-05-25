@@ -54,6 +54,83 @@ export const roadmapService = {
     return fastapiApi.post<UserRoadmapBookmarkToggle>(`/roadmaps/${roadmapId}/bookmarks/${userId}`);
   },
 
+  async isRoadmapBookmarked(
+    roadmapId: string,
+    userId: string,
+  ): Promise<ApiResponse<UserRoadmapBookmarkToggle>> {
+    const response = await fastapiApi.get<UserRoadmapBookmarkList>(`/roadmaps/bookmarks/${userId}`);
+    if (!response.success || !response.data?.bookmarks) {
+      return {
+        data: null as unknown as UserRoadmapBookmarkToggle,
+        success: false,
+        message: response.message || "Unable to load roadmap bookmarks right now.",
+        errors: response.errors,
+      };
+    }
+
+    return {
+      data: {
+        roadmap_id: roadmapId,
+        bookmarked: response.data.bookmarks.some((bookmark) => bookmark.roadmap_id === roadmapId),
+      },
+      success: true,
+    };
+  },
+
+  async addRoadmapBookmark(
+    roadmapId: string,
+    userId: string,
+  ): Promise<ApiResponse<UserRoadmapBookmarkToggle>> {
+    const statusResponse = await fastapiApi.get<UserRoadmapBookmarkList>(`/roadmaps/bookmarks/${userId}`);
+    if (!statusResponse.success || !statusResponse.data?.bookmarks) {
+      return {
+        data: null as unknown as UserRoadmapBookmarkToggle,
+        success: false,
+        message: statusResponse.message || "Unable to load roadmap bookmarks right now.",
+        errors: statusResponse.errors,
+      };
+    }
+
+    if (statusResponse.data.bookmarks.some((bookmark) => bookmark.roadmap_id === roadmapId)) {
+      return {
+        data: {
+          roadmap_id: roadmapId,
+          bookmarked: true,
+        },
+        success: true,
+      };
+    }
+
+    return fastapiApi.post<UserRoadmapBookmarkToggle>(`/roadmaps/${roadmapId}/bookmarks/${userId}`);
+  },
+
+  async removeRoadmapBookmark(
+    roadmapId: string,
+    userId: string,
+  ): Promise<ApiResponse<UserRoadmapBookmarkToggle>> {
+    const statusResponse = await fastapiApi.get<UserRoadmapBookmarkList>(`/roadmaps/bookmarks/${userId}`);
+    if (!statusResponse.success || !statusResponse.data?.bookmarks) {
+      return {
+        data: null as unknown as UserRoadmapBookmarkToggle,
+        success: false,
+        message: statusResponse.message || "Unable to load roadmap bookmarks right now.",
+        errors: statusResponse.errors,
+      };
+    }
+
+    if (!statusResponse.data.bookmarks.some((bookmark) => bookmark.roadmap_id === roadmapId)) {
+      return {
+        data: {
+          roadmap_id: roadmapId,
+          bookmarked: false,
+        },
+        success: true,
+      };
+    }
+
+    return fastapiApi.post<UserRoadmapBookmarkToggle>(`/roadmaps/${roadmapId}/bookmarks/${userId}`);
+  },
+
   getRoadmapProgress(
     roadmapId: string,
     userId: string,
