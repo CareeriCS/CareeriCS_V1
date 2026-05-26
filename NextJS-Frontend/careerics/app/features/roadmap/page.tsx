@@ -516,10 +516,10 @@ export default function RoadmapPage() {
         position: "relative",
         width: "100%",
         height: "100%",
-        padding: "var(--space-lg)",
+        padding: "var(--space-xl)",
         display: "flex",
         flexDirection: "column",
-        gap: "var(--space-md)"
+        gap: "var(--space-lg)"
       }}
     >
       <div

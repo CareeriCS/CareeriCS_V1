@@ -82,8 +82,8 @@ export default function JobHunt() {
             ? "repeat(4, 1fr)"
             : "repeat(4, 1fr)",
 
-        gridColumnGap: "var(--space-xl)",
-        gridRowGap: "var(--space-xl)",
+        gridColumnGap: "var(--space-lg)",
+        gridRowGap: "var(--space-lg)",
 
         padding: "var(--space-xl)",
 

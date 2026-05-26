@@ -375,7 +375,7 @@ export default function CareerDiscoveryPage() {
         position: "relative",
         width: "100%",
         height: "100%",
-        padding: "var(--space-lg)",
+        padding: "var(--space-xl)",
         gridRowGap: "var(--space-lg)",
         gridColumnGap: "var(--space-lg)",
         display: "grid",
