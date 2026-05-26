@@ -51,14 +51,12 @@ export default function ChoiceCard({
         width: "100%",
         height: "100%",
         backgroundColor: "var(--dark-blue)",
-        borderRadius: "4vh",
+        borderRadius: "var(--radius-xl)",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         justifyContent:"space-between",
-        paddingTop:"5vh",
-        paddingBottom: "3vh",
-        paddingInline:"3vw",
+        padding:"var(--space-xl)",
         overflow: "hidden",
         ...style
       }}
@@ -66,10 +64,10 @@ export default function ChoiceCard({
       <div
         style={{
           display: "flex",
-          width:"100%",
+          width:"fit-content",
           alignItems: "center",
-          marginBottom: "auto",
-          justifyContent:"space-between",
+          justifyContent:"space-around",
+          gap: "var(--space-xl)"
         }}
       >
         
@@ -77,22 +75,25 @@ export default function ChoiceCard({
             src={displayImage}
             alt={title || "career icon"}
             style={{
-              height:"12vh"
+              height: "var(--icon-4xl)",
             }}
           />
 
         <div
           style={{
-            height: "80%",
+            height: "100%",
             backgroundColor: "white",
-            width: "0.1vh",
+            width: "0.2rem",
+            flexShrink: 0,
+            flexGrow: 0,
+            borderRadius: "999px",
           }}
         />
 
         <p
           style={{
             color: "white",
-            fontSize: "1.4rem",
+            fontSize: "var(--text-md)",
             fontFamily: "var(--font-nova-square)",
             width: "min-content",
           }}
@@ -103,12 +104,9 @@ export default function ChoiceCard({
 
       <p
         style={{
-          flexGrow: 0,
-          flexShrink: 0,
           color: "white",
           textAlign: "center",
-          fontSize: "clamp(0.5rem,1vw,1.2rem)",
-          margin: 0,
+          fontSize: "var(--text-base)",
         }}
       >
         {description}
@@ -120,11 +118,7 @@ export default function ChoiceCard({
         onClick={handleButtonClick}
         disabled={disabled}
         style={{
-          flexGrow: 0,
-          flexShrink: 0,
-          paddingInline: "5vw",
-          marginTop: "auto",
-          paddingBlock:"2.5vh",
+          alignSelf: "stretch",
         }}
       >
         {buttonLabel}
