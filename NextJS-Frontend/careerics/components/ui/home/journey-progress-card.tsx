@@ -19,7 +19,7 @@ export const JourneyProgressCard = ({ percentage = 10, style }: any) => {
         justifyContent: "flex-start",
         alignItems: "center",
         borderRadius: "var(--radius-lg)",
-        padding: isLarge?"var(--space-md)":"var(--space-lg)",
+        padding: "var(--space-lg)",
         gap: "var(--space-md)",
         ...style,
       }}

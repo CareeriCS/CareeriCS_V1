@@ -87,7 +87,9 @@ export const CareerCardsContainer = ({
                 flexDirection: "column",
                 alignItems: "flex-start",
                 justifyContent: "flex-start",
-                padding: isLarge ? "var(--space-md)" : "var(--space-lg)",
+                paddingBlock: "var(--space-lg)",
+                paddingLeft:"var(--space-lg)",
+                paddingRight: shouldScroll ? 0 : "var(--space-lg)",
                 gap: isLarge ? "var(--space-md)" : "var(--space-lg)",
                 borderRadius: "var(--radius-xl)",
                 ...style,
@@ -112,7 +114,6 @@ export const CareerCardsContainer = ({
                     minHeight: 0,
                     minWidth: 0,
 
-                    gap: "var(--space-md)",
                     alignItems: "stretch",
                     justifyContent: "flex-start",
                     overflow: "hidden"
@@ -143,10 +144,11 @@ export const CareerCardsContainer = ({
                                 display: "flex",
                                 flexDirection: "column",
                                 userSelect: "none",
-                                width: "fit-content",
+                                width: "var(--space-xl)",
                                 marginLeft: "auto",
                                 height: "100%",
                                 justifyContent: "center",
+                                alignItems: "center",
                                 gap: "var(--space-md)",
                             }
                         }

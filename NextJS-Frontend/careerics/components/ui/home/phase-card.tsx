@@ -37,7 +37,7 @@ export const PhaseCard = (props: PhaseCardProps) => {
       <div
         style={{
           ...baseStyle,
-          paddingTop: isLarge ? "var(--space-md)" : "var(--space-lg)",
+          paddingTop: "var(--space-lg)",
           gap: isLarge ? "var(--space-md)" : "var(--space-lg)",
           overflow: "hidden",
           display: "flex",
@@ -101,7 +101,7 @@ export const PhaseCard = (props: PhaseCardProps) => {
       {/* LEFT SIDE */}
       <div
         style={{
-          padding: "var(--space-md)",
+          padding: "var(--space-lg)",
           display: "flex",
           flexDirection: "column",
           justifyContent: "flex-start",
