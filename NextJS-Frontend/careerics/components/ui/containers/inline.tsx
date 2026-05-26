@@ -117,6 +117,7 @@ export const InlineContainer = ({
                         display: "flex",
                         gap: "var(--space-md)",
                         overflowX: "auto",
+                        overflowY: "hidden",
                         scrollbarWidth: "none",
                         flex: 1,
                         alignItems: "center",

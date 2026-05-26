@@ -144,6 +144,7 @@ export const FlexContainer = ({
                         display: "flex",
                         gap: "var(--space-md)",
                         overflowY: "auto",
+                        overflowX: "hidden",
                         scrollbarWidth: "none",
                         flex: 1,
                         alignContent: "start",
