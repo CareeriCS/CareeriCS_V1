@@ -12,7 +12,7 @@ def minimax_response(prompt):
 
 def deepseek_response(prompt):
     response = DS_Client.chat.completions.create(
-        model="deepseek-ai/DeepSeek-V3",
+        model="deepseek-ai/DeepSeek-V3.2:novita",
         messages=[{"role": "user", "content": prompt}],
         temperature=0
     )
