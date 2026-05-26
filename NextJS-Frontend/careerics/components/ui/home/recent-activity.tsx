@@ -212,12 +212,12 @@ export const RecentActivityCard = ({
             display: "flex",
             flexDirection: "row",
             userSelect: "none",
-            width: "fit-content",
+            width: "auto",
             height: "var(--space-lg)",
-            marginLeft: "auto",
             marginTop: "auto",
-            justifyContent: "space-around",
-            gap: "var(--space-lg)",
+            justifyContent: "flex-end",
+            gap: "var(--space-sm)",
+            flexShrink: 0,
           }
         }
       >
@@ -226,7 +226,7 @@ export const RecentActivityCard = ({
           onClick={scrollUp}
           disabled={!canScrollUp}
         />
-
+        <div></div>
         <Arrow
           direction="next"
           onClick={scrollDown}
