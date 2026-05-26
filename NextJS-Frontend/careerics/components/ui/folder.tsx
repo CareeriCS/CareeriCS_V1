@@ -87,24 +87,7 @@ const Folder = ({ children }: FolderProps) => {
           backgroundColor: "var(--bg-color)",
         }}
       >
-        {isSmall && (
-          <div
-            style={{
-              height: "100%",
-              width: "var(--icon-lg)",
-              backgroundColor: "var(--bg-grey)",
-            }}
-          >
-            <div
-              style={{
-                height: "100%",
-                width: "100%",
-                backgroundColor: "var(--bg-color)",
-                borderBottomRightRadius: "var(--radius-xl)",
-              }}
-            />
-          </div>
-        )}
+        
         <div
           style={{
             height: "fit-content",
@@ -125,7 +108,8 @@ const Folder = ({ children }: FolderProps) => {
               alignItems: "center",
               display: "flex",
               justifyContent: "center",
-              paddingInline: "calc(var(--space-xl) * 2)",
+              paddingRight: "calc(var(--space-xl) * 2)",
+              paddingLeft: isSmall?"calc((var(--space-xl) * 2) + var(--icon-lg))":"calc(var(--space-xl) * 2)",
               paddingBlock: "var(--space-xs)",
               whiteSpace: "nowrap",
               fontFamily: "var(--font-jura)",
@@ -205,7 +189,7 @@ const Folder = ({ children }: FolderProps) => {
         style={{
           zIndex: 2,
           backgroundColor: "var(--medium-grey)",
-          borderTopLeftRadius: isSmall ? "var(--radius-xl)" : 0,
+          borderTopLeftRadius:  0,
           borderTopRightRadius: isSmall ? "var(--radius-xl)" : 0,
           borderBottomLeftRadius: "var(--radius-xl)",
           borderBottomRightRadius: "var(--radius-xl)",
@@ -220,7 +204,7 @@ const Folder = ({ children }: FolderProps) => {
           style={{
             zIndex: 2,
             backgroundColor: "var(--bg-grey)",
-            borderTopLeftRadius: isSmall ? "var(--radius-xl)" : 0,
+            borderTopLeftRadius:  0,
             borderTopRightRadius: "var(--radius-xl)",
             borderBottomLeftRadius: "var(--radius-xl)",
             borderBottomRightRadius: "var(--radius-xl)",

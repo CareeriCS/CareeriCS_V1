@@ -54,7 +54,7 @@ const Sidebar = () => {
     };
   }, [user?.id]);
 
-  
+
 
   const profileName = isLoading
     ? "Loading..."
@@ -135,15 +135,15 @@ const Sidebar = () => {
               display: "flex",
               alignItems: "center",
               gap: "var(--space-md)",
-              padding: !isSmall?"var(--space-sm)":"var(--space-lg)",
+              padding: !isSmall ? "var(--space-sm)" : "var(--space-lg)",
               borderRadius: "var(--radius-lg)",
               cursor: "pointer",
               transition: "0.2s ease-in-out",
               backgroundColor: isActive
                 ? "var(--primary-green)"
                 : isHovered
-                ? "var(--light-green)"
-                : "transparent",
+                  ? "var(--light-green)"
+                  : "transparent",
               color: activeState ? "#000" : "#fff",
             }}
           >
@@ -198,7 +198,7 @@ const Sidebar = () => {
         </nav>
 
         <div
-        onClick={()=>{router.push("/profile")}}
+          onClick={() => { router.push("/profile") }}
           style={{
             marginTop: "auto",
             display: "flex",
@@ -225,52 +225,152 @@ const Sidebar = () => {
   // ================= MEDIUM =================
   if (isMedium) {
     return (
-      <aside
-        style={{
-          width: "fit-content",
-          height: "100%",
-          display: "flex",
-          flexDirection: "column",
-          padding: "var(--space-md)",
-          gap: "var(--space-md)",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexShrink: 0,
-          color: "#fff",
-          overflowY: "auto",
-          overflowX: "hidden",
-          scrollbarWidth: "none",
-        }}
-      >
-        <div
-          style={{
-            fontSize: "var(--icon-lg)",
-            fontFamily: "var(--font-nova-square)",
-          }}
-        >
-          CS
-        </div>
 
-        <nav
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "var(--space-md)",
-          }}
-        >
-          {renderNav(true, "var(--icon-lg)")}
-        </nav>
+      <>
+        {!isOpen && (
+          <aside
+            style={{
+              width: "fit-content",
+              height: "100%",
+              display: "flex",
+              flexDirection: "column",
+              padding: "var(--space-md)",
+              gap: "var(--space-md)",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexShrink: 0,
+              color: "#fff",
+              overflowY: "auto",
+              overflowX: "hidden",
+              scrollbarWidth: "none",
+            }}
+          >
+            <div
+              onClick={() => setIsOpen(true)}
+              style={{
+                fontSize: "var(--icon-lg)",
+                fontFamily: "var(--font-nova-square)",
+                cursor: "pointer",
+              }}
 
-        <img
-        onClick={()=>{router.push("/profile")}}
-          src="/sidebar/profile.svg"
-          alt="User"
-          style={{
-            height: "var(--icon-lg)",
-            cursor: "pointer",
-          }}
-        />
-      </aside>
+            >
+              ☰
+            </div>
+
+            <nav
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "var(--space-md)",
+              }}
+            >
+              {renderNav(true, "var(--icon-lg)")}
+            </nav>
+
+            <img
+              onClick={() => { router.push("/profile") }}
+              src="/sidebar/profile.svg"
+              alt="User"
+              style={{
+                height: "var(--icon-lg)",
+                cursor: "pointer",
+              }}
+            />
+          </aside>
+        )}
+        {isOpen && (
+          <>
+            <div
+              onClick={() => setIsOpen(false)}
+              style={{
+                position: "fixed",
+                inset: 0,
+                background: "rgba(0,0,0,0.5)",
+                zIndex: 1999,
+              }}
+            />
+
+            <aside
+              style={{
+                position: "fixed",
+                top: 0,
+                left: 0,
+                height: "100%",
+                width: "40vw",
+                background: "#111",
+                display: "flex",
+                flexDirection: "column",
+                padding: "var(--space-lg)",
+                gap: "var(--space-md)",
+                zIndex: 2000,
+                color: "#fff",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "var(--text-lg)",
+                    fontFamily: "var(--font-nova-square)",
+                  }}
+                >
+                  CareeriCS
+                </div>
+
+                <button
+                  onClick={() => setIsOpen(false)}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    color: "#fff",
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <nav
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "var(--space-md)",
+                }}
+              >
+                {renderNav(false, "var(--icon-sm)")}
+              </nav>
+
+              <div
+                onClick={() => { router.push("/profile") }}
+                style={{
+                  marginTop: "auto",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "var(--space-md)",
+                  borderTop: "2px solid #fff",
+                  padding: "var(--space-md)",
+                }}
+              >
+                <img
+                  src="/sidebar/profile.svg"
+                  alt="User"
+                  style={{
+                    height: "var(--icon-xl)",
+                    cursor: "pointer",
+                  }}
+                />
+
+                <div style={{ cursor: "pointer" }}>
+                  {profileName}
+                </div>
+              </div>
+            </aside>
+          </>
+        )}
+      </>
     );
   }
 
@@ -283,13 +383,15 @@ const Sidebar = () => {
           style={{
             position: "fixed",
             top: "var(--space-md)",
-            left: "var(--space-md)",
+            left: "var(--space-2xl)",
             zIndex: 2000,
             background: "transparent",
             border: "none",
             cursor: "pointer",
-            color: "#fff",
+            color: "black",
             fontSize: "var(--text-xl)",
+            fontWeight: "bold",
+            fontFamily: "var(--font-nova-square)",
           }}
         >
           ☰
@@ -314,7 +416,8 @@ const Sidebar = () => {
               top: 0,
               left: 0,
               height: "100%",
-              width: "260px",
+              width: "fit-content",
+              maxWidth: "70vw",
               background: "#111",
               display: "flex",
               flexDirection: "column",
@@ -362,7 +465,7 @@ const Sidebar = () => {
             </nav>
 
             <div
-              onClick={()=>{router.push("/profile")}}
+              onClick={() => { router.push("/profile") }}
               style={{
                 marginTop: "auto",
                 display: "flex",
@@ -381,7 +484,7 @@ const Sidebar = () => {
                 }}
               />
 
-              <div style={{ cursor: "pointer" }}>
+              <div style={{ cursor: "pointer", whiteSpace: "nowrap" }}>
                 {profileName}
               </div>
             </div>
