@@ -37,8 +37,8 @@ export const PhaseCard = (props: PhaseCardProps) => {
       <div
         style={{
           ...baseStyle,
-          paddingTop: isLarge ? "var(--space-md)" : "var(--space-lg)",
-          gap: isLarge?"var(--space-md)":"var(--space-lg)",
+          paddingTop: "var(--space-lg)",
+          gap: isLarge ? "var(--space-md)" : "var(--space-lg)",
           overflow: "hidden",
           display: "flex",
           flexDirection: "column",
@@ -60,6 +60,7 @@ export const PhaseCard = (props: PhaseCardProps) => {
         <div
           style={{
             width: "100%",
+            height: "100%",
             flex: 1,
             display: "flex",
             justifyContent: "center",
@@ -71,12 +72,8 @@ export const PhaseCard = (props: PhaseCardProps) => {
             src={`/home/next-phase/${phaseNumber}.svg`}
             alt="Current Phase"
             style={{
-              marginTop: "auto",
-              maxWidth: "100%",
-              maxHeight: "100%",
-              width: "auto",
-              height: "auto",
-              objectFit: "contain",
+              width: "100%",
+              objectFit: "fill",
               display: "block",
             }}
           />
@@ -104,7 +101,7 @@ export const PhaseCard = (props: PhaseCardProps) => {
       {/* LEFT SIDE */}
       <div
         style={{
-          padding: "var(--space-md)",
+          padding: "var(--space-lg)",
           display: "flex",
           flexDirection: "column",
           justifyContent: "flex-start",
@@ -140,7 +137,12 @@ export const PhaseCard = (props: PhaseCardProps) => {
           flex: 1,
           display: "flex",
           justifyContent: "center",
-          alignItems: "center",
+          alignItems:
+            phaseNumber === "2" || phaseNumber === "5"
+              ? "flex-end"
+              : phaseNumber === "4"
+                ? "flex-start"
+                : "center",
           overflow: "hidden",
           minWidth: 0,
           borderLeft: "1px solid white"
@@ -150,13 +152,9 @@ export const PhaseCard = (props: PhaseCardProps) => {
           src={`/home/next-phase/${phaseNumber}.svg`}
           alt="Next Phase"
           style={{
-            marginLeft: "auto",
-            maxWidth: "100%",
-            maxHeight: "100%",
-            width: "auto",
+            width: "100%",
             height: "auto",
-            objectFit: "contain",
-            display: "block",
+            objectFit: "fill",
           }}
         />
       </div>

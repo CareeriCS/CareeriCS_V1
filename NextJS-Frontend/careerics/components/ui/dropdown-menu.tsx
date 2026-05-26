@@ -67,14 +67,14 @@ export default function CustomDropdown({
         onClick={toggleDropdown}
         style={{
           width: "100%",
-          minHeight: "44px",
-          borderRadius: "999px",
+          height: "fit-content",
+          borderRadius: "var(--radius-xl)",
           border: "0.5vh solid var(--medium-blue)",
           backgroundColor: background,
 
-          padding: "0.6rem 2.5rem 0.6rem 1rem",
+          padding: "var(--space-xs) var(--space-lg)",
 
-          fontSize: "clamp(0.85rem, 0.6vw, 1rem)",
+          fontSize: "var(--text-sm)",
           color: "#000",
 
           display: "flex",
@@ -101,7 +101,7 @@ export default function CustomDropdown({
           size={18}
           style={{
             position: "absolute",
-            right: "12px",
+            right: "var(--space-sm)",
             transition: "transform 0.2s ease",
             color: "var(--medium-blue)",
             transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",

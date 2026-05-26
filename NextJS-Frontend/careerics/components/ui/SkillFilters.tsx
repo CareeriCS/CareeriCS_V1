@@ -38,11 +38,12 @@ export default function SkillFilters({
 
     return {
       flex: 1,
-      padding: "0.65rem 0.75rem",
-      borderRadius: "999px",
+      
+      borderRadius: "var(--radius-md)",
       backgroundColor: isActive ? "var(--light-green)" : "#C1CBE6",
       color: "#000",
-      fontSize: "clamp(0.85rem, 0.6vw, 1rem)",
+      fontSize: "var(--text-base)",
+      paddingBlock: "var(--button-padding-y)", 
       fontWeight: 600,
       cursor: isSkillTypeDisabled ? "not-allowed" : "pointer",
       transition: "all 0.25s ease",
@@ -64,21 +65,20 @@ export default function SkillFilters({
         justifyContent: "center",
         alignItems: "flex-start",
 
-        padding: "1.5rem",
-        gap: "0.5rem",
+        padding: "var(--space-xl)",
+        gap: "var(--space-md)",
 
-        borderRadius: "clamp(1rem, 2vw, 2rem)",
+        borderRadius: "var(--radius-xl)",
         boxSizing: "border-box",
 
         ...style,
       }}
     >
       {/* Track Selector */}
-      <div style={{ width: "100%" }}>
+      <div style={{ width: "100%", height: "fit-content", }}>
         <h3
           style={{
-            fontSize: "clamp(1rem, 0.9vw, 1.25rem)",
-            marginBottom: "0.2rem",
+            fontSize: "var(--text-md)",
           }}
         >
           Track
@@ -94,11 +94,10 @@ export default function SkillFilters({
       </div>
 
       {/* Skill Type Toggle */}
-      <div style={{ width: "100%" }}>
+      <div style={{ width: "100%", height: "fit-content", }}>
         <h3
           style={{
-            fontSize: "clamp(1rem, 0.9vw, 1.25rem)",
-            marginBottom: "0.2rem",
+            fontSize: "var(--text-md)",
           }}
         >
           Skill Type
@@ -107,7 +106,7 @@ export default function SkillFilters({
         <div
           style={{
             display: "flex",
-            gap: "clamp(0.5rem, 0.8vw, 1rem)",
+            gap: "var(--space-md)",
             width: "100%",
           }}
         >

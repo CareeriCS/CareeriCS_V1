@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef,ReactNode } from "react";
+import React, { useRef, ReactNode } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { CircleScore } from "../circle-score";
@@ -27,7 +27,7 @@ export const RecentActivityCard = ({
 }) => {
   const router = useRouter();
   const scrollRef = useRef<HTMLDivElement>(null);
-  
+
 
   const scrollDown = () => {
     scrollRef.current?.scrollBy({ top: 100, behavior: "smooth" });
@@ -83,8 +83,9 @@ export const RecentActivityCard = ({
         flexDirection: "column",
         height: "100%",
         boxSizing: "border-box",
-        padding: isLarge?"var(--space-md)":"var(--space-lg)",
-        gap: isLarge?"var(--space-md)":"var(--space-lg)",
+        paddingInline: "var(--space-lg)",
+        paddingTop: "var(--space-lg)",
+        gap: isLarge ? "var(--space-md)" : "var(--space-lg)",
         fontFamily: "var(--font-nova-square)",
         ...style,
       }}
@@ -115,6 +116,7 @@ export const RecentActivityCard = ({
         {activities.map((act, i) => (
           <div
             key={i}
+            title={act.id}
             onClick={() => {
               if (act.href) {
                 router.push(act.href);
@@ -134,14 +136,23 @@ export const RecentActivityCard = ({
           >
             {/* activity */}
             <div>
-              <div style={{ fontWeight: "bold", fontSize: "var(--text-sm)" }}>
+              <div
+                style={{
+                  fontSize: "var(--text-sm)",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  display: "-webkit-box",
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: "vertical",
+                }}
+              >
                 {act.id}
               </div>
 
               {isLarge &&
                 <div style={{ fontSize: "var(--text-xs)" }}>
-                {act.date || `On ${act.id}`}
-              </div>
+                  {act.date || `On ${act.id}`}
+                </div>
               }
             </div>
 
@@ -156,8 +167,9 @@ export const RecentActivityCard = ({
                 }}
                 style={{
                   position: "relative",
-                  width: "var(--icon-2xl)",
-                  height: "var(--icon-2xl)",
+                  width: "var(--icon-xl)",
+                  height: "var(--icon-xl)",
+                  flexShrink: 0,
                   cursor: "pointer",
                   background: "transparent",
                   border: "none",
@@ -177,8 +189,9 @@ export const RecentActivityCard = ({
               <div
                 style={{
                   position: "relative",
-                  width: "var(--icon-2xl)",
-                  height: "var(--icon-2xl)",
+                  width: "var(--icon-xl)",
+                  height: "var(--icon-xl)",
+                  flexShrink: 0,
                 }}
               >
                 <Image
@@ -189,8 +202,8 @@ export const RecentActivityCard = ({
                 />
               </div>
             ) : null}
-            </div>
-          ))}
+          </div>
+        ))}
       </div>
 
       <div
@@ -200,11 +213,11 @@ export const RecentActivityCard = ({
             flexDirection: "row",
             userSelect: "none",
             width: "fit-content",
+            height: "var(--space-lg)",
             marginLeft: "auto",
             marginTop: "auto",
-            height: "fit-content",
-            justifyContent: "center",
-            gap: "var(--space-md)",
+            justifyContent: "space-around",
+            gap: "var(--space-lg)",
           }
         }
       >

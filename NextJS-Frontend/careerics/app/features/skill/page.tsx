@@ -1005,11 +1005,11 @@ export default function SkillAssessment() {
           display: "grid",
           gridTemplateColumns: "repeat(2, 1fr) repeat(2, 2fr)",
           gridTemplateRows: "1.5fr repeat(5, 1fr)",
-          columnGap: "25px",
-          rowGap: "20px",
+          columnGap: "var(--space-lg)",
+          rowGap: "var(--space-lg)",
           height: "100%",
           width: "100%",
-          padding: "40px",
+          padding: "var(--space-xl)",
         }}
       >
         <SkillFilters

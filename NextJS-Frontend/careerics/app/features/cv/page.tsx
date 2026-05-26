@@ -129,12 +129,12 @@ export default function CVCrafting() {
         style={{
           width: "100%",
           height: "100%",
-          padding: "40px",
+          padding: "var(--space-xl)",
           display: "grid",
-          gridTemplateRows: "repeat(6, 1fr)",
-          gridTemplateColumns: "repeat(6, 1fr)",
-          gridColumnGap: "25px",
-          gridRowGap: "20px",
+          gridTemplateColumns: "repeat(2, 1fr) 1.2fr",
+          gridTemplateRows: "2fr 1fr",
+          gridColumnGap: "var(--space-lg)",
+          gridRowGap: "var(--space-lg)",
           overflow: "hidden",
           zIndex: 1,
         }}
@@ -142,26 +142,26 @@ export default function CVCrafting() {
         <ChoiceCard
           key={1}
           title="CV Builder"
-          description="Elevate your existing resume with AI-driven insights that refine your language and highlight your most impactful achievements."
+          description="Fill out our builder’s form and we will construct a tailored, professional, ATS-approved resume ready to download."
           icon="/cv/cv-builder.svg"
           buttonVariant="primary-inverted"
           route="/cv-feature/builder"
-          style={{ gridArea: "1 / 1 / 5 / 3" }}
+          style={{ gridArea: "1 / 1 / 2 / 2" }}
         />
 
         <ChoiceCard
           key={2}
           title="CV Enhancer"
-          description="Elevate your existing resume with AI-driven insights that refine your language and highlight your most impactful achievements."
+          description="Elevate your existing resume with AI-driven insights that refine your language and highlight your achievements."
           icon="/cv/cv-enhancer.svg"
           buttonVariant="primary-inverted"
           route="/cv-feature/enhancer"
-          style={{ gridArea: "1 / 3 / 5 / 5" }}
+          style={{ gridArea: "1 / 2 / 2 / 3" }}
         />
 
         <StackContainer
           Title="Old Versions"
-          style={{ gridArea: "1 / 5 / 7 / 7", backgroundColor: "var(--medium-blue)" }}
+          style={{ gridArea: "1 / 3 / 3 / 4", backgroundColor: "var(--medium-blue)" }}
           centerTitle
         >
           {archiveItems.length ? (
@@ -192,38 +192,64 @@ export default function CVCrafting() {
 
         <div
           style={{
-            gridArea: "5 / 1 / 7 / 5",
+            gridArea: "2 / 1 / 3 / 3",
             backgroundColor: "#16203d",
-            borderRadius: "4vh",
-            padding: "25px",
+            borderRadius: "var(--radius-lg)",
+            padding: "var(--space-lg)",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
             gap: "24px",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "25px", minWidth: 0 }}>
-            <img src="/cv/cv-extractor.svg" alt="" style={{ height: "12vh" }} />
-            <div style={{ height: "80px", width: "1.7px", backgroundColor: "white" }} />
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "var(--space-lg)",
+              minWidth: 0,
+              flex: 1,
+              height: "100%",
+            }}
+          >
+            <img
+              src="/cv/cv-extractor.svg"
+              alt=""
+              style={{
+                height: "var(--icon-4xl)"
+              }}
+            />
+            <div
+              style={{
+                height: "80%",
+                width: "0.2rem",
+                backgroundColor: "white",
+                flexShrink: 0,
+                flexGrow: 0,
+                alignItems: "center",
+                display: "flex",
+                borderRadius: "999px",
+              }}
+            />
             <div>
-              <h3 style={{ color: "white", fontSize: "clamp(0.8rem,1.7vw,1.5rem)", margin: 0, fontFamily: "var(--font-nova-square)", fontWeight: "200" }}>
+              <h3
+                style={{
+                  color: "white",
+                  fontSize: "var(--text-md)",
+                  fontFamily: "var(--font-nova-square)",
+                  fontWeight: "200"
+                }}
+              >
                 CV Extractor
               </h3>
-              <p style={{ color: "white", fontSize: "15px", marginTop: "5px", marginBottom: extractorMessage ? "8px" : 0 }}>
+              <p
+                style={{
+                  color: "white",
+                  fontSize: "var(--text-base)",
+                }}
+              >
                 Update your data on our system to automate job application later on
               </p>
-              {extractorMessage ? (
-                <p
-                  style={{
-                    color: extractorMessage.toLowerCase().includes("failed") ? "#FFD3D3" : "#D7E3FF",
-                    fontFamily: "var(--font-jura)",
-                    fontSize: "13px",
-                    margin: 0,
-                  }}
-                >
-                  {extractorMessage}
-                </p>
-              ) : null}
             </div>
           </div>
 
@@ -232,12 +258,7 @@ export default function CVCrafting() {
             onClick={() => setIsPopOpen(true)}
             disabled={isExtracting}
             style={{
-              flexGrow: 0,
-              flexShrink: 0,
-              paddingInline: "2vw",
               marginTop: "auto",
-              paddingBlock: "2.5vh",
-              whiteSpace: "nowrap",
             }}
           >
             {isExtracting ? "Uploading..." : "Upload CV"}

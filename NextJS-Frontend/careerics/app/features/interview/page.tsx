@@ -177,13 +177,13 @@ export default function Interview() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(3, 1fr)",
-          gridTemplateRows: "repeat(3, 1fr)",
-          gridColumnGap: "25px",
-          gridRowGap: "20px",
+          gridTemplateColumns: "repeat(2, 1fr) 1.2fr",
+          gridTemplateRows: "2fr 1fr",
+          gridColumnGap: "var(--space-lg)",
+          gridRowGap: "var(--space-lg)",
           width: "100%",
           height: "100%",
-          padding: "40px",
+          padding: "var(--space-xl)",
         }}
       >
         <ChoiceCard
@@ -194,7 +194,7 @@ export default function Interview() {
           disabled={isLoading || isStartingInterview}
           buttonLabel={startButtonLabel}
           icon="/interview/hr.svg"
-          style={{ gridArea: "1 / 1 / 3 / 2" }}
+          style={{ gridArea: "1 / 1 / 2 / 2" }}
         />
 
         <ChoiceCard
@@ -205,13 +205,13 @@ export default function Interview() {
           disabled={isLoading || isStartingInterview}
           buttonLabel={startButtonLabel}
           icon="/interview/tech.svg"
-          style={{ gridArea: "1 / 2 / 3 / 3" }}
+          style={{ gridArea: "1 / 2 / 2 / 3" }}
         />
 
         <StackContainer
           Title="Interviews Archive"
           centerTitle
-          style={{ gridArea: "1 / 3 / 3 / 4" }}
+          style={{ gridArea: "1 / 3 / 2 / 4" }}
         >
           {archiveItems.length ? (
             archiveItems.map((item) => (
@@ -243,7 +243,7 @@ export default function Interview() {
           title="Tip of the day"
           description="Research the company and interviewers before your interview so you understand the company's goals and show how you fit."
           icon="/global/tip.svg"
-          style={{ gridArea: "3 / 1 / 4 / 4" }}
+          style={{ gridArea: "2 / 1 / 3 / 4" }}
         />
 
         {startError ? (

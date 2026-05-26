@@ -243,7 +243,7 @@ export default function CoursesPage() {
         gridRowGap: "var(--space-lg)",
         height: "100%",
         width: "100%",
-        padding: "var(--space-lg)",
+        padding: "var(--space-xl)",
       }}
     >
       {courseProgressError ? (
