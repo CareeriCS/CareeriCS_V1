@@ -39,7 +39,8 @@ export const ActivityCard = ({
       style={{
         backgroundColor: "#C1CBE6",
         borderRadius: "var(--radius-lg)",
-        padding: "var(--space-sm)",
+        paddingInline: "var(--space-sm)",
+        paddingBlock: "var(--space-xs)",
 
         display: "flex",
         justifyContent: "space-between",
@@ -49,7 +50,6 @@ export const ActivityCard = ({
         fontFamily: "var(--font-nova-square)",
 
         width: "100%",
-        minHeight:"70px",
         gap: "var(--space-sm)",
 
         ...style,

@@ -1,15 +1,19 @@
 "use client";
 
 import React, { useRef, Children, useEffect, useState } from "react";
+import { SearchBar } from "../searchbar";
 
 type Props = {
     children: React.ReactNode;
     style?: React.CSSProperties;
     Title?: string;
     centerTitle?: boolean;
+
     searchBar?: boolean;
     searchValue?: string;
     onSearchChange?: (value: string) => void;
+
+    loadingText?: string;
 };
 
 export const FlexContainer = ({
@@ -17,9 +21,12 @@ export const FlexContainer = ({
     style,
     Title = "Title",
     centerTitle = false,
+
     searchBar = false,
     searchValue = "",
     onSearchChange,
+
+    loadingText = "Loading...",
 }: Props) => {
     const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -31,7 +38,9 @@ export const FlexContainer = ({
 
     const updateScrollState = () => {
         if (!scrollRef.current) return;
+
         const el = scrollRef.current;
+
         setCanScrollPrev(el.scrollTop > 0);
         setCanScrollNext(el.scrollTop + el.clientHeight < el.scrollHeight - 1);
     };
@@ -40,6 +49,7 @@ export const FlexContainer = ({
         updateScrollState();
 
         const el = scrollRef.current;
+
         if (!el) return;
 
         el.addEventListener("scroll", updateScrollState);
@@ -53,6 +63,7 @@ export const FlexContainer = ({
 
     const scroll = (direction: "prev" | "next") => {
         if (!scrollRef.current) return;
+
         const amount = scrollRef.current.clientHeight;
 
         scrollRef.current.scrollBy({
@@ -81,12 +92,15 @@ export const FlexContainer = ({
                 ...style,
             }}
         >
-
-            {/* Header Title & Search */}
+            {/* Header */}
             <div
                 style={{
                     display: "flex",
+                    alignItems: "center",
                     justifyContent: centerTitle ? "center" : "space-between",
+                    gap: "var(--space-xl)",
+                    width: "100%",
+                    
                 }}
             >
                 <h2
@@ -94,41 +108,23 @@ export const FlexContainer = ({
                         fontSize: "var(--text-md)",
                         textAlign: centerTitle ? "center" : "left",
                         fontFamily: "var(--font-nova-square)",
+                        whiteSpace: "nowrap",
                     }}
                 >
                     {Title}
                 </h2>
+
                 {searchBar && (
-                    <form
-                        role="search"
-                        onSubmit={(e) => e.preventDefault()}
-                        style={{
-                            width: "fit-content",
-                            height: "100%",
-                            paddingInline: "1rem",
-                            border: "2px solid white",
-                            display: "flex",
-                            alignItems: "center",
-                            borderRadius: "999px",
+                    <SearchBar
+                        value={searchValue}
+                        onChange={(value) => {
+                            onSearchChange?.(value);
                         }}
-                    >
-                        <input
-                            type="search"
-                            placeholder="Search..."
-                            value={searchValue}
-                            onChange={(e) => onSearchChange?.(e.target.value)}
-                            style={{
-                                background: "transparent",
-                                border: "none",
-                                outline: "none",
-                                color: "white",
-                            }}
-                        />
-                    </form>
+                    />
                 )}
             </div>
 
-            {/* Scroll Area */}
+            {/* Content */}
             <div
                 style={{
                     display: "flex",
@@ -150,6 +146,7 @@ export const FlexContainer = ({
                         alignContent: "start",
                         flexWrap: "wrap",
                         flexDirection: "row",
+                        minHeight: 0,
                     }}
                 >
                     {isEmpty ? (
@@ -165,14 +162,14 @@ export const FlexContainer = ({
                                 opacity: 0.8,
                             }}
                         >
-                            Loading...
+                            {loadingText}
                         </div>
                     ) : (
                         children
                     )}
                 </div>
 
-                {/* Scroll Buttons */}
+                {/* Scroll Controls */}
                 <div
                     style={{
                         display: "flex",
@@ -189,6 +186,7 @@ export const FlexContainer = ({
                         onClick={() => scroll("prev")}
                         disabled={!canScrollPrev}
                     />
+
                     <Arrow
                         direction="next"
                         onClick={() => scroll("next")}
@@ -209,7 +207,8 @@ const Arrow = ({
     onClick: () => void;
     disabled?: boolean;
 }) => {
-    const rotation = direction === "prev" ? "rotate(-90deg)" : "rotate(90deg)";
+    const rotation =
+        direction === "prev" ? "rotate(-90deg)" : "rotate(90deg)";
 
     return (
         <div
