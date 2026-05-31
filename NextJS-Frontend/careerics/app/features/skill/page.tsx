@@ -30,6 +30,7 @@ import { ActivityCard } from "@/components/ui/activity-card";
 import { InlineContainer } from "@/components/ui/containers/inline";
 import { FlexContainer } from "@/components/ui/containers/flex";
 import { StackContainer } from "@/components/ui/containers/stack";
+import { useResponsive } from "@/hooks/useResponsive";
 
 type AssessmentTarget = {
   id: string;
@@ -990,7 +991,7 @@ export default function SkillAssessment() {
     skill.toLowerCase().includes(search.toLowerCase())
   );
 
-
+  const { isLarge, isMedium, isSmall } = useResponsive();
 
   return (
     <div
@@ -1003,8 +1004,8 @@ export default function SkillAssessment() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(2, 1fr) repeat(2, 2fr)",
-          gridTemplateRows: "1.5fr repeat(5, 1fr)",
+          gridTemplateColumns: isLarge ? "repeat(2, 1fr) repeat(2, 2fr)" : isMedium ? "1.5fr 1fr" : "1fr",
+          gridTemplateRows: isLarge ? "1.5fr repeat(5, 1fr)" : isMedium ? "repeat(2, 1fr) 2.7fr" : "repeat(2, 1fr) 2.5fr",
           columnGap: "var(--space-lg)",
           rowGap: "var(--space-lg)",
           height: "100%",
@@ -1013,26 +1014,28 @@ export default function SkillAssessment() {
         }}
       >
         <SkillFilters
-            tracks={trackOptions}
-            selectedTrackId={selectedTrackId}
-            onTrackChange={handleTrackChange}
-            skillType={selectedSkillType}
-            onSkillTypeChange={setSelectedSkillType}
-            disabled={isLoading}
-            disableSkillTypeToggle={isGeneralSkillsMode}
-            trackHelperText={trackHelperText}
-            style={{
-            gridArea: "1/ 1 / 3 / 3",  
+          tracks={trackOptions}
+          selectedTrackId={selectedTrackId}
+          onTrackChange={handleTrackChange}
+          skillType={selectedSkillType}
+          onSkillTypeChange={setSelectedSkillType}
+          disabled={isLoading}
+          disableSkillTypeToggle={isGeneralSkillsMode}
+          trackHelperText={trackHelperText}
+          style={{
+            gridArea: isLarge ? "1/ 1 / 3 / 3" : "1 / 1 / 2 / 2",
+            flexGrow: 0,
+            maxHeight: "100%",
           }}
         />
-         
+
 
         <InlineContainer
           Title="Skill you are currently learning"
           style={{
             backgroundColor: "var(--dark-blue)",
             width: "100%",
-            gridArea: "1 / 3 / 3 / 5",
+            gridArea: isLarge ? "1 / 3 / 3 / 5" : "2 / 1 / 3 / 2",
           }}
         >
           {learningItems.length ? (
@@ -1083,7 +1086,7 @@ export default function SkillAssessment() {
           searchValue={search}
           onSearchChange={setSearch}
           style={{
-            gridArea: "3 / 1 / 7 / 4",
+            gridArea: isLarge ? "3 / 1 / 7 / 4" : isMedium ? "3 / 1 / 4 / 3" : "3 / 1 / 4 / 2",
             backgroundColor: "var(--dark-blue)",
           }}
         >
@@ -1114,32 +1117,33 @@ export default function SkillAssessment() {
                 }}
                 style={{
                   minWidth: "fit-content",
-                  flex:1,
+                  flex: 1,
                 }}
               />
             );
           })}
         </FlexContainer>
 
-
-        <StackContainer
-          Title="Past Tests"
-          centerTitle
-          style={{
-            gridArea: "3 / 4 / 7 / 5",
-            backgroundColor: "var(--dark-blue)",
-          }}
-        >
-          {allPastTests.map((test) => (
-            <ActivityCard
-              key={test.id}
-              title={test.title}
-              score={test.score}
-              skill={test.skill}
-              variant="progress"
-            />
-          ))}
-        </StackContainer>
+        {!isSmall &&
+          <StackContainer
+            Title="Past Tests"
+            centerTitle
+            style={{
+              gridArea: isLarge?"3 / 4 / 7 / 5": "1 / 2 / 3 / 3",
+              backgroundColor: "var(--dark-blue)",
+            }}
+          >
+            {allPastTests.map((test) => (
+              <ActivityCard
+                key={test.id}
+                title={test.title}
+                score={test.score}
+                skill={test.skill}
+                variant="progress"
+              />
+            ))}
+          </StackContainer>
+        }
 
       </div>
 

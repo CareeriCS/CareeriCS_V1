@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, ReactNode } from "react";
+import React, { useRef, ReactNode, Activity } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { CircleScore } from "../circle-score";
@@ -73,6 +73,8 @@ export const RecentActivityCard = ({
 
   const { isLarge, isMedium, isSmall, width } = useResponsive();
 
+  const isActivity = activities[0]?.id !== "No activity yet";
+
   return (
     <div
       style={{
@@ -110,6 +112,8 @@ export const RecentActivityCard = ({
           overflowY: "auto",
           scrollbarWidth: "none",
           scrollBehavior: "smooth",
+          minHeight: 0,
+          flex:1,
         }}
       >
         {/* activities */}
@@ -123,10 +127,10 @@ export const RecentActivityCard = ({
               }
             }}
             style={{
-              backgroundColor: "#c1cbe6",
+              backgroundColor: isActivity ? "#c1cbe6" : "transparent",
               borderRadius: "var(--radius-md)",
               padding: "var(--space-xxs)",
-              color: "black",
+              color: isActivity ? "black" : "white",
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
@@ -144,13 +148,14 @@ export const RecentActivityCard = ({
                   display: "-webkit-box",
                   WebkitLineClamp: 2,
                   WebkitBoxOrient: "vertical",
+                  textAlign:isActivity?"left":"center"
                 }}
               >
                 {act.id}
               </div>
 
               {isLarge &&
-                <div style={{ fontSize: "var(--text-xs)" }}>
+                <div style={{ fontSize: "var(--text-xs)",textAlign:isActivity?"left":"center"}}>
                   {act.date || `On ${act.id}`}
                 </div>
               }

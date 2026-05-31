@@ -123,8 +123,8 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          justifyContent: "flex-start",
-          paddingTop: "10vh",
+          justifyContent: isLarge ? "flex-start" : "center",
+          gap: isLarge ? 0 : "var(--space-2xl)",
         }}
       >
 
@@ -135,6 +135,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
             width: "50%",
             maxWidth: "320px",
             height: "fit-content",
+            marginTop: isLarge ? "auto" : 0,
           }}
         >
           <svg preserveAspectRatio="none" viewBox="0 0 983 169" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -155,7 +156,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
           <div
             style={{
               width: "100%",
-              height: isLarge?"100vh":"100%",
+              height: isLarge ? "100vh" : "fit-content",
               gridArea: layout.LeftArea,
               display: "flex",
               alignItems: "center",
@@ -262,6 +263,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
             style={{
               height: "fit-content",
               maxWidth: isMedium ? "50%" : "70%",
+              marginTop: "auto",
             }}
           >
             <img
