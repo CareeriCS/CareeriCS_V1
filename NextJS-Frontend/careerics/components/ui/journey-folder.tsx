@@ -65,13 +65,13 @@ export default function JourneyFolder({
   const bottomRight = phase === 5 ? "100" : "90";
 
   const clipPath = `
-    polygon(
-      100% ${topRight}%,
-      0% 0%,
-      0% 100%,
-      100% ${bottomRight}%
-    )
-  `;
+  polygon(
+    0% ${topRight}%,
+    100% 0%,
+    100% 100%,
+    0% ${bottomRight}%
+  )
+`;
 
   const handleNavigation = (e: React.MouseEvent) => {
     e.stopPropagation(); // prevents nested click conflicts
@@ -89,24 +89,6 @@ export default function JourneyFolder({
         display: "flex",
       }}
     >
-      {/* Main panel */}
-      <div
-        style={{
-          width: "100%",
-          height: "100%",
-          backgroundColor: current ? primaryColor : phaseColor,
-          borderRadius: "4vh",
-          overflow: "hidden",
-          borderTopRightRadius: phase === 1 ? "0" : "4vh",
-          borderBottomRightRadius: phase === 5 ? "0" : "4vh",
-          paddingRight: "0.5rem",
-          boxShadow: "10px 0 15px rgba(0, 0, 0, 0.66)",
-          maxWidth: closed ? "12rem" : "100%",
-          display: "flex",
-        }}
-      >
-        {children}
-      </div>
 
       {/* Label */}
       <div
@@ -114,7 +96,6 @@ export default function JourneyFolder({
         style={{
           height: "100%",
           display: "flex",
-          flexDirection: "column",
           cursor: locked ? "not-allowed" : "pointer",
         }}
       >
@@ -125,22 +106,47 @@ export default function JourneyFolder({
             height: "fit-content",
             backgroundColor: current ? primaryColor : phaseColor,
             clipPath,
-            borderTopRightRadius: "5vh",
-            borderBottomRightRadius: "5vh",
-            writingMode: "vertical-rl",
+            borderTopLeftRadius: "5vh",
+            borderBottomLeftRadius: "5vh",
             textAlign: "center",
-            paddingBlock: "0.5rem",
-            paddingInline: "2.5rem",
-            fontFamily: "var(--font-nova-square)",
-            color: !current ? primaryColor : phaseColor,
-            fontSize: "1rem",
+            paddingBlock: "var(--space-xs)",
+            paddingInline: "var(--space-2xl)",
             userSelect: "none",
+            writingMode: "vertical-rl",
             cursor: locked ? "not-allowed" : "pointer",
-            whiteSpace:"nowrap",
           }}
-        >
-          {locked ? `${label} (Locked)` : label}
+          >
+          <h1
+          style={{
+            fontFamily: "var(--font-nova-square)",
+            fontSize: "var(--text-base)",
+            color: !current ? primaryColor : phaseColor,
+            whiteSpace: "nowrap",
+            transform: "rotate(180deg)",
+          }}
+          >
+            {locked ? `${label} (Locked)` : label}
+          </h1>
         </div>
+      </div>
+
+      {/* Main panel */}
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          backgroundColor: current ? primaryColor : phaseColor,
+          borderRadius: "var(--radius-xl)",
+          overflow: "hidden",
+          borderTopLeftRadius: phase === 1 ? "0" : "var(--radius-xl)",
+          borderBottomLeftRadius: phase === 5 ? "0" : "var(--radius-xl)",
+          paddingLeft: "0.5rem",
+          boxShadow: "-10px 0 15px rgba(0, 0, 0, 0.66)",
+          maxWidth: closed ? "12rem" : "100%",
+          display: "flex",
+        }}
+      >
+        {children}
       </div>
     </div>
   );

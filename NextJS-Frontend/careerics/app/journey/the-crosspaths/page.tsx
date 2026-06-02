@@ -101,8 +101,8 @@ function renderLoadingState() {
       <div style={{ textAlign: "center" }}>
         <div
           style={{
-            fontSize: "1rem",
-            marginBottom: "1rem",
+            fontSize: "var(--text-md)",
+            marginBottom: "var(--space-md)",
             opacity: 0.8,
           }}
         >
@@ -279,8 +279,8 @@ export default function JourneyCrosspathsPage() {
               justifyContent: "center",
               alignItems: "center",
               color: "white",
-              padding: "40px",
-              gap: "1rem",
+              padding: "var(--space-xl)",
+              gap: "var(--space-lg)",
               textAlign: "center",
             }}
           >
@@ -323,10 +323,10 @@ export default function JourneyCrosspathsPage() {
             width: "100%",
             height: "100%",
             display: "grid",
-            padding: "40px",
-            gridTemplateColumns: "repeat(2,1fr)",
+            padding: "var(--space-xl)",
+            gridTemplateColumns: "1.2fr 1fr",
             gridTemplateRows: "1fr",
-            gridColumnGap: "1rem",
+            gridColumnGap: "var(--space-lg)",
             color: "white",
             textAlign: "left",
             overflow: "hidden",
@@ -341,42 +341,43 @@ export default function JourneyCrosspathsPage() {
               justifyContent: "flex-start",
               alignItems: "flex-start",
               gap: "2rem",
+              gridArea: "1 / 1 / 2 / 2",
+              maxWidth: "100%",
             }}
           >
             <div>
-              <h1 style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>
+              <h1 style={{ fontSize: "var(--text-lg)", marginBottom: "var(--space-sm)" }}>
                 {selectedTrack.title || "Career Track"}
               </h1>
-              <p style={{ color: "lightgrey", margin: 0 }}>
+              <p style={{ fontSize: "var(--text-base)", color: "lightgrey", margin: 0 }}>
                 {selectedTrack.description || "Track details are loading..."}
               </p>
-              {selectedTrack.score !== null && selectedTrack.score !== undefined ? (
-                <p style={{ color: "var(--light-green)", marginTop: "0.5rem", marginBottom: 0 }}>
-                  Match score: {Math.round(selectedTrack.score)}%
-                </p>
-              ) : null}
             </div>
 
             <div
               style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(3, 1fr)",
-                width: "fit-content",
-                gap: "1rem",
+                display: "flex",
+                flexWrap: "wrap",
+                width: "100%",
+                gap: "var(--space-sm)",
               }}
             >
               {displaySkills.map((skill) => (
                 <RectangularCard
                   key={skill}
-                  style={{ width: "100%" }}
                   theme="dark"
                   Title={skill}
+                  style={{
+                    flex:1,
+                    minWidth: "fit-content",
+                    flexGrow: 1,
+                  }}
                 />
               ))}
             </div>
 
             <div>
-              <h1 style={{ fontSize: "1.2rem", marginBottom: "1rem" }}>
+              <h1 style={{ fontSize: "var(--text-lg)", marginBottom: "var(--space-sm)" }}>
                 Key Responsibilities
               </h1>
 
@@ -388,17 +389,17 @@ export default function JourneyCrosspathsPage() {
                     display: "grid",
                     gridTemplateColumns: "repeat(1, 1fr)",
                     width: "fit-content",
-                    gap: "1rem",
+                    gap: "var(--space-md)",
                   }}
                 >
                   {displayResponsibilities.length ? (
                     displayResponsibilities.map((responsibility, index) => (
-                      <p key={`${responsibility}-${index}`} style={{ color: "lightgrey", margin: 0 }}>
+                      <p key={`${responsibility}-${index}`} style={{ fontSize: "var(--text-base)", color: "lightgrey", margin: 0 }}>
                         {"\u2022"} {responsibility}
                       </p>
                     ))
                   ) : (
-                    <p style={{ color: "lightgrey", margin: 0 }}>
+                    <p style={{ fontSize: "var(--text-base)", color: "lightgrey", margin: 0 }}>
                       No detailed responsibilities are available for this track yet.
                     </p>
                   )}
@@ -416,19 +417,18 @@ export default function JourneyCrosspathsPage() {
               justifyContent: "flex-start",
               alignItems: "flex-start",
               gap: "2rem",
+              gridArea: "1 / 2 / 2 / 3",
             }}
           >
             <div
               style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(3, 1fr)",
-                width: "fit-content",
-                gap: "1rem",
+                display: "flex",
+                width: "100%",
+                gap: "var(--space-sm)",
               }}
             >
               {LEVELS.map((level) => (
                 <RectangularCard
-                  style={{ width: "100%" }}
                   key={level}
                   font="jura"
                   theme="light"
@@ -436,6 +436,11 @@ export default function JourneyCrosspathsPage() {
                   selected={selectedLevel === level}
                   selectable
                   onSelect={() => setSelectedLevel(level)}
+                  style={{
+                    flex:1,
+                    minWidth: "fit-content",
+                    flexGrow: 1,
+                  }}
                 />
               ))}
             </div>
@@ -447,19 +452,19 @@ export default function JourneyCrosspathsPage() {
                 display: "flex",
                 justifyContent: "flex-start",
                 alignItems: "center",
-                gap: "5rem",
+                gap: "var(--space-xl)",
               }}
             >
               <div>
-                <h1 style={{ fontSize: "1rem", marginBottom: "0.5rem" }}>Salary Range</h1>
-                <h1 style={{ fontSize: "1.5rem", color: "lightgrey", margin: 0 }}>
+                <h1 style={{ fontSize: "var(--text-md)", marginBottom: "var(--space-xs)" }}>Salary Range</h1>
+                <h1 style={{ fontSize: "var(--text-md)", color: "lightgrey", margin: 0 }}>
                   {currentLevelData.salary}
                 </h1>
               </div>
 
               <div>
-                <h1 style={{ fontSize: "1rem", marginBottom: "0.5rem" }}>Market Demand</h1>
-                <h1 style={{ fontSize: "1.5rem", color: currentLevelData.demandColor, margin: 0 }}>
+                <h1 style={{ fontSize: "var(--text-md)", marginBottom: "var(--space-xs)" }}>Market Demand</h1>
+                <h1 style={{ fontSize: "var(--text-md)", color: currentLevelData.demandColor, margin: 0 }}>
                   {currentLevelData.demand}
                 </h1>
               </div>
@@ -470,11 +475,11 @@ export default function JourneyCrosspathsPage() {
                 width: "100%",
                 height: "100%",
                 backgroundColor: "var(--medium-blue)",
-                borderRadius: "4vh",
-                padding: "2rem",
+                borderRadius: "var(--radius-xl)",
+                padding: "var(--space-xl)",
               }}
             >
-              <h1 style={{ fontSize: "1.2rem", marginBottom: "1rem" }}>
+              <h1 style={{ fontSize: "var(--text-lg)", marginBottom: "var(--space-md)" }}>
                 This Would Fit You If
               </h1>
 
@@ -486,11 +491,11 @@ export default function JourneyCrosspathsPage() {
                     display: "grid",
                     gridTemplateColumns: "repeat(1, 1fr)",
                     width: "fit-content",
-                    gap: "1rem",
+                    gap: "var(--space-md)",
                   }}
                 >
                   {displayFitReasons.map((fitReason, index) => (
-                    <p key={`${fitReason}-${index}`} style={{ color: "lightgrey", margin: 0 }}>
+                    <p key={`${fitReason}-${index}`} style={{fontSize: "var(--text-base)", color: "lightgrey", margin: 0 }}>
                       {"\u2022"} {fitReason}
                     </p>
                   ))}

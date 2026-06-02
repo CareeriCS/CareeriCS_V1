@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import ChoiceCard from "@/components/ui/choice-card";
 import CVPop from "@/components/ui/cvPopup";
 import { StackContainer } from "@/components/ui/containers/stack";
+import ChoiceCardHorizontal from "@/components/ui/choice-card-horizontal";
+import { useResponsive } from "@/hooks/useResponsive";
 
 function formatReportDate(dateIso: string): string {
   const parsedDate = new Date(dateIso);
@@ -122,6 +124,9 @@ export default function CVCrafting() {
     link.click();
     link.remove();
   };
+  const { isLarge, isMedium, isSmall } = useResponsive();
+
+  const CardType = isLarge ? ChoiceCard : ChoiceCardHorizontal;
 
   return (
     <>
@@ -131,139 +136,82 @@ export default function CVCrafting() {
           height: "100%",
           padding: "var(--space-xl)",
           display: "grid",
-          gridTemplateColumns: "repeat(2, 1fr) 1.2fr",
-          gridTemplateRows: "2fr 1fr",
+          gridTemplateColumns: isLarge ? "repeat(2, 1fr) 1.2fr" : isMedium ? "1.5fr 1fr" : "1fr",
+          gridTemplateRows: isLarge ? "2fr 1fr" : "repeat(3, 1fr)",
           gridColumnGap: "var(--space-lg)",
           gridRowGap: "var(--space-lg)",
           overflow: "hidden",
           zIndex: 1,
         }}
       >
-        <ChoiceCard
+        <CardType
           key={1}
           title="CV Builder"
           description="Fill out our builder’s form and we will construct a tailored, professional, ATS-approved resume ready to download."
           icon="/cv/cv-builder.svg"
           buttonVariant="primary-inverted"
           route="/cv-feature/builder"
-          style={{ gridArea: "1 / 1 / 2 / 2" }}
+          style={{ gridArea: isLarge ? "1 / 1 / 2 / 2" : "1 / 1 / 2 / 2" }}
         />
 
-        <ChoiceCard
+        <CardType
           key={2}
           title="CV Enhancer"
           description="Elevate your existing resume with AI-driven insights that refine your language and highlight your achievements."
           icon="/cv/cv-enhancer.svg"
           buttonVariant="primary-inverted"
           route="/cv-feature/enhancer"
-          style={{ gridArea: "1 / 2 / 2 / 3" }}
+          style={{ gridArea: isLarge ? "1 / 2 / 2 / 3" : "2 / 1 / 3 / 2" }}
         />
 
-        <StackContainer
-          Title="Old Versions"
-          style={{ gridArea: "1 / 3 / 3 / 4", backgroundColor: "var(--medium-blue)" }}
-          centerTitle
-        >
-          {archiveItems.length ? (
-            archiveItems.map((item) => (
-              <ActivityCard
-                key={item.id}
-                title={item.label}
-                date={item.date}
-                onClick={() => handleDownloadReport(item)}
-                variant="download"
-              />
-            ))
-          ) : (
-            <div
-              style={{
-                color: reportsError ? "#FFD3D3" : "#D7E3FF",
-                fontFamily: "var(--font-jura)",
-                textAlign: "center",
-                paddingInline: "20px",
-              }}
-            >
-              {isLoadingReports
-                ? "Loading your CV history..."
-                : reportsError || "No saved CV versions yet."}
-            </div>
-          )}
-        </StackContainer>
-
-        <div
-          style={{
-            gridArea: "2 / 1 / 3 / 3",
-            backgroundColor: "#16203d",
-            borderRadius: "var(--radius-lg)",
-            padding: "var(--space-lg)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: "24px",
+        {!isSmall && (
+          <StackContainer
+            Title="Old Versions"
+            style={{ gridArea: isLarge ? "1 / 3 / 3 / 4" : "1 / 2 / 4 / 3", 
+            backgroundColor: "var(--medium-blue)" 
           }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "var(--space-lg)",
-              minWidth: 0,
-              flex: 1,
-              height: "100%",
-            }}
+            centerTitle
           >
-            <img
-              src="/cv/cv-extractor.svg"
-              alt=""
-              style={{
-                height: "var(--icon-4xl)"
-              }}
-            />
-            <div
-              style={{
-                height: "80%",
-                width: "0.2rem",
-                backgroundColor: "white",
-                flexShrink: 0,
-                flexGrow: 0,
-                alignItems: "center",
-                display: "flex",
-                borderRadius: "999px",
-              }}
-            />
-            <div>
-              <h3
+            {archiveItems.length ? (
+              archiveItems.map((item) => (
+                <ActivityCard
+                  key={item.id}
+                  title={item.label}
+                  date={item.date}
+                  onClick={() => handleDownloadReport(item)}
+                  variant="download"
+                />
+              ))
+            ) : (
+              <div
                 style={{
-                  color: "white",
-                  fontSize: "var(--text-md)",
-                  fontFamily: "var(--font-nova-square)",
-                  fontWeight: "200"
+                  color: reportsError ? "#FFD3D3" : "#D7E3FF",
+                  fontFamily: "var(--font-jura)",
+                  textAlign: "center",
+                  paddingInline: "20px",
                 }}
               >
-                CV Extractor
-              </h3>
-              <p
-                style={{
-                  color: "white",
-                  fontSize: "var(--text-base)",
-                }}
-              >
-                Update your data on our system to automate job application later on
-              </p>
-            </div>
-          </div>
+                {isLoadingReports
+                  ? "Loading your CV history..."
+                  : reportsError || "No saved CV versions yet."}
+              </div>
+            )}
+          </StackContainer>
+        )}
 
-          <Button
-            variant="primary-inverted"
-            onClick={() => setIsPopOpen(true)}
-            disabled={isExtracting}
-            style={{
-              marginTop: "auto",
-            }}
-          >
-            {isExtracting ? "Uploading..." : "Upload CV"}
-          </Button>
-        </div>
+        <ChoiceCardHorizontal
+          icon="/cv/cv-extractor.svg"
+          title="CV Extractor"
+          description="Update your data on our system to automate job application later on"
+          buttonText="Upload CV"
+          buttonLoadingText="Uploading..."
+          isLoading={isExtracting}
+          onButtonClick={() => setIsPopOpen(true)}
+          style={{
+            gridArea: isLarge ? "2 / 1 / 3 / 3" :  "3 / 1 / 4 / 2",
+          }}
+        />
+
       </div>
 
       {isPopOpen ? (

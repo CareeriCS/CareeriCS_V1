@@ -34,6 +34,16 @@ function renderChain(
       locked={isLocked}
       path={targetPath}
     >
+      {isCurrent && (
+        <div
+          style={{
+            width: "100%",
+            height: "100%",
+          }}
+        >
+          {renderContent?.()}
+        </div>
+      )}
       {rest.length > 0 &&
         (isCurrent ? (
           <div
@@ -49,16 +59,6 @@ function renderChain(
           renderChain(rest, current, maxReached, resolvePhasePath, renderContent)
         ))}
 
-      {isCurrent && (
-        <div
-          style={{
-            width: "100%",
-            height: "100%",
-          }}
-        >
-          {renderContent?.()}
-        </div>
-      )}
     </JourneyFolder>
   );
 }
