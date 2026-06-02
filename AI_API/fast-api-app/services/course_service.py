@@ -3,10 +3,11 @@ from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
-from db.models import Course, CourseUserProgress, User
+from db.models import Course, CourseUserProgress, RoadmapCourse, User
 from schemas import CourseProgressItemRead, UserCourseProgressListResponse
 
 
@@ -122,14 +123,47 @@ def get_courses_by_skill(db: Session, tag: str, category: Optional[str] = None) 
     ]
 
 
-def _validate_user_and_course(db: Session, user_id: UUID, course_id: UUID) -> None:
+def _resolve_course_for_progress(db: Session, user_id: UUID, course_id: UUID) -> Course:
     user_exists = db.query(User.id).filter(User.id == user_id).first()
     if not user_exists:
         raise ValueError(f"User with ID {user_id} not found")
 
-    course_exists = db.query(Course.id).filter(Course.id == course_id).first()
-    if not course_exists:
+    course = db.query(Course).filter(Course.id == course_id).first()
+    if course:
+        return course
+
+    roadmap_course = db.query(RoadmapCourse).filter(RoadmapCourse.id == course_id).first()
+    if not roadmap_course:
         raise ValueError(f"Course with ID {course_id} not found")
+
+    existing_course = db.query(Course).filter(Course.url == roadmap_course.url).first()
+    if existing_course:
+        # TODO: if mirrored roadmap courses keep a different Course.id, frontend status matching may need URL-based reconciliation.
+        return existing_course
+
+    mirrored_course = Course(
+        id=roadmap_course.id,
+        platform=roadmap_course.provider,
+        title=roadmap_course.title,
+        url=roadmap_course.url,
+        category=None,
+        level=None,
+        language=roadmap_course.language,
+        price="Free" if roadmap_course.is_free is True else None,
+    )
+
+    db.add(mirrored_course)
+    try:
+        db.flush()
+    except IntegrityError:
+        db.rollback()
+        existing_course = db.query(Course).filter(Course.url == roadmap_course.url).first()
+        if existing_course:
+            # TODO: if mirrored roadmap courses keep a different Course.id, frontend status matching may need URL-based reconciliation.
+            return existing_course
+        raise
+
+    return mirrored_course
 
 
 def update_course_status(db: Session, user_id: UUID, course_id: UUID, status: str) -> CourseUserProgress:
@@ -137,13 +171,13 @@ def update_course_status(db: Session, user_id: UUID, course_id: UUID, status: st
     if normalized_status not in VALID_COURSE_STATUSES:
         raise ValueError("Invalid status. Allowed values: saved, enrolled, completed")
 
-    _validate_user_and_course(db, user_id, course_id)
+    course = _resolve_course_for_progress(db, user_id, course_id)
 
     now = datetime.now(UTC)
 
     insert_values: Dict[str, Any] = {
         "user_id": user_id,
-        "course_id": course_id,
+        "course_id": course.id,
         "status": normalized_status,
         "saved_at": now if normalized_status == "saved" else None,
         "started_at": now if normalized_status == "enrolled" else None,
