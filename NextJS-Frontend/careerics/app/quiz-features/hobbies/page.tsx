@@ -4,12 +4,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { careerService } from "@/services";
 import type { APICareerCardRead, APICareerCardSelectionItem } from "@/types";
+import { useResponsive } from "@/hooks/useResponsive";
 
 const MIN_CARDS_PER_STEP = 3;
 const MAX_CARDS_PER_STEP = 5;
 
 export default function HobbiesGrid() {
   const router = useRouter();
+  const { isLarge, isMedium, isSmall } = useResponsive();
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("sessionId") || "";
 
@@ -67,12 +69,16 @@ export default function HobbiesGrid() {
   }, [sessionId]);
 
   const currentCards = step === 0 ? hobbyCards : technicalCards;
-  const currentTitle = step === 0
-    ? "Choose Your Favorite interests"
-    : "Choose Your Favorite strengths";
-  const currentSubtitle = step === 0
-    ? "Step 1 of 2: Select between 3 and 5 interests"
-    : "Step 2 of 2: Select between 3 and 5 strengths";
+  const currentTitle =
+    step === 0
+      ? "Choose Your Favorite interests"
+      : "Choose Your Favorite strengths";
+
+  const currentSubtitle =
+    step === 0
+      ? "Step 1 of 2: Select between 3 and 5 interests"
+      : "Step 2 of 2: Select between 3 and 5 strengths";
+
   const currentSelectionIds = step === 0 ? selectedHobbyIds : selectedTechnicalIds;
 
   const selectedSummary = useMemo(() => {
@@ -123,6 +129,7 @@ export default function HobbiesGrid() {
       setStep(0);
       return;
     }
+
     router.push("/features/career");
   };
 
@@ -167,6 +174,7 @@ export default function HobbiesGrid() {
         setError("Choose at least 3 interests to continue.");
         return;
       }
+
       setError(null);
       setStep(1);
       return;
@@ -175,195 +183,239 @@ export default function HobbiesGrid() {
     void submitSelections();
   };
 
-const isCurrentStepValid = currentSelectionIds.length >= 3 ;
+  const isCurrentStepValid = currentSelectionIds.length >= 3;
+
   return (
     <div
       style={{
-        width: "90%", // Zabatt de men 1000% le 100% 3ashan el layout
-        minHeight: "100%",
+        width: "100%",
+        maxHeight: "100%",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        justifyContent: "center",
-        padding: "1rem",
+        justifyContent: "space-between",
+        overflowY: "auto",
+        scrollbarWidth: "none",
+        gap: isSmall ? "var(--space-sm)" : "var(--space-md)",
+        paddingInline: isSmall ? "var(--space-sm)" : "0",
         boxSizing: "border-box",
-        position: "relative",
-        left: "6vw",
-        marginTop: "10vh",
       }}
     >
       <div
         style={{
-          width: "100%",
-          maxWidth: "1100px",
           display: "flex",
-          flexDirection: "column",
-          gap: "1rem",
+          justifyContent: isSmall ? "center" : "space-between",
+          alignItems: isSmall ? "center" : "center",
+          gap: isSmall ? "var(--space-md)" : "var(--space-lg)",
+          flexWrap: "wrap",
+          position: "relative",
+          width: isSmall ? "100%" : "auto",
+          textAlign: isSmall ? "center" : "left",
         }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", flexWrap: "wrap",position: "relative", left: "6vw" }}>
-          <div>
-            <h1
-              style={{
-                color: "#FFFFFF",
-                fontSize: "clamp(1.6rem, 3.2vw, 2.4rem)",
-                fontFamily: "var(--font-nova-square)",
-                margin: 0,
-
-              }}
-            >
-              {currentTitle}
-            </h1>
-            <p style={{ color: "#C7D2FE", marginTop: "0.45rem", marginBottom: 0, fontSize: "0.95rem" }}>
-              {currentSubtitle}
-            </p>
-          </div>
-
-          <div
+        <div>
+          <h1
             style={{
-              background: "rgba(184, 239, 70, 0.15)",
-              border: "1px solid rgba(184, 239, 70, 0.35)",
-              color: "var(--light-green)",
-              borderRadius: "999px",
-              padding: "0.5rem 0.9rem",
-              fontSize: "0.9rem",
-              fontWeight: 700,
-              whiteSpace: "nowrap",
-              position: "relative",
-              right: "4vw",
+              color: "var(--light-blue)",
+              fontSize: isSmall ? "var(--text-lg)" : "var(--text-xl)",
+              fontFamily: "var(--font-nova-square)",
+              lineHeight: "var(--line-tight)",
             }}
           >
-            {selectedSummary}
-          </div>
-        </div>
+            {currentTitle}
+          </h1>
 
-        {error ? (
-          <p style={{ margin: 0, color: "#FFD3D3", fontSize: "0.95rem" }}>
-            {error}
+          <p
+            style={{
+              color: "var(--text-grey)",
+              fontSize: isSmall ? "var(--text-sm)" : "var(--text-base)",
+              fontFamily: "var(--font-jura)",
+              lineHeight: "var(--line-normal)",
+            }}
+          >
+            {currentSubtitle}
           </p>
-        ) : null}
+        </div>
 
         <div
           style={{
-            background: "#BABABA",
-            borderRadius: "1.6rem",
-            width: "85%",
-            height: "100%",
-            // minHeight: "fit-content",
-            padding: "2rem",
-            border: "1px solid rgba(255, 255, 255, 0.08)",
-            boxSizing: "border-box",
+            backgroundColor: "var(--dark-grey)",
+            border: "1px solid var(--primary-green)",
+            color: "var(--light-green)",
+            borderRadius: "var(--radius-2xl)",
+            padding: "var(--space-sm) var(--space-sm)",
+            fontSize: "var(--text-sm)",
+            fontWeight: 700,
+            whiteSpace: "nowrap",
             position: "relative",
-            left: "5vw",
+            fontFamily: "var(--font-jura)",
           }}
         >
-          {isLoadingCards ? (
-            <div style={{ color: "#E5E7EB", textAlign: "center", paddingTop: "5rem", fontSize: "1rem" }}>
-              Loading available cards...
-            </div>
-          ) : currentCards.length === 0 ? (
-            <div style={{ color: "#E5E7EB", textAlign: "center", paddingTop: "5rem", fontSize: "1rem" }}>
-              No cards available for this step yet.
-            </div>
-          ) : (
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: "1.4rem",
-                justifyContent: "flex-start",
-              }}
-            >
-              {currentCards.map((card) => {
-                const isSelected = currentSelectionIds.includes(card.id);
-                return (
-                  <button
-                    key={card.id}
-                    type="button"
-                    onClick={() => toggleCard(card.id)}
-                    style={{
-                      width:"0",
-                      minWidth:"fit-content",
-                      backgroundColor: isSelected ? "#E6FFB2" : "#1C427B",
-                      color: isSelected ? "#111827" : "#F9FAFB",
-                      border: isSelected ? "1px solid #D9FF8F" : "1px solid rgba(255, 255, 255, 0.12)",
-                      borderRadius: "1rem",
-                      padding: "0.7rem 1.2rem",
-                      textAlign: "center",
-                      cursor: "pointer",
-                      transition: "all 0.2s ease",
-                      minHeight: "3rem",
-                      fontSize: "1rem",
-                      display: "flex",
-                      flexDirection: "column",
-                      justifyContent: "center",
-                      alignItems: "center",
-                      whiteSpace:"normal",
-                      flex:1
-                    }}
-                  >
-                    <div>{card.name}</div>
-                    {card.description ? (
-                      <div style={{ marginTop: "0.2rem", fontSize: "0.75rem", fontWeight: 500, opacity: 0.8 }}>
-                        {card.description}
-                      </div>
-                    ) : null}
-                  </button>
-                );
-              })}
-            </div>
-          )}
+          {selectedSummary}
         </div>
+      </div>
 
-          <div style={{ 
-          display: "flex", 
-          justifyContent: "space-between", 
-          alignItems: "center", 
-          gap: "0.75rem", 
-          width: "100%",
-          marginTop: "1rem" 
-        }}>
-          {step !== 0 ? (
-            <Button
-              variant="primary-inverted"
-              type="button"
-              onClick={handleBack}
-              style={{
-                color: "#111827",
-                borderRadius: "0.8rem",
-                padding: "0.75rem 1.35rem",
-                fontWeight: 700,
-                height: "6.5vh",
-                width: "20%", 
-                flex: "none"  
-              }}
-            >
-              Previous
-            </Button>
-          ) : (
-            // Optional: Add an empty div if you want to keep the "Next" button pushed to the right
-            <div style={{ width: "20%" }} /> 
-          )}
+      {error ? (
+        <p
+          style={{
+            margin: 0,
+            color: "var(--light-red)",
+            fontSize: isSmall ? "var(--text-sm)" : "var(--text-base)",
+            fontFamily: "var(--font-jura)",
+            lineHeight: "var(--line-normal)",
+            textAlign: isSmall ? "center" : "left",
+          }}
+        >
+          {error}
+        </p>
+      ) : null}
 
-          <Button
-            variant="primary"
-            type="button"
-            onClick={handleNext}
-            disabled={isLoadingCards || !isCurrentStepValid || isSubmitting}
+      <div
+        style={{
+          background: "var(--bg-grey)",
+          borderRadius: "var(--radius-2xl)",
+          width: isSmall ? "100%" : isMedium ? "90%" : "80%",
+          padding: isSmall ? "var(--space-md)" : "var(--space-xl)",
+          boxSizing: "border-box",
+        }}
+      >
+        {isLoadingCards ? (
+          <div
             style={{
-              color: "#111827",
-              borderRadius: "0.8rem",
-              padding: "0.75rem 1.35rem",
-              fontWeight: 800,
-              width: "20%", 
-              height: "6.5vh",
-              flex: "none",   
-              opacity: isLoadingCards || !isCurrentStepValid || isSubmitting ? 0.55 : 1,
+              color: "var(--dark-grey)",
+              textAlign: "center",
+              paddingTop: isSmall ? "var(--space-xl)" : "var(--space-2xl)",
+              fontSize: isSmall ? "var(--text-sm)" : "var(--text-base)",
+              fontFamily: "var(--font-jura)",
+              lineHeight: "var(--line-normal)",
             }}
           >
-            {step === 0 ? "Continue to Strengths" : isSubmitting ? "Saving..." : "Start Questions"}
+            Loading available cards...
+          </div>
+        ) : currentCards.length === 0 ? (
+          <div
+            style={{
+              color: "var(--dark-grey)",
+              textAlign: "center",
+              paddingTop: isSmall ? "var(--space-xl)" : "var(--space-2xl)",
+              fontSize: isSmall ? "var(--text-sm)" : "var(--text-base)",
+              fontFamily: "var(--font-jura)",
+              lineHeight: "var(--line-normal)",
+            }}
+          >
+            No cards available for this step yet.
+          </div>
+        ) : (
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: isSmall ? "var(--space-md)" : "var(--space-xl)",
+              justifyContent: isSmall ? "center" : "space-between",
+            }}
+          >
+            {currentCards.map((card) => {
+              const isSelected = currentSelectionIds.includes(card.id);
+
+              return (
+                <button
+                  key={card.id}
+                  type="button"
+                  onClick={() => toggleCard(card.id)}
+                  style={{
+                    width: isSmall ? "100%" : "0",
+                    minWidth: isSmall ? "100%" : "fit-content",
+                    backgroundColor: isSelected
+                      ? "var(--light-green)"
+                      : "var(--medium-blue)",
+                    color: isSelected
+                      ? "var(--bg-color)"
+                      : "var(--light-blue)",
+                    borderRadius: "var(--radius-lg)",
+                    padding: isSmall
+                      ? "var(--space-sm) var(--space-md)"
+                      : "var(--space-sm) var(--space-xl)",
+                    textAlign: "center",
+                    cursor: "pointer",
+                    minHeight: "var(--min-touch-target)",
+                    fontSize: isSmall ? "var(--text-sm)" : "var(--text-base)",
+                    fontFamily: "var(--font-jura)",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-around",
+                    alignItems: "center",
+                    whiteSpace: "normal",
+                    flex: isSmall ? "none" : 1,
+                    lineHeight: "var(--line-normal)",
+                  }}
+                >
+                  <div>{card.name}</div>
+
+                  {card.description ? (
+                    <div
+                      style={{
+                        fontSize: "var(--text-xs)",
+                        fontWeight: 500,
+                        lineHeight: "var(--line-normal)",
+                      }}
+                    >
+                      {card.description}
+                    </div>
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: isSmall ? "center" : "space-between",
+          alignItems: "center",
+          width: "100%",
+          gap: isSmall ? "var(--space-md)" : "var(--space-lg)",
+          flexDirection: isSmall ? "column" : "row",
+        }}
+      >
+        {step !== 0 ? (
+          <Button
+            variant="primary-inverted"
+            type="button"
+            onClick={handleBack}
+            style={{
+              borderRadius: "var(--radius-lg)",
+              padding: "var(--button-padding-y) var(--button-padding-x)",
+              fontWeight: 700,
+              minHeight: "var(--min-touch-target)",
+              width: isSmall ? "100%" : "15%",
+              flex: "none",
+            }}
+          >
+            Previous
           </Button>
-        </div>
+        ) : (
+          <div style={{ width: isSmall ? "100%" : "20%" }} />
+        )}
+
+        <Button
+          variant="primary"
+          type="button"
+          onClick={handleNext}
+          disabled={isLoadingCards || !isCurrentStepValid || isSubmitting}
+          style={{
+            borderRadius: "var(--radius-lg)",
+            padding: "var(--button-padding-y) var(--button-padding-x)",
+            fontWeight: 800,
+            minHeight: "var(--min-touch-target)",
+            width: isSmall ? "100%" : "auto",
+            flex: "none",
+            opacity: isLoadingCards || !isCurrentStepValid || isSubmitting ? 0.55 : 1,
+          }}
+        >
+          {step === 0 ? "Continue to Strengths" : isSubmitting ? "Saving..." : "Start Questions"}
+        </Button>
       </div>
     </div>
   );

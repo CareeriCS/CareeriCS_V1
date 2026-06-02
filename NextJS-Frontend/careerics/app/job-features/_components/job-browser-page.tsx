@@ -15,6 +15,8 @@ import {
 } from "@/lib/jobs";
 import { useAuth } from "@/providers/auth-provider";
 import { jobService } from "@/services";
+import { useResponsive } from "@/hooks/useResponsive";
+
 import type {
   APIJobFilters,
   JobApplicationStatus,
@@ -393,9 +395,11 @@ function toggleSelection(currentValues: string[], nextValue: string): string[] {
 }
 
 export default function JobBrowserPage({
+
   mode,
-  syncSelectionToUrl = false,
+  syncSelectionToUrl = false,  
 }: JobBrowserPageProps) {
+  const { isLarge, isMedium, isSmall } = useResponsive();
   const { user, isLoading: isAuthLoading } = useAuth();
   const [jobs, setJobs] = useState<JobUiModel[]>([]);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
@@ -719,250 +723,369 @@ export default function JobBrowserPage({
   };
 //job card
 return (
-    <div style={{
+  <div
+    style={{
       display: "flex",
+      flexDirection: isSmall ? "column" : "row",
       width: "100%",
       maxHeight: "100%",
       height: "100%",
-      padding: "var(--space-lg)",
+      padding: isSmall ? "var(--space-md)" : "var(--space-lg)",
       boxSizing: "border-box",
-      justifyContent: "space-around",
+      justifyContent: isLarge ? "space-around" : "center",
       overflow: "hidden",
       scrollbarWidth: "none",
       position: "relative",
-      gap: "var(--space-lg)",
-    }}>
-
-      <div style={{
-        width: "var(--container-sm)",
+      gap: isSmall ? "var(--space-md)" : "var(--space-lg)",
+    }}
+  >
+    <div
+      style={{
+        width: isLarge
+          ? "var(--container-sm)"
+          : isMedium
+            ? "var(--container-xs)"
+            : "100%",
         minHeight: "0",
         display: "flex",
         flexDirection: "column",
         position: "relative",
-        gap: "var(--space-lg)",
+        gap: isSmall ? "var(--space-md)" : "var(--space-lg)",
         overflowX: "hidden",
         overflowY: "auto",
         scrollbarWidth: "none",
         zIndex: 1,
-      }}>
+      }}
+    >
+      <div style={{ position: "relative", width: "100%" }}>
+        <input
+          type="text"
+          placeholder="Search By Job Title"
+          value={searchQuery}
+          onChange={(event) => {
+            setSearchQuery(event.target.value);
+            setCurrentPage(1);
+          }}
+          style={{
+            width: "100%",
+            padding: "var(--input-padding)",
+            paddingRight: "calc(var(--icon-lg) + var(--space-xl))",
+            borderRadius: "var(--radius-xl)",
+            border: "1.5px solid var(--light-blue)",
+            backgroundColor: "transparent",
+            color: "var(--light-blue)",
+            fontSize: "var(--text-base)",
+            outline: "none",
+            boxSizing: "border-box",
+            minHeight: "var(--min-touch-target)",
+            fontFamily: "var(--font-jura)",
+          }}
+        />
 
-        <div style={{ position: "relative", width: "100%" }}>
-          <input
-            type="text"
-            placeholder="Search By Job Title"
-            value={searchQuery}
-            onChange={(event) => {
-              setSearchQuery(event.target.value);
-              setCurrentPage(1);
-            }}
-            style={{
-              width: "100%",
-              padding: "var(--input-padding)",
-              borderRadius: "var(--radius-xl)",
-              border: "1.5px solid var(--light-blue)",
-              backgroundColor: "transparent",
-              color: "var(--light-blue)",
-              fontSize: "var(--text-base)",
-              outline: "none",
-              boxSizing: "border-box",
-            }}
-          />
-          <img
-            src="/global/search.svg"
-            alt="search"
-            style={{
-              position: "absolute",
-              right: "var(--space-lg)",
-              top: "50%",
-              transform: "translateY(-50%)",
-              width: "var(--icon-lg)",
-            }}
-          />
-        </div>
+        <img
+          src="/global/search.svg"
+          alt="search"
+          style={{
+            position: "absolute",
+            right: "var(--space-lg)",
+            top: "50%",
+            transform: "translateY(-50%)",
+            width: "var(--icon-lg)",
+            height: "var(--icon-lg)",
+            pointerEvents: "none",
+          }}
+        />
+      </div>
 
-        <div style={{ display: "flex", gap: "var(--space-sm)", zIndex: 10, flexWrap: "wrap" }}>
-          <MultiSelectDropdown
-            placeholder="Country"
-            options={countryOptions}
-            selectedValues={selectedCountries}
-            onToggle={(value) => {
-              setCurrentPage(1);
-              setSelectedCountries((current) => toggleSelection(current, value));
-            }}
-            onClear={() => {
-              setCurrentPage(1);
-              setSelectedCountries([]);
-            }}
-            emptyLabel="No country options available"
-          />
-          <MultiSelectDropdown
-            placeholder="City"
-            options={cityOptions}
-            selectedValues={selectedCities}
-            onToggle={(value) => {
-              setCurrentPage(1);
-              setSelectedCities((current) => toggleSelection(current, value));
-            }}
-            onClear={() => {
-              setCurrentPage(1);
-              setSelectedCities([]);
-            }}
-            emptyLabel="No city options available"
-          />
-          <MultiSelectDropdown
-            placeholder="Job Type"
-            options={jobTypeOptions}
-            selectedValues={selectedJobTypes}
-            onToggle={(value) => {
-              setCurrentPage(1);
-              setSelectedJobTypes((current) => toggleSelection(current, value));
-            }}
-            onClear={() => {
-              setCurrentPage(1);
-              setSelectedJobTypes([]);
-            }}
-            emptyLabel="No job type options available"
-          />
-          <MultiSelectDropdown
-            placeholder="Work Mode"
-            options={workTypeOptions}
-            selectedValues={selectedWorkTypes}
-            onToggle={(value) => {
-              setCurrentPage(1);
-              setSelectedWorkTypes((current) => toggleSelection(current, value));
-            }}
-            onClear={() => {
-              setCurrentPage(1);
-              setSelectedWorkTypes([]);
-            }}
-            emptyLabel="No work mode options available"
-          />
-          <MultiSelectDropdown
-            placeholder="Experience Level"
-            options={levelOptions}
-            selectedValues={selectedLevels}
-            onToggle={(value) => {
-              setCurrentPage(1);
-              setSelectedLevels((current) => toggleSelection(current, value));
-            }}
-            onClear={() => {
-              setCurrentPage(1);
-              setSelectedLevels([]);
-            }}
-            emptyLabel="No experience levels available"
-          />
-          <button
-            type="button"
-            onClick={resetFilters}
-            disabled={!hasActiveFilters}
-            style={{
-              height: "fit-content",
-              padding: " var(--space-sm)",
-              borderRadius: "var(--radius-xl)",
-              border: "1.5px solid var(--medium-grey)",
-              backgroundColor: "transparent",
-              color: hasActiveFilters ? "var(--light-blue)" : "var(--text-grey)",
-              cursor: hasActiveFilters ? "pointer" : "not-allowed",
-              whiteSpace: "nowrap",
-               fontSize: "var(--text-sm)",
-              fontFamily: "var(--font-jura)",
-            }}
-          >
-            Reset Filters
-          </button>
-        </div>
+      <div
+        style={{
+          display: "flex",
+          gap: "var(--space-sm)",
+          zIndex: 10,
+          flexWrap: "wrap",
+          width: "100%",
+        }}
+      >
+        <MultiSelectDropdown
+          placeholder="Country"
+          options={countryOptions}
+          selectedValues={selectedCountries}
+          onToggle={(value) => {
+            setCurrentPage(1);
+            setSelectedCountries((current) => toggleSelection(current, value));
+          }}
+          onClear={() => {
+            setCurrentPage(1);
+            setSelectedCountries([]);
+          }}
+          emptyLabel="No country options available"
+        />
 
-        <div style={{ display: "flex", gap: "var(--space-md)", fontSize: "var(--text-sm)", color: "var(--light-blue)", alignItems: "center", flexWrap: "wrap" }}>
-          <span style={{ opacity: 0.7, flexShrink: 0 }}>Sort By:</span>
-          <SortLink label="Relevance" isActive={activeSort === "relevance"} onClick={() => {
+        <MultiSelectDropdown
+          placeholder="City"
+          options={cityOptions}
+          selectedValues={selectedCities}
+          onToggle={(value) => {
+            setCurrentPage(1);
+            setSelectedCities((current) => toggleSelection(current, value));
+          }}
+          onClear={() => {
+            setCurrentPage(1);
+            setSelectedCities([]);
+          }}
+          emptyLabel="No city options available"
+        />
+
+        <MultiSelectDropdown
+          placeholder="Job Type"
+          options={jobTypeOptions}
+          selectedValues={selectedJobTypes}
+          onToggle={(value) => {
+            setCurrentPage(1);
+            setSelectedJobTypes((current) => toggleSelection(current, value));
+          }}
+          onClear={() => {
+            setCurrentPage(1);
+            setSelectedJobTypes([]);
+          }}
+          emptyLabel="No job type options available"
+        />
+
+        <MultiSelectDropdown
+          placeholder="Work Mode"
+          options={workTypeOptions}
+          selectedValues={selectedWorkTypes}
+          onToggle={(value) => {
+            setCurrentPage(1);
+            setSelectedWorkTypes((current) => toggleSelection(current, value));
+          }}
+          onClear={() => {
+            setCurrentPage(1);
+            setSelectedWorkTypes([]);
+          }}
+          emptyLabel="No work mode options available"
+        />
+
+        <MultiSelectDropdown
+          placeholder="Experience Level"
+          options={levelOptions}
+          selectedValues={selectedLevels}
+          onToggle={(value) => {
+            setCurrentPage(1);
+            setSelectedLevels((current) => toggleSelection(current, value));
+          }}
+          onClear={() => {
+            setCurrentPage(1);
+            setSelectedLevels([]);
+          }}
+          emptyLabel="No experience levels available"
+        />
+
+        <button
+          type="button"
+          onClick={resetFilters}
+          disabled={!hasActiveFilters}
+          style={{
+            height: "fit-content",
+            padding: "var(--space-sm)",
+            borderRadius: "var(--radius-xl)",
+            border: "1.5px solid var(--medium-grey)",
+            backgroundColor: "transparent",
+            color: hasActiveFilters ? "var(--light-blue)" : "var(--text-grey)",
+            cursor: hasActiveFilters ? "pointer" : "not-allowed",
+            whiteSpace: "nowrap",
+            fontSize: "var(--text-sm)",
+            fontFamily: "var(--font-jura)",
+          }}
+        >
+          Reset Filters
+        </button>
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          gap: isSmall ? "var(--space-sm)" : "var(--space-md)",
+          fontSize: "var(--text-sm)",
+          color: "var(--light-blue)",
+          alignItems: "center",
+          flexWrap: "wrap",
+          lineHeight: "var(--line-normal)",
+        }}
+      >
+        <span style={{ opacity: 0.7, flexShrink: 0 }}>Sort By:</span>
+
+        <SortLink
+          label="Relevance"
+          isActive={activeSort === "relevance"}
+          onClick={() => {
             setCurrentPage(1);
             setActiveSort("relevance");
-          }} />
-          <span style={{ opacity: 0.4 }}>-</span>
-          <SortLink label="Date Posted" isActive={activeSort === "date"} onClick={() => {
+          }}
+        />
+
+        <span style={{ opacity: 0.4 }}>-</span>
+
+        <SortLink
+          label="Date Posted"
+          isActive={activeSort === "date"}
+          onClick={() => {
             setCurrentPage(1);
             setActiveSort("date");
-          }} />
-          <span style={{ opacity: 0.4 }}>-</span>
-          <SortLink label="Resume Match" isActive={activeSort === "match"} onClick={() => {
+          }}
+        />
+
+        <span style={{ opacity: 0.4 }}>-</span>
+
+        <SortLink
+          label="Resume Match"
+          isActive={activeSort === "match"}
+          onClick={() => {
             setCurrentPage(1);
             setActiveSort("match");
-          }} />
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", color: "var(--light-blue)", gap: "var(--space-md)", flexWrap: "wrap" }}>
-          <span style={{ opacity: 0.8, fontSize: "var(--text-sm)" }}>
-            {totalJobs
-              ? `Showing ${pageStart}-${pageEnd} of ${totalJobs} jobs`
-              : isLoading
-                ? "Loading jobs..."
-                : "No jobs found"}
-          </span>
-          <span style={{ opacity: 0.6, fontSize: "var(--text-xs)" }}>
-            Page {Math.min(currentPage, Math.max(totalPages, 1))} of {Math.max(totalPages, 1)}
-          </span>
-        </div>
-
-        {error && (
-          <p style={{ color: "var(--light-red)", margin: 0, fontSize: "var(--text-sm)" }}>
-            {error}
-          </p>
-        )}
-
-        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2xl)" }}>
-          {renderLeftPanelContent()}
-        </div>
-
-        <div style={{ display: "flex", gap: "var(--space-md)", justifyContent: "space-between", alignItems: "center", paddingBottom: "var(--space-xl)" }}>
-          <Button
-            variant="outline"
-            type="button"
-            onClick={() => setCurrentPage((page) => Math.max(page - 1, 1))}
-            disabled={currentPage <= 1 || isLoading}
-            style={{
-              cursor: currentPage > 1 && !isLoading ? "pointer" : "default",
-            }}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="primary"
-            type="button"
-            onClick={() => setCurrentPage((page) => Math.min(page + 1, Math.max(totalPages, 1)))}
-            disabled={currentPage >= totalPages || isLoading || !totalPages}
-            style={{
-              cursor: currentPage < totalPages && !isLoading ? "pointer" : "default",
-            }}
-          >
-            Next
-          </Button>
-        </div>
+          }}
+        />
       </div>
 
-      <div style={{
-        width: "1.5px",
-        backgroundColor: "var(--medium-grey)",
-        height: "95%",
-        flexShrink: 0,
-        position: "relative",
-      }} />
+      <div
+        style={{
+          display: "flex",
+          alignItems: isSmall ? "flex-start" : "center",
+          justifyContent: "space-between",
+          flexDirection: isSmall ? "column" : "row",
+          color: "var(--light-blue)",
+          gap: "var(--space-sm)",
+          flexWrap: "wrap",
+        }}
+      >
+        <span style={{ opacity: 0.8, fontSize: "var(--text-sm)" }}>
+          {totalJobs
+            ? `Showing ${pageStart}-${pageEnd} of ${totalJobs} jobs`
+            : isLoading
+              ? "Loading jobs..."
+              : "No jobs found"}
+        </span>
 
-      {/* job details */}
-        <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-start", maxWidth: "100%" }}>
-          {selectedJob ? (
-            <JobDetailsCard
-              jobData={selectedJob}
-              onApply={handleApply}
-              isApplying={isApplying}
-              actionLabel="Apply"
-              isApplyDisabled={false}
-            />
-          ) : (
-            <div style={{ color: "var(--light-blue)", paddingTop: "var(--space-2xl)" }}>
-              {isLoading ? "Loading job details..." : "No job selected yet."}
-            </div>
-          )}
-        </div>
+        <span style={{ opacity: 0.6, fontSize: "var(--text-xs)" }}>
+          Page {Math.min(currentPage, Math.max(totalPages, 1))} of{" "}
+          {Math.max(totalPages, 1)}
+        </span>
       </div>
-  );
+
+      {error && (
+        <p
+          style={{
+            color: "var(--light-red)",
+            margin: 0,
+            fontSize: "var(--text-sm)",
+            fontFamily: "var(--font-jura)",
+            lineHeight: "var(--line-normal)",
+          }}
+        >
+          {error}
+        </p>
+      )}
+
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: isSmall ? "var(--space-lg)" : "var(--space-2xl)",
+        }}
+      >
+        {renderLeftPanelContent()}
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          gap: "var(--space-md)",
+          justifyContent: "space-between",
+          alignItems: "center",
+          paddingBottom: "var(--space-xl)",
+          flexDirection: isSmall ? "column" : "row",
+        }}
+      >
+        <Button
+          variant="outline"
+          type="button"
+          onClick={() => setCurrentPage((page) => Math.max(page - 1, 1))}
+          disabled={currentPage <= 1 || isLoading}
+          style={{
+            width: isSmall ? "100%" : undefined,
+            cursor: currentPage > 1 && !isLoading ? "pointer" : "default",
+          }}
+        >
+          Previous
+        </Button>
+
+        <Button
+          variant="primary"
+          type="button"
+          onClick={() =>
+            setCurrentPage((page) =>
+              Math.min(page + 1, Math.max(totalPages, 1)),
+            )
+          }
+          disabled={currentPage >= totalPages || isLoading || !totalPages}
+          style={{
+            width: isSmall ? "100%" : undefined,
+            cursor:
+              currentPage < totalPages && !isLoading ? "pointer" : "default",
+          }}
+        >
+          Next
+        </Button>
+      </div>
+    </div>
+
+    {!isSmall && (
+      <div
+        style={{
+          width: "1.5px",
+          backgroundColor: "var(--medium-grey)",
+          height: "95%",
+          flexShrink: 0,
+          position: "relative",
+        }}
+      />
+    )}
+
+    {/* job details */}
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "flex-start",
+        maxWidth: isLarge ? "100%" : isMedium ? "55%" : "100%",
+        width: isLarge ? "fit-content" : isMedium ? "55%" : "100%",
+        minHeight: "0",
+        overflowY: "auto",
+        scrollbarWidth: "none",
+      }}
+    >
+      {selectedJob ? (
+        <JobDetailsCard
+          jobData={selectedJob}
+          onApply={handleApply}
+          isApplying={isApplying}
+          actionLabel="Apply"
+          isApplyDisabled={false}
+        />
+      ) : (
+        <div
+          style={{
+            color: "var(--light-blue)",
+            paddingTop: "var(--space-2xl)",
+            fontSize: "var(--text-base)",
+            fontFamily: "var(--font-jura)",
+            lineHeight: "var(--line-normal)",
+          }}
+        >
+          {isLoading ? "Loading job details..." : "No job selected yet."}
+        </div>
+      )}
+    </div>
+  </div>
+);
 }

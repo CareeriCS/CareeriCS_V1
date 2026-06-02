@@ -562,7 +562,7 @@ export default function CareerQuestionsPage() {
         <div
           style={{
             width: "100%",
-            height: "100%",
+            height: "fit-content",
             display: "flex",
             flexDirection: "column",
             padding: "5vh 4vw",
