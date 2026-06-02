@@ -11,63 +11,56 @@ export default function JourneyLayout({
         <div
             style={{
                 width: "100%",
-                height: "100vh",
-                padding: "10px",
-                boxSizing: "border-box",
+                height: "100dvh",
+                maxHeight: "100dvh",
+                padding: "var(--space-md)",
                 overflow: "hidden",
+                display: "grid",
+                gridTemplateColumns: "1fr",
+                gridTemplateRows: "1fr",
             }}
         >
+            {/* Main Content */}
             <div
                 style={{
                     background: "linear-gradient(180deg, var(--dark-blue) 0%, #000000 100%)",
-                    borderRadius: "5vh",
                     width: "100%",
-                    height: "100%",
-                    margin: "0 auto",
-                    overflow: "hidden",
                     display: "flex",
-                    flexDirection: "row",
+                    overflow: "hidden",
+                    borderRadius: "var(--radius-xl)",
+                    flexDirection: "column",
                 }}
             >
-                {/* Main content */}
-                <div
+
+            <button
+                type="button"
+                onClick={() => router.back()}
+                style={{
+                    width: "var(--icon-lg)",
+                    height: "var(--icon-lg)",
+                    cursor: "pointer",
+                    marginLeft: "auto",
+                    marginBottom: "auto",
+                    marginTop: "var(--space-md)",
+                    marginRight: "var(--space-md)",
+                    gridArea: "1 / 1 / 2 / 2",
+                }}
+            >
+                <img
+                    src="/global/close.svg"
+                    alt="Close"
                     style={{
-                        position: "relative",
-                        display: "flex",
-                        flex: 1,
-                        overflowX:"hidden",
-                        overflowY:"auto",
-                        scrollbarWidth: "none",
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "contain",
                     }}
-                >
-                    {children}
-                </div>
+                />
+            </button>
 
-
-                {/* Exit Button*/}
-                <button
-                    type="button"
-                    onClick={() => router.back()}
-                    style={{
-                        width: "5vh",
-                        height: "5vh",
-                        cursor: "pointer",
-                        margin: "20px",
-
-                    }}
-                >
-                    <img
-                        src="/global/close.svg"
-                        alt="Close"
-                        style={{
-                            width: "100%",
-                            height: "100%",
-                            objectFit: "contain",
-                        }}
-                    />
-
-                </button>
+                {children}
             </div>
+
+           
         </div>
     );
 }
