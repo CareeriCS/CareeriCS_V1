@@ -13,6 +13,8 @@ import { interviewService } from "@/services/interview.service";
 import { reportsService } from "@/services/reports.service";
 import type { APIInterviewArchiveItem } from "@/types";
 import { StackContainer } from "@/components/ui/containers/stack";
+import { useResponsive } from "@/hooks/useResponsive";
+import ChoiceCardHorizontal from "@/components/ui/choice-card-horizontal";
 
 export default function Interview() {
   const router = useRouter();
@@ -172,13 +174,15 @@ export default function Interview() {
     return "Start";
   }, [isLoading, isStartingInterview]);
 
+  const { isLarge, isMedium, isSmall } = useResponsive();
+  const CardType = isLarge ? ChoiceCard : ChoiceCardHorizontal;
   return (
     <>
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(2, 1fr) 1.2fr",
-          gridTemplateRows: "2fr 1fr",
+          gridTemplateColumns: isLarge ? "repeat(2, 1fr) 1.2fr" : isMedium ? "1.5fr 1fr" : "1fr",
+          gridTemplateRows: isLarge ? "2fr 1fr" : "repeat(3, 1fr)",
           gridColumnGap: "var(--space-lg)",
           gridRowGap: "var(--space-lg)",
           width: "100%",
@@ -186,7 +190,7 @@ export default function Interview() {
           padding: "var(--space-xl)",
         }}
       >
-        <ChoiceCard
+        <CardType
           title="Behavioral Mock Interview"
           description="Practice answering the most common interview questions and improve how you present yourself and your skills."
           buttonVariant="primary-inverted"
@@ -194,10 +198,10 @@ export default function Interview() {
           disabled={isLoading || isStartingInterview}
           buttonLabel={startButtonLabel}
           icon="/interview/hr.svg"
-          style={{ gridArea: "1 / 1 / 2 / 2" }}
+          style={{ gridArea: isLarge ? "1 / 1 / 2 / 2" : "1 / 1 / 2 / 2" }}
         />
 
-        <ChoiceCard
+        <CardType
           title="Technical Mock Interview"
           description="Choose the technical career you want to practice, then we will load the matching technical question bank."
           buttonVariant="primary-inverted"
@@ -205,45 +209,47 @@ export default function Interview() {
           disabled={isLoading || isStartingInterview}
           buttonLabel={startButtonLabel}
           icon="/interview/tech.svg"
-          style={{ gridArea: "1 / 2 / 2 / 3" }}
+          style={{ gridArea: isLarge ? "1 / 2 / 2 / 3" : "2 / 1 / 3 / 2" }}
         />
 
-        <StackContainer
-          Title="Interviews Archive"
-          centerTitle
-          style={{ gridArea: "1 / 3 / 2 / 4" }}
-        >
-          {archiveItems.length ? (
-            archiveItems.map((item) => (
-              <ActivityCard
-                key={item.report_id}
-                title={item.session_name}
-                date={formatInterviewArchiveDate(item.report_created_at || item.session_created_at)}
-                variant="download"
-                onClick={() => handleDownloadArchiveItem(item)}
-              />
-            ))
-          ) : (
-            <div
-              style={{
-                color: archiveError ? "#FFD3D3" : "#D7E3FF",
-                fontFamily: "var(--font-jura)",
-                textAlign: "center",
-                paddingInline: "20px",
-              }}
-            >
-              {isArchiveLoading
-                ? "Loading completed interview reports..."
-                : archiveError || "No completed interview reports yet."}
-            </div>
-          )}
-        </StackContainer>
+        {!isSmall && (
+          <StackContainer
+            Title="Interviews Archive"
+            centerTitle
+            style={{ gridArea: isLarge ? "1 / 3 / 2 / 4" : "1 / 2 / 4 / 3" }}
+          >
+            {archiveItems.length ? (
+              archiveItems.map((item) => (
+                <ActivityCard
+                  key={item.report_id}
+                  title={item.session_name}
+                  date={formatInterviewArchiveDate(item.report_created_at || item.session_created_at)}
+                  variant="download"
+                  onClick={() => handleDownloadArchiveItem(item)}
+                />
+              ))
+            ) : (
+              <div
+                style={{
+                  color: archiveError ? "#FFD3D3" : "#D7E3FF",
+                  fontFamily: "var(--font-jura)",
+                  textAlign: "center",
+                  paddingInline: "20px",
+                }}
+              >
+                {isArchiveLoading
+                  ? "Loading completed interview reports..."
+                  : archiveError || "No completed interview reports yet."}
+              </div>
+            )}
+          </StackContainer>
+        )}
 
         <TipCard
           title="Tip of the day"
           description="Research the company and interviewers before your interview so you understand the company's goals and show how you fit."
           icon="/global/tip.svg"
-          style={{ gridArea: "2 / 1 / 3 / 4" }}
+          style={{ gridArea: isLarge ? "2 / 1 / 3 / 4" : "3 / 1 / 4 / 2" }}
         />
 
         {startError ? (
