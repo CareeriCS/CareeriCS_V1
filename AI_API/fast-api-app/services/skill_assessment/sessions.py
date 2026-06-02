@@ -7,6 +7,8 @@ from db.models import AssessmentSession, Roadmap, RoadmapSection, RoadmapStep, S
 from schemas import AssessmentSessionSummary, StartAssessmentResponse
 from services.skill_assessment.questions import generate_and_save_questions, get_questions_response
 
+ALLOWED_SESSION_STATUSES = {"in_progress", "submitted", "completed", "cancelled"}
+
 
 def _normalize_session_type(session_type: str) -> str:
     normalized = (session_type or "").strip().lower()
@@ -127,3 +129,24 @@ def list_user_sessions(db: Session, user_id: str, limit: int = 20) -> List[Asses
         .all()
     )
     return sessions
+
+
+def update_session_status(db: Session, session_id: str, status: str) -> AssessmentSession:
+    normalized_status = (status or "").strip().lower()
+    if normalized_status not in ALLOWED_SESSION_STATUSES:
+        raise ValueError(
+            "Invalid session status. Must be one of: in_progress, submitted, completed, cancelled"
+        )
+
+    session = db.query(AssessmentSession).filter_by(id=session_id).first()
+    if not session:
+        raise ValueError("Assessment session not found")
+
+    current_status = (session.status or "").strip().lower()
+    if normalized_status == "cancelled" and current_status in {"submitted", "completed"}:
+        return session
+
+    session.status = normalized_status
+    db.commit()
+    db.refresh(session)
+    return session
