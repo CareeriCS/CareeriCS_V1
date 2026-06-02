@@ -13,6 +13,7 @@ import type {
 import { Button } from "@/components/ui";
 
 const STORAGE_PREFIX = "skill-assessment:";
+const STATUS_STORAGE_PREFIX = "skill-assessment:status:";
 
 type CachedAssessmentState = {
   sessionId: string;
@@ -138,6 +139,7 @@ export default function AssessmentPage() {
     setUnlockedStepId(1);
 
     persistAssessmentState(nextSessionId, nextQuestions, {}, 1, 1);
+    sessionStorage.setItem(`${STATUS_STORAGE_PREFIX}${nextSessionId}`, "in_progress");
 
     const params = new URLSearchParams({
       targetId,
@@ -261,6 +263,8 @@ export default function AssessmentPage() {
       setError(submitResponse.message || "Unable to submit assessment answers.");
       return;
     }
+
+    sessionStorage.setItem(`${STATUS_STORAGE_PREFIX}${sessionId}`, "submitted");
 
     const resultsResponse = await skillAssessmentService.getResults(user.id, sessionId);
     const finalResults =

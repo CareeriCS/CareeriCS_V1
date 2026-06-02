@@ -25,6 +25,16 @@ export const skillAssessmentService = {
     );
   },
 
+  updateSessionStatus(
+    sessionId: string,
+    payload: { status: string },
+  ): Promise<ApiResponse<APIAssessmentSessionSummary>> {
+    return fastapiApi.put<APIAssessmentSessionSummary>(
+      `/skill_assessment/session/${sessionId}/status`,
+      payload,
+    );
+  },
+
   submitAnswers(
     userId: string,
     sessionId: string,
