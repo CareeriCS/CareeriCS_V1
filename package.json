@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@splinetool/react-spline": "^4.1.0",
     "country-state-city": "^3.2.1",
     "lucide-react": "^0.576.0",
     "styled-components": "^6.3.11",
