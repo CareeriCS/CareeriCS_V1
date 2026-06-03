@@ -1,20 +1,21 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
+import { Jura, Nova_Square } from "next/font/google";
 import { AppReadyProvider } from "@/components/AppReadyProvider";
 import { Providers } from "@/providers";
 import "../styles/globals.scss";
 import "../styles/variables.css";
 
-const jura = localFont({
-  src: "../public/fonts/Jura-latin.woff2",
+const jura = Jura({
+  subsets: ["latin"],
   variable: "--font-jura",
-  display: "swap",
+
 });
 
-const novaSquare = localFont({
-  src: "../public/fonts/NovaSquare-latin.woff2",
+const novaSquare = Nova_Square({
+  subsets: ["latin"],
+  weight: "400",
   variable: "--font-nova-square",
-  display: "swap",
+
 });
 
 export const metadata: Metadata = {
