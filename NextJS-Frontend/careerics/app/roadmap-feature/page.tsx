@@ -10,6 +10,7 @@ import {
   buildRoadmapStepFlowItems,
   buildRoadmapUiSections,
   getLockedRoadmapStepIndexes,
+  getNextUnlockedRoadmapSectionAfterCompletion,
   resolveRoadmapSectionSelection,
 } from "@/lib/roadmap-ui";
 import { useAuth } from "@/providers/auth-provider";
@@ -183,7 +184,7 @@ export default function RoadmapFeaturePage() {
     };
   }, [activeRoadmapId, isAuthLoading, user?.id]);
 
-  const { isLarge, isMedium, isSmall } = useResponsive();
+  const { isLarge } = useResponsive();
 
   const sections = useMemo(() => {
     return buildRoadmapUiSections({
@@ -206,19 +207,9 @@ export default function RoadmapFeaturePage() {
 
   const [isStatsOpen, setIsStatsOpen] = useState(false);
 
-  const openStats = useCallback(() => {
-    if (!isLarge) setIsStatsOpen(true);
-  }, [isLarge]);
-
   const closeStats = useCallback(() => {
     setIsStatsOpen(false);
   }, []);
-
-  const toggleStats = useCallback(() => {
-    if (!isLarge) {
-      setIsStatsOpen((prev) => !prev);
-    }
-  }, [isLarge]);
 
   const handleSectionSelect = useCallback(
     (index: number) => {
@@ -324,6 +315,24 @@ export default function RoadmapFeaturePage() {
       delete next[step.id];
       return next;
     });
+
+    if (nextChecked && selectedSection) {
+      const updatedSections = buildRoadmapUiSections({
+        roadmap,
+        progress: response.data,
+        localStepCompletion: {},
+      });
+      const nextSection = getNextUnlockedRoadmapSectionAfterCompletion(updatedSections, selectedSection.id);
+
+      if (nextSection) {
+        setSectionAccessMessage(null);
+        setSelectedSectionPreferenceId(nextSection.id);
+
+        if (!isLarge) {
+          setIsStatsOpen(true);
+        }
+      }
+    }
   };
 
   const steps = useMemo(() => buildRoadmapStepFlowItems(sections), [sections]);
