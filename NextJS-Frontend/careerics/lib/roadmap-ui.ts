@@ -154,6 +154,28 @@ export function getFirstUnlockedRoadmapSectionId(sections: RoadmapUiSection[]): 
   return sections.find((section) => !section.locked)?.id || sections[0]?.id || "";
 }
 
+export function getNextUnlockedRoadmapSectionAfterCompletion(
+  sections: RoadmapUiSection[],
+  currentSectionId: string,
+): RoadmapUiSection | null {
+  const currentIndex = sections.findIndex((section) => section.id === currentSectionId);
+  if (currentIndex < 0) {
+    return null;
+  }
+
+  const currentSection = sections[currentIndex];
+  if (currentSection?.completionStatus !== "completed") {
+    return null;
+  }
+
+  const nextSection = sections[currentIndex + 1] || null;
+  if (!nextSection || nextSection.locked) {
+    return null;
+  }
+
+  return nextSection;
+}
+
 export function buildRoadmapStepFlowItems(sections: RoadmapUiSection[]): Array<{
   label: string;
   href: string;

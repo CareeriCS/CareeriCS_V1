@@ -7,6 +7,11 @@ import Link from "next/link";
 import { useAuth } from "@/providers/auth-provider";
 import { useResponsive } from "@/hooks/useResponsive";
 import { profileService } from "@/services/profile.service";
+import { supabase } from "@/lib/supabase";
+
+const PROFILE_PHOTO_BUCKET = "profile-pictures";
+const PROFILE_PHOTO_SIGNED_URL_TTL_SECONDS = 60 * 60 * 24 * 7;
+const DEFAULT_PROFILE_IMAGE = "/sidebar/profile.svg";
 
 const Sidebar = () => {
   const pathname = usePathname();
@@ -18,6 +23,7 @@ const Sidebar = () => {
   const [hoveredNav, setHoveredNav] = useState<number | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [profileNameOverride, setProfileNameOverride] = useState<string | null>(null);
+  const [profileAvatarUrl, setProfileAvatarUrl] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -54,7 +60,52 @@ const Sidebar = () => {
     };
   }, [user?.id]);
 
+  useEffect(() => {
+    let alive = true;
 
+    const loadProfileAvatar = async () => {
+      if (!user?.id) {
+        if (alive) {
+          setProfileAvatarUrl("");
+        }
+        return;
+      }
+
+      const userResponse = await supabase.auth.getUser();
+      if (!alive) {
+        return;
+      }
+
+      const metadata = userResponse.data.user?.user_metadata;
+      const avatarPath = typeof metadata?.avatar_path === "string" ? metadata.avatar_path : "";
+
+      if (avatarPath) {
+        const signedUrlResponse = await supabase.storage
+          .from(PROFILE_PHOTO_BUCKET)
+          .createSignedUrl(avatarPath, PROFILE_PHOTO_SIGNED_URL_TTL_SECONDS);
+
+        if (!alive) {
+          return;
+        }
+
+        if (!signedUrlResponse.error && signedUrlResponse.data?.signedUrl) {
+          setProfileAvatarUrl(signedUrlResponse.data.signedUrl);
+          return;
+        }
+      }
+
+      const avatarUrl = typeof metadata?.avatar_url === "string" ? metadata.avatar_url : "";
+      setProfileAvatarUrl(avatarUrl || user.avatarUrl || "");
+    };
+
+    void loadProfileAvatar();
+
+    return () => {
+      alive = false;
+    };
+  }, [user?.id, user?.avatarUrl]);
+
+  const profileImageSrc = profileAvatarUrl || user?.avatarUrl || DEFAULT_PROFILE_IMAGE;
 
   const profileName = isLoading
     ? "Loading..."
@@ -209,9 +260,14 @@ const Sidebar = () => {
           }}
         >
           <img
-            src="/sidebar/profile.svg"
+            src={profileImageSrc}
             alt="User"
-            style={{ height: "var(--icon-md)" }}
+            style={{
+              height: "var(--icon-xl)",
+              width: "var(--icon-xl)",
+              borderRadius: "999px",
+              objectFit: "cover",
+            }}
           />
 
           <div style={{ cursor: "pointer" }}>
@@ -269,10 +325,13 @@ const Sidebar = () => {
 
             <img
               onClick={() => { router.push("/profile") }}
-              src="/sidebar/profile.svg"
+              src={profileImageSrc}
               alt="User"
               style={{
                 height: "var(--icon-lg)",
+                width: "var(--icon-lg)",
+                borderRadius: "999px",
+                objectFit: "cover",
                 cursor: "pointer",
               }}
             />
@@ -355,10 +414,13 @@ const Sidebar = () => {
                 }}
               >
                 <img
-                  src="/sidebar/profile.svg"
+                  src={profileImageSrc}
                   alt="User"
                   style={{
                     height: "var(--icon-xl)",
+                    width: "var(--icon-xl)",
+                    borderRadius: "999px",
+                    objectFit: "cover",
                     cursor: "pointer",
                   }}
                 />
@@ -476,10 +538,13 @@ const Sidebar = () => {
               }}
             >
               <img
-                src="/sidebar/profile.svg"
+                src={profileImageSrc}
                 alt="User"
                 style={{
                   height: "var(--icon-xl)",
+                  width: "var(--icon-xl)",
+                  borderRadius: "999px",
+                  objectFit: "cover",
                   cursor: "pointer",
                 }}
               />

@@ -139,6 +139,7 @@ export default function HomePage() {
     selectedTrackId: null,
   });
   const [isLoadingJourneyTracks, setIsLoadingJourneyTracks] = useState(false);
+  const [removingTrackIds, setRemovingTrackIds] = useState<Set<string>>(new Set());
   const [journeyError, setJourneyError] = useState<string | null>(null);
 
   const handleStartCareerQuiz = async () => {
@@ -585,48 +586,65 @@ export default function HomePage() {
       return;
     }
 
-    setBookmarkActionError(null);
-
-    const removal = await removeTrackBookmarksFromUnifiedList({
-      trackId: track.id,
-      roadmapId: track.roadmapId,
-      userId,
-    });
-
-    if (!removal.success) {
-      setBookmarkActionError(removal.message || "Unable to remove this career right now.");
+    if (removingTrackIds.has(track.id)) {
       return;
     }
 
-    invalidateJourneyTrackCardsCache(userId);
+    setBookmarkActionError(null);
+    setRemovingTrackIds((previous) => new Set(previous).add(track.id));
 
-    const currentTracks = bookmarkedJourneyTracks;
-    const currentIndex = currentTracks.findIndex((item) => item.id === track.id);
-    const remainingTracks = currentTracks.filter((item) => item.id !== track.id);
-    const fallbackTrack = remainingTracks[currentIndex] || remainingTracks[currentIndex - 1] || remainingTracks[0] || null;
+    try {
+      const removal = await removeTrackBookmarksFromUnifiedList({
+        trackId: track.id,
+        roadmapId: track.roadmapId,
+        userId,
+      });
 
-    setJourneyTracks((previous) => previous.filter((item) => item.id !== track.id));
-
-    if (selectedTrackId === track.id) {
-      setSelectedTrackId(fallbackTrack?.id || null);
-      persistSelectedJourneyTrackId(fallbackTrack?.id || null, userId);
-
-      if (fallbackTrack) {
-        void syncSelectedJourneyTrackProgress({
-          trackId: fallbackTrack.id,
-          userId,
-          roadmapId: fallbackTrack.roadmapId,
-          maxReached: getJourneyPhaseStateFromSnapshot(
-            journeyProgressSnapshot,
-            fallbackTrack.id,
-            userId,
-          ).maxReached,
-        });
+      if (!removal.success) {
+        setBookmarkActionError(removal.message || "Unable to remove this career right now.");
+        return;
       }
+
+      invalidateJourneyTrackCardsCache(userId);
+
+      const currentTracks = bookmarkedJourneyTracks;
+      const currentIndex = currentTracks.findIndex((item) => item.id === track.id);
+      const remainingTracks = currentTracks.filter((item) => item.id !== track.id);
+      const fallbackTrack = remainingTracks[currentIndex] || remainingTracks[currentIndex - 1] || remainingTracks[0] || null;
+
+      setJourneyTracks((previous) => previous.filter((item) => item.id !== track.id));
+
+      if (selectedTrackId === track.id) {
+        setSelectedTrackId(fallbackTrack?.id || null);
+        persistSelectedJourneyTrackId(fallbackTrack?.id || null, userId);
+
+        if (fallbackTrack) {
+          void syncSelectedJourneyTrackProgress({
+            trackId: fallbackTrack.id,
+            userId,
+            roadmapId: fallbackTrack.roadmapId,
+            maxReached: getJourneyPhaseStateFromSnapshot(
+              journeyProgressSnapshot,
+              fallbackTrack.id,
+              userId,
+            ).maxReached,
+          });
+        }
+      }
+    } finally {
+      setRemovingTrackIds((previous) => {
+        const next = new Set(previous);
+        next.delete(track.id);
+        return next;
+      });
     }
   };
 
-  const showJourneyPlaceholder = !isLoadingJourneyTracks && !bookmarkedJourneyTracks.length;
+  const isRemovingAnyTrack = removingTrackIds.size > 0;
+  const shouldShowJourneyLoadingCard =
+    isLoadingJourneyTracks && !bookmarkedJourneyTracks.length && !isRemovingAnyTrack;
+  const showJourneyPlaceholder =
+    !isLoadingJourneyTracks && !bookmarkedJourneyTracks.length && !isRemovingAnyTrack;
   const showSavedCareerPlaceholder = showJourneyPlaceholder && journeyTracks.length > 0;
   const isLoadingJourneyWidgets = isAuthLoading || isLoadingJourneyTracks;
 
@@ -714,7 +732,7 @@ export default function HomePage() {
           </p>
         ) : null}
 
-        {isLoadingJourneyTracks ? (
+        {shouldShowJourneyLoadingCard ? (
           <ChoiceCard
             key="journey-loading"
             title="Loading Tracks"
@@ -725,58 +743,40 @@ export default function HomePage() {
           />
         ) : null}
 
-        {bookmarkedJourneyTracks.map((track) => (
-          <ChoiceCard
-            key={track.id}
-            isSelected={activeTrack?.id === track.id}
-            title={track.title}
-            image="/landing/Rectangle.svg"
-            description={track.description}
-            buttonLabel="Continue"
-            onClick={() => handleSelectTrack(track.id)}
-            onAction={() => openTrackJourney(track)}
-            onRemove={() => {
-              void handleRemoveTrack(track);
-            }}
-          />
-        ))}
+        {bookmarkedJourneyTracks.map((track) => {
+          const isRemovingTrack = removingTrackIds.has(track.id);
 
-        {showJourneyPlaceholder ? (
-          <ChoiceCard
-            key="journey-empty-state"
-            title={
-              showSavedCareerPlaceholder
-                ? "No Saved Careers Yet"
-                : "No Journey Started Yet"
-            }
-            description={
-              showSavedCareerPlaceholder
-                ? "Bookmark a career roadmap to keep it here and continue your journey."
-                : "Take the career quiz to get track recommendations, then continue your 5-phase journey."
-            }
-            buttonLabel={
-              showSavedCareerPlaceholder
-                ? "Explore Roadmaps"
-                : isStartingCareerQuiz
-                  ? "Starting..."
-                  : "Take Quiz"
-            }
-            type="bookmark"
-            disabled={
-              showSavedCareerPlaceholder
-                ? false
-                : isStartingCareerQuiz || isAuthLoading
-            }
-            onAction={() => {
-              if (showSavedCareerPlaceholder) {
-                router.push("/features/roadmap");
-                return;
-              }
+          return (
+            <ChoiceCard
+              key={track.id}
+              isSelected={activeTrack?.id === track.id}
+              title={track.title}
+              image="/landing/Rectangle.svg"
+              description={track.description}
+              buttonLabel={isRemovingTrack ? "Removing..." : "Continue"}
+              disabled={isRemovingTrack}
+              onClick={() => handleSelectTrack(track.id)}
+              onAction={() => openTrackJourney(track)}
+              onRemove={() => {
+                void handleRemoveTrack(track);
+              }}
+            />
+          );
+        })}
 
-              void handleStartCareerQuiz();
-            }}
-          />
-        ) : null}
+{showJourneyPlaceholder ? (
+  <ChoiceCard
+    key="journey-empty-state"
+    title="No Journey Started Yet"
+    description="Take the career quiz to get track recommendations, then continue your 5-phase journey."
+    buttonLabel={isStartingCareerQuiz ? "Starting..." : "Take Quiz"}
+    type="bookmark"
+    disabled={isStartingCareerQuiz || isAuthLoading}
+    onAction={() => {
+      void handleStartCareerQuiz();
+    }}
+  />
+) : null}
       </CareerCardsContainer>
 
       <RecentActivityCard
