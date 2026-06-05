@@ -359,6 +359,10 @@ class AssessmentSessionSummary(BaseModel):
         from_attributes = True
 
 
+class AssessmentSessionStatusUpdate(BaseModel):
+    status: str
+
+
 # =====================================================
 # SUBMIT ASSESSMENT
 # =====================================================

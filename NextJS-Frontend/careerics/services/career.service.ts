@@ -83,6 +83,12 @@ export const careerService = {
     return fastapiApi.post<APICareerSessionRead>("/career/sessions/", payload);
   },
 
+  getSession(
+    sessionId: string,
+  ): Promise<ApiResponse<APICareerSessionRead>> {
+    return fastapiApi.get<APICareerSessionRead>(`/career/sessions/${sessionId}`);
+  },
+
   getUserSessions(
     userId: string,
   ): Promise<ApiResponse<APICareerSessionRead[]>> {
@@ -118,6 +124,23 @@ export const careerService = {
 
     userSessionsPromiseCache.set(cacheKey, nextRequest);
     return nextRequest;
+  },
+
+  updateSessionStatus(
+    sessionId: string,
+    payload: { status: string },
+  ): Promise<ApiResponse<APICareerSessionRead>> {
+    return fastapiApi
+      .put<APICareerSessionRead>(`/career/sessions/${sessionId}/status`, payload)
+      .then((response) => {
+        if (response.success && response.data?.user_id) {
+          const cacheKey = getUserSessionsCacheKey(response.data.user_id);
+          userSessionsCache.delete(cacheKey);
+          userSessionsPromiseCache.delete(cacheKey);
+        }
+
+        return response;
+      });
   },
 
   getCardsByType(

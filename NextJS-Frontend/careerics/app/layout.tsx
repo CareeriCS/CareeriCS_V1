@@ -8,12 +8,14 @@ import "../styles/variables.css";
 const jura = Jura({
   subsets: ["latin"],
   variable: "--font-jura",
+
 });
 
 const novaSquare = Nova_Square({
   subsets: ["latin"],
   weight: "400",
   variable: "--font-nova-square",
+
 });
 
 export const metadata: Metadata = {

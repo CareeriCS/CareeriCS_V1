@@ -1,5 +1,8 @@
 "use client";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
+import { isActiveSessionStatus, runCloseStatusUpdate } from "@/lib/session-close";
+import { careerService } from "@/services";
 
 export default function JourneyLayout({
     children,
@@ -7,6 +10,41 @@ export default function JourneyLayout({
     children: React.ReactNode;
 }) {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const [isClosing, setIsClosing] = useState(false);
+
+    const handleClose = async () => {
+        if (isClosing) {
+            return;
+        }
+
+        setIsClosing(true);
+
+        const sessionId = searchParams.get("sessionId") || "";
+
+        if (sessionId) {
+            await runCloseStatusUpdate("career quiz", async () => {
+                const sessionResponse = await careerService.getSession(sessionId);
+                if (!sessionResponse.success) {
+                    throw new Error(sessionResponse.message || "Unable to load career quiz session.");
+                }
+
+                if (!isActiveSessionStatus(sessionResponse.data?.status)) {
+                    return;
+                }
+
+                const updateResponse = await careerService.updateSessionStatus(sessionId, {
+                    status: "cancelled",
+                });
+                if (!updateResponse.success) {
+                    throw new Error(updateResponse.message || "Unable to cancel career quiz session.");
+                }
+            });
+        }
+
+        router.replace("/features/career");
+    };
+
     return (
         <div
             style={{
@@ -34,16 +72,19 @@ export default function JourneyLayout({
 
             <button
                 type="button"
-                onClick={() => router.back()}
+                onClick={() => void handleClose()}
+                disabled={isClosing}
+                aria-label="Close career quiz"
                 style={{
                     width: "var(--icon-lg)",
                     height: "var(--icon-lg)",
-                    cursor: "pointer",
+                    cursor: isClosing ? "not-allowed" : "pointer",
                     marginLeft: "auto",
                     marginBottom: "auto",
                     marginTop: "var(--space-md)",
                     marginRight: "var(--space-md)",
                     gridArea: "1 / 1 / 2 / 2",
+                    opacity: isClosing ? 0.6 : 1,
                 }}
             >
                 <img

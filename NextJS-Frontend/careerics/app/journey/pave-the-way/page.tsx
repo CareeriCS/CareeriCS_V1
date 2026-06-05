@@ -380,7 +380,8 @@ export default function JourneyPaveTheWayPage() {
       );
 
       setCourseProgress(nextProgress);
-      setActivePopupMode("complete");
+      setActivePopupCourse(null);
+      setActivePopupMode(null);
     } catch (error) {
       setCourseProgressError(
         error instanceof Error

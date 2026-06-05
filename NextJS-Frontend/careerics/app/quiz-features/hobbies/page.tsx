@@ -1,4 +1,5 @@
 "use client";
+
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -69,6 +70,7 @@ export default function HobbiesGrid() {
   }, [sessionId]);
 
   const currentCards = step === 0 ? hobbyCards : technicalCards;
+
   const currentTitle =
     step === 0
       ? "Choose Your Favorite interests"
@@ -183,39 +185,55 @@ export default function HobbiesGrid() {
     void submitSelections();
   };
 
-  const isCurrentStepValid = currentSelectionIds.length >= 3;
+  const isCurrentStepValid = currentSelectionIds.length >= MIN_CARDS_PER_STEP;
+
+  const containerWidth = isSmall ? "100%" : isMedium ? "85%" : isLarge ? "70%" : "60%";
+  const containerMaxWidth = isSmall ? "100%" : isMedium ? "90%" : "70%";
 
   return (
     <div
       style={{
         width: "100%",
-        maxHeight: "100%",
+        height: "100%",
         display: "flex",
         flexDirection: "column",
-        alignItems: "center",
+        alignItems: "stretch",
         justifyContent: "space-between",
-        overflowY: "auto",
-        scrollbarWidth: "none",
-        gap: isSmall ? "var(--space-sm)" : "var(--space-md)",
-        paddingInline: isSmall ? "var(--space-sm)" : "0",
+        overflow: "hidden",
+        gap: isSmall ? "var(--space-sm)" : "var(--space-sm)",
+        paddingInline: isSmall
+          ? "var(--space-sm)"
+          : isMedium
+            ? "var(--space-sm)"
+            : "0",
         boxSizing: "border-box",
       }}
     >
       <div
         style={{
           display: "flex",
-          justifyContent: isSmall ? "center" : "space-between",
-          alignItems: isSmall ? "center" : "center",
-          gap: isSmall ? "var(--space-md)" : "var(--space-lg)",
+          justifyContent: isSmall ? "center" : "center",
+          alignItems: "center",
+          gap: isSmall ? "var(--space-md)" : "var(--space-xl)",
           flexWrap: "wrap",
           position: "relative",
-          width: isSmall ? "100%" : "auto",
-          textAlign: isSmall ? "center" : "left",
+          width: "100%",
+          textAlign: isSmall ? "center" : "center",
+          flexShrink: 0,
         }}
       >
-        <div>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: isSmall ? "center" : "flex-start",
+            justifyContent: "center",
+            gap: "var(--space-xxs)",
+          }}
+        >
           <h1
             style={{
+              margin: 0,
               color: "var(--light-blue)",
               fontSize: isSmall ? "var(--text-lg)" : "var(--text-xl)",
               fontFamily: "var(--font-nova-square)",
@@ -227,6 +245,7 @@ export default function HobbiesGrid() {
 
           <p
             style={{
+              margin: 0,
               color: "var(--text-grey)",
               fontSize: isSmall ? "var(--text-sm)" : "var(--text-base)",
               fontFamily: "var(--font-jura)",
@@ -264,6 +283,7 @@ export default function HobbiesGrid() {
             fontFamily: "var(--font-jura)",
             lineHeight: "var(--line-normal)",
             textAlign: isSmall ? "center" : "left",
+            flexShrink: 0,
           }}
         >
           {error}
@@ -274,9 +294,24 @@ export default function HobbiesGrid() {
         style={{
           background: "var(--bg-grey)",
           borderRadius: "var(--radius-2xl)",
-          width: isSmall ? "100%" : isMedium ? "90%" : "80%",
-          padding: isSmall ? "var(--space-md)" : "var(--space-xl)",
+          width: "fit-content",
+          maxWidth: containerMaxWidth,
+          height: "fit-content",
+          maxHeight: isSmall ? "100%" : "60%",
+          padding: isSmall
+            ? "var(--space-md)"
+            : isMedium
+              ? "var(--space-lg)"
+              : "var(--space-md)",
           boxSizing: "border-box",
+          overflowY: "auto",
+          scrollbarWidth: "none",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "flex-start",
+          alignSelf: "center",
+          flexShrink: 1,
         }}
       >
         {isLoadingCards ? (
@@ -285,9 +320,11 @@ export default function HobbiesGrid() {
               color: "var(--dark-grey)",
               textAlign: "center",
               paddingTop: isSmall ? "var(--space-xl)" : "var(--space-2xl)",
+              paddingBottom: isSmall ? "var(--space-xl)" : "var(--space-2xl)",
               fontSize: isSmall ? "var(--text-sm)" : "var(--text-base)",
               fontFamily: "var(--font-jura)",
               lineHeight: "var(--line-normal)",
+              width: "100%",
             }}
           >
             Loading available cards...
@@ -298,9 +335,11 @@ export default function HobbiesGrid() {
               color: "var(--dark-grey)",
               textAlign: "center",
               paddingTop: isSmall ? "var(--space-xl)" : "var(--space-2xl)",
+              paddingBottom: isSmall ? "var(--space-xl)" : "var(--space-2xl)",
               fontSize: isSmall ? "var(--text-sm)" : "var(--text-base)",
               fontFamily: "var(--font-jura)",
               lineHeight: "var(--line-normal)",
+              width: "100%",
             }}
           >
             No cards available for this step yet.
@@ -309,9 +348,17 @@ export default function HobbiesGrid() {
           <div
             style={{
               display: "flex",
+              flexDirection: "row",
               flexWrap: "wrap",
-              gap: isSmall ? "var(--space-md)" : "var(--space-xl)",
-              justifyContent: isSmall ? "center" : "space-between",
+              gap: isSmall
+                ? "var(--space-sm)"
+                : isMedium
+                  ? "var(--space-md)"
+                  : "var(--space-sm)",
+              justifyContent: "center",
+              alignItems: "flex-start",
+              alignContent: "flex-start",
+              width: "100%",
             }}
           >
             {currentCards.map((card) => {
@@ -323,32 +370,48 @@ export default function HobbiesGrid() {
                   type="button"
                   onClick={() => toggleCard(card.id)}
                   style={{
-                    width: isSmall ? "100%" : "0",
-                    minWidth: isSmall ? "100%" : "fit-content",
-                    backgroundColor: isSelected
-                      ? "var(--light-green)"
-                      : "var(--medium-blue)",
-                    color: isSelected
-                      ? "var(--bg-color)"
-                      : "var(--light-blue)",
-                    borderRadius: "var(--radius-lg)",
-                    padding: isSmall
-                      ? "var(--space-sm) var(--space-md)"
-                      : "var(--space-sm) var(--space-xl)",
-                    textAlign: "center",
-                    cursor: "pointer",
-                    minHeight: "var(--min-touch-target)",
-                    fontSize: isSmall ? "var(--text-sm)" : "var(--text-base)",
-                    fontFamily: "var(--font-jura)",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "space-around",
-                    alignItems: "center",
-                    whiteSpace: "normal",
-                    flex: isSmall ? "none" : 1,
-                    lineHeight: "var(--line-normal)",
-                  }}
-                >
+  width: isSmall ? "100%" : "auto",
+  minWidth: isSmall ? "100%" : "fit-content",
+  maxWidth: isSmall ? "100%" : "max-content",
+
+  backgroundColor: isSelected
+    ? "var(--light-green)"
+    : "var(--medium-blue)",
+
+  color: isSelected
+    ? "var(--bg-color)"
+    : "var(--light-blue)",
+
+  borderRadius: "var(--radius-lg)",
+
+  padding: isSmall
+    ? "var(--space-sm) var(--space-md)"
+    : "var(--space-md) var(--space-xl)",
+
+  textAlign: "center",
+  cursor: "pointer",
+
+  minHeight: "fit-content",
+  height: "fit-content",
+
+  fontSize: isSmall ? "var(--text-sm)" : "var(--text-base)",
+  fontFamily: "var(--font-jura)",
+
+  display: "flex",
+  flexDirection: "column",
+  justifyContent: "center",
+  alignItems: "center",
+
+  gap: "var(--space-xs)",
+  whiteSpace: isSmall ? "normal" : "nowrap",
+
+  flex: isSmall ? "1 1 100%" : "0 0 auto",
+
+  lineHeight: "var(--line-normal)",
+  boxSizing: "border-box",
+
+  
+}}                >
                   <div>{card.name}</div>
 
                   {card.description ? (
@@ -357,6 +420,7 @@ export default function HobbiesGrid() {
                         fontSize: "var(--text-xs)",
                         fontWeight: 500,
                         lineHeight: "var(--line-normal)",
+                        whiteSpace: "normal",
                       }}
                     >
                       {card.description}
@@ -372,11 +436,14 @@ export default function HobbiesGrid() {
       <div
         style={{
           display: "flex",
-          justifyContent: isSmall ? "center" : "space-between",
+          justifyContent: "space-between",
           alignItems: "center",
-          width: "100%",
+          width: containerWidth,
+          maxWidth: containerMaxWidth,
           gap: isSmall ? "var(--space-md)" : "var(--space-lg)",
           flexDirection: isSmall ? "column" : "row",
+          flexShrink: 0,
+          alignSelf: "center",
         }}
       >
         {step !== 0 ? (
@@ -389,14 +456,19 @@ export default function HobbiesGrid() {
               padding: "var(--button-padding-y) var(--button-padding-x)",
               fontWeight: 700,
               minHeight: "var(--min-touch-target)",
-              width: isSmall ? "100%" : "15%",
+              width: isSmall ? "100%" : "fit-content",
               flex: "none",
             }}
           >
             Previous
           </Button>
         ) : (
-          <div style={{ width: isSmall ? "100%" : "20%" }} />
+          <div
+            style={{
+              width: isSmall ? "100%" : "fit-content",
+              flex: "none",
+            }}
+          />
         )}
 
         <Button
@@ -409,12 +481,12 @@ export default function HobbiesGrid() {
             padding: "var(--button-padding-y) var(--button-padding-x)",
             fontWeight: 800,
             minHeight: "var(--min-touch-target)",
-            width: isSmall ? "100%" : "auto",
+            width: isSmall ? "100%" : "fit-content",
             flex: "none",
             opacity: isLoadingCards || !isCurrentStepValid || isSubmitting ? 0.55 : 1,
           }}
         >
-          {step === 0 ? "Continue to Strengths" : isSubmitting ? "Saving..." : "Start Questions"}
+          {step === 0 ? "Continue" : isSubmitting ? "Saving..." : "Start Questions"}
         </Button>
       </div>
     </div>

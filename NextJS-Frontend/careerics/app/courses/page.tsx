@@ -215,7 +215,8 @@ export default function CourseLibraryPage() {
       );
 
       setCourseProgress(nextProgress);
-      setActivePopupMode("complete");
+      setActivePopupCourse(null);
+      setActivePopupMode(null);
     } catch (syncError) {
       setCourseProgressError(
         syncError instanceof Error

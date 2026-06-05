@@ -2,6 +2,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from core.config import settings
+from core.observability import install_sqlalchemy_query_observability
 
 
 def _make_engine(url: str):
@@ -22,6 +23,7 @@ if database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
 
 engine = _make_engine(database_url)
+install_sqlalchemy_query_observability(engine)
 
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
