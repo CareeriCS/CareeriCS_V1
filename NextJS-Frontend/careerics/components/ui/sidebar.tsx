@@ -24,6 +24,26 @@ const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [profileNameOverride, setProfileNameOverride] = useState<string | null>(null);
   const [profileAvatarUrl, setProfileAvatarUrl] = useState("");
+  const [profileImageUseFallback, setProfileImageUseFallback] = useState(false);
+
+  const profileImageSrc = profileImageUseFallback
+    ? DEFAULT_PROFILE_IMAGE
+    : profileAvatarUrl || user?.avatarUrl || DEFAULT_PROFILE_IMAGE;
+
+  const handleProfileImageError = (event: React.SyntheticEvent<HTMLImageElement>) => {
+    const image = event.currentTarget;
+    if (image.src.endsWith(DEFAULT_PROFILE_IMAGE)) {
+      return;
+    }
+
+    if (profileAvatarUrl) {
+      setProfileAvatarUrl("");
+    } else {
+      setProfileImageUseFallback(true);
+    }
+
+    image.src = DEFAULT_PROFILE_IMAGE;
+  };
 
   useEffect(() => {
     let alive = true;
@@ -67,6 +87,7 @@ const Sidebar = () => {
       if (!user?.id) {
         if (alive) {
           setProfileAvatarUrl("");
+          setProfileImageUseFallback(false);
         }
         return;
       }
@@ -90,12 +111,14 @@ const Sidebar = () => {
 
         if (!signedUrlResponse.error && signedUrlResponse.data?.signedUrl) {
           setProfileAvatarUrl(signedUrlResponse.data.signedUrl);
+          setProfileImageUseFallback(false);
           return;
         }
       }
 
       const avatarUrl = typeof metadata?.avatar_url === "string" ? metadata.avatar_url : "";
       setProfileAvatarUrl(avatarUrl || user.avatarUrl || "");
+      setProfileImageUseFallback(false);
     };
 
     void loadProfileAvatar();
@@ -104,8 +127,6 @@ const Sidebar = () => {
       alive = false;
     };
   }, [user?.id, user?.avatarUrl]);
-
-  const profileImageSrc = profileAvatarUrl || user?.avatarUrl || DEFAULT_PROFILE_IMAGE;
 
   const profileName = isLoading
     ? "Loading..."
@@ -261,12 +282,14 @@ const Sidebar = () => {
         >
           <img
             src={profileImageSrc}
-            alt="User"
+            alt=""
+            onError={handleProfileImageError}
             style={{
               height: "var(--icon-xl)",
               width: "var(--icon-xl)",
               borderRadius: "999px",
               objectFit: "cover",
+              backgroundColor: "transparent",
             }}
           />
 
@@ -326,12 +349,14 @@ const Sidebar = () => {
             <img
               onClick={() => { router.push("/profile") }}
               src={profileImageSrc}
-              alt="User"
+              alt=""
+              onError={handleProfileImageError}
               style={{
                 height: "var(--icon-lg)",
                 width: "var(--icon-lg)",
                 borderRadius: "999px",
                 objectFit: "cover",
+                backgroundColor: "transparent",
                 cursor: "pointer",
               }}
             />
@@ -415,12 +440,14 @@ const Sidebar = () => {
               >
                 <img
                   src={profileImageSrc}
-                  alt="User"
+                  alt=""
+                  onError={handleProfileImageError}
                   style={{
                     height: "var(--icon-xl)",
                     width: "var(--icon-xl)",
                     borderRadius: "999px",
                     objectFit: "cover",
+                    backgroundColor: "transparent",
                     cursor: "pointer",
                   }}
                 />
@@ -539,12 +566,14 @@ const Sidebar = () => {
             >
               <img
                 src={profileImageSrc}
-                alt="User"
+                alt=""
+                onError={handleProfileImageError}
                 style={{
                   height: "var(--icon-xl)",
                   width: "var(--icon-xl)",
                   borderRadius: "999px",
                   objectFit: "cover",
+                  backgroundColor: "transparent",
                   cursor: "pointer",
                 }}
               />
