@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from core.config import settings
+from core.observability import install_request_timing_middleware
 from routers.interview.interview import routers as interview_routers
 from routers.cv.cv import routers as cv_routers
 from routers.skills.skill import routers as skill_routers
@@ -16,6 +17,7 @@ from routers.course import router as course_router
 from routers.profile import router as profile_router
 
 app = FastAPI()
+install_request_timing_middleware(app)
 
 for path in settings.AUDIO_PATHS.values():
     os.makedirs(path, exist_ok=True)
