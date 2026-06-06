@@ -16,6 +16,9 @@ import { useAuth } from "@/providers/auth-provider";
 import { jobService } from "@/services";
 import type { JobUiModel } from "@/types";
 import { InlineContainer } from "@/components/ui/containers/inline";
+import JourneyTreeVertical from "@/components/ui/journey-tree-vertical";
+import { useResponsive } from "@/hooks/useResponsive";
+import { StackContainer } from "@/components/ui/containers/stack";
 
 export default function JourneyJobHuntPage() {
   const router = useRouter();
@@ -78,9 +81,9 @@ export default function JourneyJobHuntPage() {
         recentResponse.success && savedResponse.success && applicationsResponse.success
           ? null
           : recentResponse.message ||
-              savedResponse.message ||
-              applicationsResponse.message ||
-              "Unable to load job dashboard data.",
+          savedResponse.message ||
+          applicationsResponse.message ||
+          "Unable to load job dashboard data.",
       );
       setIsLoading(false);
     };
@@ -110,9 +113,13 @@ export default function JourneyJobHuntPage() {
 
   // Delay render until all data is ready
   const isInitializing = isLoadingTracks || isLoading || isAuthLoading;
+
+  const { isLarge, isMedium, isSmall } = useResponsive();
+  const Orientation = isLarge ? JourneyTree : JourneyTreeVertical;
+
   if (isInitializing && !selectedTrack) {
     return (
-      <JourneyTree
+      <Orientation
         current={5}
         maxReached={5}
         renderContent={() => (
@@ -157,7 +164,7 @@ export default function JourneyJobHuntPage() {
 
   if (!selectedTrack && !isLoadingTracks) {
     return (
-      <JourneyTree
+      <Orientation
         current={5}
         maxReached={5}
         renderContent={() => (
@@ -200,85 +207,151 @@ export default function JourneyJobHuntPage() {
     );
   }
 
-
+  const RecentlyViewed = isSmall ? StackContainer : InlineContainer;
   return (
-    <JourneyTree
+    <Orientation
       current={5}
       maxReached={5}
       resolvePhasePath={(phase) => buildJourneyPhaseHref(phase, selectedTrack?.id)}
       renderContent={() => (
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 2fr repeat(2, 1fr)",
-          gridTemplateRows: "repeat(3,1fr)",
-          gridColumnGap: "15px",
-          gridRowGap: "15px",
-          width: "100%",
-          height: "100%",
-          padding: "45px",
-        }}>
-          <div style={{ gridArea: "1 / 1 / 2 / 3" }}>
-            <BookmarkCard description={bookmarkDescription} />
-          </div>
+       <div
+      style={{
+        display: "grid",
 
-          <div style={{ gridArea: "1 / 3 / 2 / 5" }}>
-            <ContinueCard description={continueDescription} />
-          </div>
+        gridTemplateColumns: isLarge
+          ? "1fr 2fr repeat(2, 1fr)"
+          : isMedium
+            ? "3fr 1fr"
+            : "2fr 1fr",
 
-          <div style={{ gridArea: "2 / 1 / 3 / 5" }}>
-            <TipCard
-              title="Tip of the day"
-              description="Prioritize roles with strong fit and clear requirements, then tailor your CV before applying."
-              icon="/global/tip.svg"
-            />
-          </div>
+        gridTemplateRows: isLarge
+          ? "repeat(3, 1fr)"
+          : isMedium
+            ? "repeat(4, 1fr)"
+            : "repeat(4, 1fr)",
 
-          <div style={{ gridArea: "3 / 1 / 4 / 2" }}>
-            <LevelCard
-              style={{ backgroundColor: "var(--medium-blue)" }}
-              onClick={() => router.push("/features/skill")}
-            />
-          </div>
+        gridColumnGap: "var(--space-lg)",
+        gridRowGap: "var(--space-lg)",
 
-          <InlineContainer
-            style={{ gridArea: "3 / 2 / 4 / 5", backgroundColor: "var(--medium-blue)" }}
-            Title="Recently Viewed"
-            centerTitle
-          >
-            {recentlyViewedJobs.length ? (
-              recentlyViewedJobs.map((job) => (
-                <div
-                  key={job.id}
-                  onClick={() => router.push(buildJobDetailsHref(job.id))}
-                  style={{ cursor: "pointer" }}
-                >
-                  <RectangularCard
-                    Title={job.title}
-                    isSubtextVisible
-                    subtext={job.company}
-                    font="nova"
-                    variant="radio"
-                    style={{ height: "70%" }}
-                  />
-                </div>
-              ))
-            ) : !isLoading ? (
-              <div style={{ display: "flex", alignItems: "center", color: "white", opacity: 0.8 }}>
-                No recently viewed jobs yet.
-              </div>
-            ) : (
-              <div style={{ display: "flex", alignItems: "center", color: "white", opacity: 0.8 }}>
-                Loading jobs...
-              </div>
-            )}
-          </InlineContainer>
+        padding: "var(--space-xl)",
 
-          {trackError || jobsError ? (
-            <p style={{ margin: 0, color: "#FFD3D3", gridArea: "3 / 2 / 4 / 5", alignSelf: "end" }}>
-              {trackError || jobsError}
-            </p>
-          ) : null}
+        width: "100%",
+        height: "100%",
+        flexGrow: 0,
+      }}
+    >
+      {/* BOOKMARK CARD */}
+      <div
+        style={{
+          gridArea: isLarge
+            ? "1 / 1 / 2 / 3"
+            : isMedium
+              ? "2 / 1 / 3 / 3"
+              : "2 / 1 / 3 / 3",
+        }}
+      >
+        <BookmarkCard description="All of your saved jobs are here" />
+      </div>
+
+      {/* CONTINUE CARD */}
+      <div
+        style={{
+          gridArea: isLarge
+            ? "1 / 3 / 2 / 5"
+            : isMedium
+              ? "1 / 1 / 2 / 2"
+              : "1 / 1 / 2 / 2",
+        }}
+      >
+        <ContinueCard 
+        description="Your next opportunity awaits" 
+        style={{
+          backgroundColor: isSmall?"var(--medium-blue)":"var(--dark-blue)",
+        }} />
+      </div>
+
+      {/* TIP CARD */}
+
+      {(!isSmall &&
+        <div
+          style={{
+            gridArea: isLarge
+              ? "2 / 1 / 3 / 5"
+              : "3 / 1 / 4 / 3"
+          }}
+        >
+          <TipCard
+            title="Tip of the day"
+            description="Research the company and interviewers before your interview so you understand the company's goals and show how you fit."
+            icon="/global/tip.svg"
+          />
         </div>
+      )}
+
+      {/* LEVEL CARD */}
+      <div
+        style={{
+          gridArea: isLarge
+            ? "3 / 1 / 4 / 2"
+            : isMedium
+              ? "1 / 2 / 2 / 3"
+              : "1 / 2 / 2 / 3",
+        }}
+      >
+        <LevelCard />
+      </div>
+
+      {/* RECENTLY VIEWED */}
+      <RecentlyViewed
+        style={{
+          gridArea: isLarge
+            ? "3 / 2 / 4 / 5"
+            : isMedium
+              ? "4 / 1 / 5 / 3"
+              : "3 / 1 / 5 / 3",
+
+          backgroundColor: "var(--dark-blue)",
+        }}
+        Title="Recently Viewed"
+        centerTitle
+        >
+        {recentlyViewedJobs.length ? (
+          recentlyViewedJobs.map((job) => (
+            <div
+              key={job.id}
+              onClick={() => router.push(buildJobDetailsHref(job.id))}
+              style={{
+                cursor: "pointer",
+              }}
+            >
+              <RectangularCard
+                Title={job.title}
+                titleVariant={isSmall ? "full" : "clip"}
+                isSubtextVisible
+                subtext={job.company}
+                variant="radio"
+                font="nova"
+                style={{
+                  width: "100%",
+                  flex: 1,
+                }}
+              />
+            </div>
+          ))
+        ) : !isLoading ? (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              color: "white",
+              opacity: 0.8,
+            }}
+          >
+            No recently viewed jobs yet.
+          </div>
+        ) : null}
+      </RecentlyViewed>
+    </div>
       )}
     />
   );
