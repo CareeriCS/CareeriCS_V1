@@ -30,6 +30,30 @@ const DIRECT_USER_TABLES = [
 
 type AdminClient = SupabaseClient;
 
+function formatUserTag(userId: string): string {
+  if (!userId) {
+    return "unknown";
+  }
+
+  if (userId.length <= 10) {
+    return userId;
+  }
+
+  return `${userId.slice(0, 6)}...${userId.slice(-4)}`;
+}
+
+function logDeleteAccountInfo(step: string, details?: Record<string, unknown>) {
+  console.info("[delete-account]", step, details ?? {});
+}
+
+function logDeleteAccountWarn(step: string, details?: Record<string, unknown>) {
+  console.warn("[delete-account]", step, details ?? {});
+}
+
+function logDeleteAccountError(step: string, details?: Record<string, unknown>) {
+  console.error("[delete-account]", step, details ?? {});
+}
+
 function publicTable(adminClient: AdminClient, table: string) {
   return adminClient.schema("public").from(table);
 }
@@ -349,12 +373,65 @@ function readAccessToken(req: NextRequest): string | null {
   return req.cookies.get(TOKEN_COOKIE)?.value ?? null;
 }
 
+async function isPublicUserDeleted(adminClient: AdminClient, userId: string): Promise<boolean> {
+  const { data, error } = await adminClient
+    .schema("public")
+    .from("users")
+    .select("id")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error) {
+    if (isMissingTableError(error)) {
+      return true;
+    }
+
+    throw new Error(`Failed verifying users deletion: ${formatPostgrestError(error)}`);
+  }
+
+  return !data;
+}
+
+async function isAuthUserDeleted(adminClient: AdminClient, userId: string): Promise<boolean> {
+  const { data, error } = await adminClient.auth.admin.getUserById(userId);
+  if (error) {
+    if (/not found/i.test(error.message || "")) {
+      return true;
+    }
+
+    throw new Error(
+      `Failed verifying auth user deletion: ${error.message || "Unknown auth error."}`,
+    );
+  }
+
+  return !data.user;
+}
+
 export async function POST(req: NextRequest) {
+  let userTag = "unknown";
+
   try {
+    logDeleteAccountInfo("request_received", {
+      hasAuthorizationHeader: Boolean(req.headers.get("authorization")),
+      hasSessionCookie: Boolean(req.cookies.get(TOKEN_COOKIE)?.value),
+    });
+
     const { supabaseUrl, serviceRoleKey } = getSupabaseConfig();
+    logDeleteAccountInfo("config_loaded", {
+      supabaseHost: (() => {
+        try {
+          return new URL(supabaseUrl).host;
+        } catch {
+          return "invalid-url";
+        }
+      })(),
+      hasServiceRoleKey: Boolean(serviceRoleKey),
+    });
+
     const accessToken = readAccessToken(req);
 
     if (!accessToken) {
+      logDeleteAccountWarn("missing_access_token");
       return NextResponse.json(
         { detail: "Missing authenticated session." },
         { status: 401 },
@@ -368,6 +445,9 @@ export async function POST(req: NextRequest) {
 
     const { data: authData, error: authError } = await adminClient.auth.getUser(accessToken);
     if (authError || !authData.user?.id) {
+      logDeleteAccountWarn("access_token_invalid", {
+        reason: authError?.message || "missing user id",
+      });
       return NextResponse.json(
         { detail: authError?.message || "Invalid authenticated session." },
         { status: 401 },
@@ -375,16 +455,49 @@ export async function POST(req: NextRequest) {
     }
 
     const userId = authData.user.id;
+    userTag = formatUserTag(userId);
+    logDeleteAccountInfo("authenticated_user_resolved", { userTag });
 
+    logDeleteAccountInfo("public_data_deletion_started", { userTag });
     await deletePublicUserData(adminClient, userId);
+    logDeleteAccountInfo("public_data_deletion_completed", { userTag });
 
+    logDeleteAccountInfo("public_user_verification_started", { userTag });
+    const publicUserDeleted = await isPublicUserDeleted(adminClient, userId);
+    if (!publicUserDeleted) {
+      logDeleteAccountError("public_user_verification_failed", { userTag });
+      return NextResponse.json(
+        { detail: "Public profile record still exists after deletion attempt." },
+        { status: 500 },
+      );
+    }
+    logDeleteAccountInfo("public_user_verification_passed", { userTag });
+
+    logDeleteAccountInfo("auth_user_deletion_started", { userTag });
     const { error: deleteAuthError } = await adminClient.auth.admin.deleteUser(userId);
     if (deleteAuthError) {
+      logDeleteAccountError("auth_user_deletion_failed", {
+        userTag,
+        reason: deleteAuthError.message || "unknown error",
+      });
       return NextResponse.json(
         { detail: deleteAuthError.message || "Failed to delete auth account." },
         { status: 500 },
       );
     }
+
+    logDeleteAccountInfo("auth_user_deletion_completed", { userTag });
+    logDeleteAccountInfo("auth_user_verification_started", { userTag });
+    const authUserDeleted = await isAuthUserDeleted(adminClient, userId);
+    if (!authUserDeleted) {
+      logDeleteAccountError("auth_user_verification_failed", { userTag });
+      return NextResponse.json(
+        { detail: "Auth user still exists after deletion attempt." },
+        { status: 500 },
+      );
+    }
+    logDeleteAccountInfo("auth_user_verification_passed", { userTag });
+    logDeleteAccountInfo("delete_account_completed", { userTag });
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -392,6 +505,12 @@ export async function POST(req: NextRequest) {
       error instanceof Error
         ? error.message
         : "Unable to delete account right now.";
+
+    logDeleteAccountError("delete_account_unexpected_error", {
+      userTag,
+      message,
+    });
+
     return NextResponse.json({ detail: message }, { status: 500 });
   }
 }

@@ -2,12 +2,20 @@
 import React, { useState } from "react";
 import { Button } from "./button";
 
+type SkillConfirmOption = {
+  id: string;
+  label: string;
+};
+
 interface SkillConfirmPopupProps {
   skillName: string;
   isLoading?: boolean;
   onConfirm: (questions: number) => void;
   onCancel: () => void;
   testCode: string;
+  skillOptions?: SkillConfirmOption[];
+  selectedSkillId?: string;
+  onSkillChange?: (id: string) => void;
 }
 
 export default function SkillConfirmPopup({
@@ -16,7 +24,11 @@ export default function SkillConfirmPopup({
   onConfirm,
   onCancel,
   testCode,
+  skillOptions,
+  selectedSkillId,
+  onSkillChange,
 }: SkillConfirmPopupProps) {
+  const hasSkillSelector = Boolean(skillOptions?.length && onSkillChange);
   const [questions, setQuestions] = useState("");
 
   const numericValue = Number(questions);
@@ -131,18 +143,43 @@ export default function SkillConfirmPopup({
           <p style={{ marginRight: "1rem", whiteSpace: "nowrap" }}>
             Skill Chosen:
           </p>
-          <div
-            style={{
-              paddingInline: "1rem",
-              paddingBlock: "0.5rem",
-              backgroundColor: "var(--medium-grey)",
-              borderRadius: "2vh",
-              color: "white",
-              width: "12rem",
-            }}
-          >
-            <p>{skillName}</p>
-          </div>
+          {hasSkillSelector ? (
+            <select
+              value={selectedSkillId || skillOptions?.[0]?.id || ""}
+              onChange={(event) => onSkillChange?.(event.target.value)}
+              style={{
+                paddingInline: "1rem",
+                paddingBlock: "0.5rem",
+                backgroundColor: "var(--medium-grey)",
+                borderRadius: "2vh",
+                color: "white",
+                width: "12rem",
+                border: "none",
+                outline: "none",
+                fontFamily: "inherit",
+                cursor: "pointer",
+              }}
+            >
+              {skillOptions?.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <div
+              style={{
+                paddingInline: "1rem",
+                paddingBlock: "0.5rem",
+                backgroundColor: "var(--medium-grey)",
+                borderRadius: "2vh",
+                color: "white",
+                width: "12rem",
+              }}
+            >
+              <p style={{ margin: 0 }}>{skillName}</p>
+            </div>
+          )}
         </div>
 
         <div

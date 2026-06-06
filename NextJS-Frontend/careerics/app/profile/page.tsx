@@ -5,12 +5,24 @@ import { Button } from "@/components/ui/button";
 import InputField from "@/components/ui/input-field";
 import AccountDeletePopup from "@/components/ui/account-delete-popup";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type SyntheticEvent } from "react";
 import { authService } from "@/services/auth.service";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useAuth } from "@/providers/auth-provider";
 import { profileService } from "@/services/profile.service";
+import { supabase } from "@/lib/supabase";
 import type { ApiResponse, UserProfile, UserProfileUpsertRequest } from "@/types";
+
+const PROFILE_PHOTO_BUCKET = "profile-pictures";
+const MAX_PROFILE_PHOTO_SIZE_BYTES = 5 * 1024 * 1024;
+const PROFILE_PHOTO_SIGNED_URL_TTL_SECONDS = 60 * 60 * 24 * 7;
+const DEFAULT_PROFILE_IMAGE = "/sidebar/profile.svg";
+const PROFILE_PHOTO_ALLOWED_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+]);
 
 function normalizeOptionalText(value: string): string | null {
   const trimmed = value.trim();
@@ -81,16 +93,71 @@ function isValidOptionalHttpUrl(value: string): boolean {
   }
 }
 
+function sanitizeProfilePhotoFileName(fileName: string): string {
+  const normalized = fileName
+    .trim()
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^[-.]+|[-.]+$/g, "");
+
+  return normalized || "profile-photo";
+}
+
+async function getProfilePhotoUrlFromPath(path: string): Promise<string | null> {
+  if (!path) {
+    return null;
+  }
+
+  const signedUrlResponse = await supabase.storage
+    .from(PROFILE_PHOTO_BUCKET)
+    .createSignedUrl(path, PROFILE_PHOTO_SIGNED_URL_TTL_SECONDS);
+
+  if (!signedUrlResponse.error && signedUrlResponse.data?.signedUrl) {
+    return signedUrlResponse.data.signedUrl;
+  }
+
+  const publicUrl = supabase.storage.from(PROFILE_PHOTO_BUCKET).getPublicUrl(path).data.publicUrl;
+  return publicUrl || null;
+}
+
+async function resolveProfilePhotoFromAuthMetadata(fallbackAvatarUrl?: string): Promise<string | null> {
+  const userResponse = await supabase.auth.getUser();
+  const metadata = userResponse.data.user?.user_metadata;
+
+  const avatarPath = typeof metadata?.avatar_path === "string" ? metadata.avatar_path : "";
+  if (avatarPath) {
+    const resolvedFromPath = await getProfilePhotoUrlFromPath(avatarPath);
+    if (resolvedFromPath) {
+      return resolvedFromPath;
+    }
+  }
+
+  const avatarUrl = typeof metadata?.avatar_url === "string" ? metadata.avatar_url : "";
+  return avatarUrl || fallbackAvatarUrl || null;
+}
+
 export default function Profile() {
   const router = useRouter();
   const { user, isLoading: isAuthLoading } = useAuth();
   const { isLarge, isSmall } = useResponsive();
+  const profilePhotoInputRef = useRef<HTMLInputElement | null>(null);
+  const profileSnapshotRef = useRef({
+    fullName: "",
+    phone: null as string | null,
+    workEmail: null as string | null,
+    city: null as string | null,
+    country: null as string | null,
+    linkedin: null as string | null,
+    portfolio: null as string | null,
+    github: null as string | null,
+  });
 
   const isGrid = isLarge;
 
   const [isEditingFields, setIsEditingFields] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingPhoto, setIsEditingPhoto] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
@@ -108,12 +175,40 @@ export default function Profile() {
   const [linkedin, setLinkedin] = useState("");
   const [portfolio, setPortfolio] = useState("");
   const [github, setGithub] = useState("");
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState("");
+  const [persistedAvatarUrl, setPersistedAvatarUrl] = useState("");
+  const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
+  const [avatarUseFallback, setAvatarUseFallback] = useState(false);
 
-  const isMutatingProfile = isSavingProfile || isDeletingAccount;
+  const isMutatingProfile = isSavingProfile || isDeletingAccount || isUploadingPhoto;
   const canEditName = isEditingName && !isMutatingProfile && !isLoadingProfile;
   const canEditFields = isEditingFields && !isMutatingProfile && !isLoadingProfile;
+  const displayedAvatarUrl = avatarLoadFailed || avatarUseFallback
+    ? DEFAULT_PROFILE_IMAGE
+    : avatarPreviewUrl || persistedAvatarUrl || user?.avatarUrl || DEFAULT_PROFILE_IMAGE;
+  const isDefaultProfileImage = displayedAvatarUrl.endsWith(DEFAULT_PROFILE_IMAGE);
 
-  const applyProfileToForm = (profile: UserProfile) => {
+  const handleAvatarImageError = (event: React.SyntheticEvent<HTMLImageElement>) => {
+    const image = event.currentTarget;
+    if (image.src.endsWith(DEFAULT_PROFILE_IMAGE)) {
+      return;
+    }
+
+    if (avatarPreviewUrl) {
+      if (avatarPreviewUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(avatarPreviewUrl);
+      }
+      setAvatarPreviewUrl("");
+    } else if (persistedAvatarUrl) {
+      setPersistedAvatarUrl("");
+    } else {
+      setAvatarUseFallback(true);
+    }
+
+    image.src = DEFAULT_PROFILE_IMAGE;
+  };
+
+  const applyProfileToForm = (profile: UserProfile, nextAvatarUrl?: string | null) => {
     setFullName(profile.full_name || "");
     setEmail(profile.email || "");
     setPhone(profile.phone || "");
@@ -123,7 +218,31 @@ export default function Profile() {
     setLinkedin(profile.linkedin || "");
     setPortfolio(profile.portfolio || "");
     setGithub(profile.github || "");
+
+    profileSnapshotRef.current = {
+      fullName: normalizeOptionalText(profile.full_name || "") || "",
+      phone: normalizeOptionalText(profile.phone || ""),
+      workEmail: normalizeOptionalEmail(profile.secondary_email || ""),
+      city: normalizeOptionalText(profile.city || ""),
+      country: normalizeOptionalText(profile.country || ""),
+      linkedin: normalizeOptionalText(profile.linkedin || ""),
+      portfolio: normalizeOptionalText(profile.portfolio || ""),
+      github: normalizeOptionalText(profile.github || ""),
+    };
+
+    if (typeof nextAvatarUrl !== "undefined") {
+      setPersistedAvatarUrl(nextAvatarUrl || "");
+      setAvatarUseFallback(false);
+    }
   };
+
+  useEffect(() => {
+    return () => {
+      if (avatarPreviewUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(avatarPreviewUrl);
+      }
+    };
+  }, [avatarPreviewUrl]);
 
   useEffect(() => {
     let alive = true;
@@ -147,13 +266,16 @@ export default function Profile() {
       setProfileError(null);
       setProfileSuccess(null);
 
-      const response = await profileService.getUserProfile(user.id);
+      const [response, resolvedAvatarUrl] = await Promise.all([
+        profileService.getUserProfile(user.id),
+        resolveProfilePhotoFromAuthMetadata(user.avatarUrl),
+      ]);
       if (!alive) {
         return;
       }
 
       if (response.success && response.data) {
-        applyProfileToForm(response.data);
+        applyProfileToForm(response.data, resolvedAvatarUrl || null);
         setIsLoadingProfile(false);
         return;
       }
@@ -178,7 +300,7 @@ export default function Profile() {
       }
 
       if (createResponse.success && createResponse.data) {
-        applyProfileToForm(createResponse.data);
+        applyProfileToForm(createResponse.data, resolvedAvatarUrl || null);
       } else {
         setProfileError(createResponse.message || "Unable to initialize your profile.");
       }
@@ -191,9 +313,9 @@ export default function Profile() {
     return () => {
       alive = false;
     };
-  }, [isAuthLoading, user?.displayName, user?.email, user?.id]);
+  }, [isAuthLoading, user?.avatarUrl, user?.displayName, user?.email, user?.id]);
 
-  async function saveProfile(): Promise<boolean> {
+  async function saveNameProfile(): Promise<boolean> {
     if (!user?.id) {
       setProfileError("Please sign in first to save your profile.");
       return false;
@@ -205,8 +327,36 @@ export default function Profile() {
       return false;
     }
 
-    if (!isValidOptionalEmail(email)) {
-      setProfileError("Please enter a valid personal email.");
+    if (normalizedFullName === profileSnapshotRef.current.fullName) {
+      setProfileSuccess("No changes to save.");
+      return true;
+    }
+
+    setIsSavingProfile(true);
+    setProfileError(null);
+    setProfileSuccess(null);
+
+    const payload: UserProfileUpsertRequest = {
+      full_name: normalizedFullName,
+      auth_display_name: user.displayName || null,
+    };
+
+    const response = await profileService.updateUserProfile(user.id, payload);
+    setIsSavingProfile(false);
+
+    if (!response.success || !response.data) {
+      setProfileError(response.message || "Failed to save your profile.");
+      return false;
+    }
+
+    applyProfileToForm(response.data);
+    setProfileSuccess("Name saved successfully.");
+    return true;
+  }
+
+  async function saveDetailsProfile(): Promise<boolean> {
+    if (!user?.id) {
+      setProfileError("Please sign in first to save your profile.");
       return false;
     }
 
@@ -230,34 +380,131 @@ export default function Profile() {
       return false;
     }
 
+    const payload: UserProfileUpsertRequest = {};
+    const normalizedPhone = normalizeOptionalText(phone);
+    const normalizedWorkEmail = normalizeOptionalEmail(workEmail);
+    const normalizedCity = normalizeOptionalText(city);
+    const normalizedCountry = normalizeOptionalText(country);
+    const normalizedLinkedin = normalizeOptionalText(linkedin);
+    const normalizedPortfolio = normalizeOptionalText(portfolio);
+    const normalizedGithub = normalizeOptionalText(github);
+
+    if (normalizedPhone !== profileSnapshotRef.current.phone) {
+      payload.phone = normalizedPhone;
+    }
+
+    if (normalizedWorkEmail !== profileSnapshotRef.current.workEmail) {
+      payload.secondary_email = normalizedWorkEmail;
+    }
+
+    if (normalizedCity !== profileSnapshotRef.current.city) {
+      payload.city = normalizedCity;
+    }
+
+    if (normalizedCountry !== profileSnapshotRef.current.country) {
+      payload.country = normalizedCountry;
+    }
+
+    if (normalizedLinkedin !== profileSnapshotRef.current.linkedin) {
+      payload.linkedin = normalizedLinkedin;
+    }
+
+    if (normalizedPortfolio !== profileSnapshotRef.current.portfolio) {
+      payload.portfolio = normalizedPortfolio;
+    }
+
+    if (normalizedGithub !== profileSnapshotRef.current.github) {
+      payload.github = normalizedGithub;
+    }
+
+    if (Object.keys(payload).length === 0) {
+      setProfileSuccess("No changes to save.");
+      return true;
+    }
+
     setIsSavingProfile(true);
     setProfileError(null);
     setProfileSuccess(null);
 
-    const payload: UserProfileUpsertRequest = {
-      full_name: normalizedFullName,
-      email: normalizeOptionalEmail(email),
-      secondary_email: normalizeOptionalEmail(workEmail),
-      phone: normalizeOptionalText(phone),
-      city: normalizeOptionalText(city),
-      country: normalizeOptionalText(country),
-      linkedin: normalizeOptionalText(linkedin),
-      portfolio: normalizeOptionalText(portfolio),
-      github: normalizeOptionalText(github),
-      auth_display_name: user.displayName || null,
-    };
-
-    const response = await profileService.upsertUserProfile(user.id, payload);
+    const response = await profileService.updateUserProfile(user.id, payload);
     setIsSavingProfile(false);
 
     if (!response.success || !response.data) {
-      setProfileError(response.message || "Failed to save your profile.");
+      setProfileError(response.message || "Failed to save your profile details.");
       return false;
     }
 
     applyProfileToForm(response.data);
-    setProfileSuccess("Profile saved successfully.");
+    setProfileSuccess("Profile details saved successfully.");
     return true;
+  }
+
+  async function handleProfilePhotoChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file || !user?.id) {
+      return;
+    }
+
+    if (!PROFILE_PHOTO_ALLOWED_TYPES.has(file.type)) {
+      setProfileError("Please upload a PNG, JPG, WebP, or GIF image.");
+      return;
+    }
+
+    if (file.size > MAX_PROFILE_PHOTO_SIZE_BYTES) {
+      setProfileError("Profile photo must be 5MB or smaller.");
+      return;
+    }
+
+    const previousAvatarUrl = persistedAvatarUrl || user.avatarUrl || "";
+    const previewUrl = URL.createObjectURL(file);
+
+    setProfileError(null);
+    setProfileSuccess(null);
+    setAvatarPreviewUrl(previewUrl);
+    setAvatarUseFallback(false);
+    setIsEditingPhoto(true);
+    setIsUploadingPhoto(true);
+
+    try {
+      const safeFileName = sanitizeProfilePhotoFileName(file.name);
+      const uploadPath = `${user.id}/${Date.now()}-${safeFileName}`;
+
+      const uploadResponse = await supabase.storage.from(PROFILE_PHOTO_BUCKET).upload(uploadPath, file, {
+        contentType: file.type,
+        cacheControl: "3600",
+        upsert: true,
+      });
+
+      if (uploadResponse.error) {
+        throw uploadResponse.error;
+      }
+
+      const resolvedAvatarUrl = await getProfilePhotoUrlFromPath(uploadResponse.data.path);
+      const metadataResponse = await supabase.auth.updateUser({
+        data: {
+          avatar_path: uploadResponse.data.path,
+          avatar_url: resolvedAvatarUrl,
+        },
+      });
+
+      if (metadataResponse.error) {
+        throw metadataResponse.error;
+      }
+
+      setPersistedAvatarUrl(resolvedAvatarUrl || "");
+      setAvatarPreviewUrl("");
+      setAvatarUseFallback(false);
+      setProfileSuccess("Profile photo updated successfully.");
+    } catch (error) {
+      setPersistedAvatarUrl(previousAvatarUrl);
+      setAvatarPreviewUrl("");
+      setProfileError(error instanceof Error ? error.message : "Unable to update your profile photo right now.");
+    } finally {
+      setIsUploadingPhoto(false);
+      setIsEditingPhoto(false);
+    }
   }
 
   async function handleNameEditAction() {
@@ -272,7 +519,7 @@ export default function Profile() {
       return;
     }
 
-    const saved = await saveProfile();
+    const saved = await saveNameProfile();
     if (saved) {
       setIsEditingName(false);
     }
@@ -290,10 +537,18 @@ export default function Profile() {
       return;
     }
 
-    const saved = await saveProfile();
+    const saved = await saveDetailsProfile();
     if (saved) {
       setIsEditingFields(false);
     }
+  }
+
+  function handleProfilePhotoIconClick() {
+    if (isMutatingProfile || isLoadingProfile) {
+      return;
+    }
+
+    profilePhotoInputRef.current?.click();
   }
 
   async function handleSwitchAccount() {
@@ -480,20 +735,35 @@ export default function Profile() {
                   width: "var(--icon-3xl)",
                   height: "var(--icon-3xl)",
                   position: "relative",
-                  overflow: "hidden",
+                  overflow: "visible",
                   flexShrink: 0,
                 }}
               >
-                <img
-                  src={"/sidebar/profile.svg"}
-                  alt="Profile"
+                <div
                   style={{
-                    borderRadius: "999px",
                     width: "100%",
                     height: "100%",
-                    objectFit: "cover",
+                    borderRadius: "999px",
+                    overflow: "hidden",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: "transparent",
                   }}
-                />
+                >
+                  <img
+                    src={displayedAvatarUrl}
+                    alt=""
+                    onError={handleAvatarImageError}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: isDefaultProfileImage ? "contain" : "cover",
+                      padding: isDefaultProfileImage ? "8%" : undefined,
+                      backgroundColor: "transparent",
+                    }}
+                  />
+                </div>
 
                 <img
                   src={isEditingPhoto ? "/profile/save.svg" : "/profile/edit.svg"}
@@ -501,12 +771,24 @@ export default function Profile() {
                   style={{
                     width: "var(--icon-md)",
                     height: "var(--icon-md)",
-                    cursor: "pointer",
+                    cursor: isMutatingProfile ? "not-allowed" : "pointer",
                     position: "absolute",
-                    right: 0,
-                    bottom: 0,
+                    right: "-0.15rem",
+                    bottom: "-0.15rem",
+                    zIndex: 2,
+                    opacity: isMutatingProfile ? 0.6 : 1,
                   }}
-                  onClick={() => setIsEditingPhoto((previous) => !previous)}
+                  onClick={handleProfilePhotoIconClick}
+                />
+
+                <input
+                  ref={profilePhotoInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  onChange={(event) => {
+                    void handleProfilePhotoChange(event);
+                  }}
+                  style={{ display: "none" }}
                 />
               </div>
 
@@ -574,33 +856,18 @@ export default function Profile() {
                   />
                 </div>
 
-                {canEditName ? (
-                  <input
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                    style={{
-                      width: "100%",
-                      backgroundColor: "transparent",
-                      border: "1px solid var(--bg-grey)",
-                      borderRadius: "var(--radius-md)",
-                      padding: "var(--space-sm) var(--space-md)",
-                      color: "white",
-                      fontSize: "var(--text-base)",
-                      outline: "none",
-                      fontFamily: "var(--font-nova-square)",
-                    }}
-                  />
-                ) : (
-                  <h3
-                    style={{
-                      fontSize: isLarge ? "var(--text-base)" : "var(--text-lg)",
-                      margin: 0,
-                      color: "var(--bg-grey)",
-                    }}
-                  >
-                    {email || "No email set"}
-                  </h3>
-                )}
+                <h3
+                  style={{
+                    fontSize: isLarge ? "var(--text-base)" : "var(--text-lg)",
+                    margin: 0,
+                    color: "var(--bg-grey)",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {email || "No email set"}
+                </h3>
               </div>
             </div>
 

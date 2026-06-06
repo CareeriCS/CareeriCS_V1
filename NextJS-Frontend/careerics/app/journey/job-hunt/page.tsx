@@ -1,21 +1,39 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import BookmarkCard from "@/components/ui/BookmarkCard";
 import ContinueCard from "@/components/ui/ContinueCard";
 import TipCard from "@/components/ui/3ateyat";
 import LevelCard from "@/components/ui/LevelCard";
+import SkillConfirmPopup from "@/components/ui/skillConfirmPopup";
 import { RectangularCard } from "@/components/ui/rectangular-card";
 import JourneyTree from "@/components/ui/journey-tree";
 import { useJourneyPhase } from "@/hooks/use-journey-phase";
 import { buildJourneyPhaseHref } from "@/lib/journey";
 import { buildJobDetailsHref, mapApiJobToUiModel } from "@/lib/jobs";
 import { useAuth } from "@/providers/auth-provider";
-import { jobService } from "@/services";
-import type { JobUiModel } from "@/types";
+import { jobService, roadmapService, skillAssessmentService } from "@/services";
+import type { JobUiModel, RoadmapListItem } from "@/types";
 import { InlineContainer } from "@/components/ui/containers/inline";
+
+function normalizeRoadmapListPayload(payload: unknown): RoadmapListItem[] {
+  if (Array.isArray(payload)) {
+    return payload as RoadmapListItem[];
+  }
+
+  if (
+    payload &&
+    typeof payload === "object" &&
+    "roadmaps" in payload &&
+    Array.isArray((payload as { roadmaps: unknown }).roadmaps)
+  ) {
+    return (payload as { roadmaps: RoadmapListItem[] }).roadmaps;
+  }
+
+  return [];
+}
 
 export default function JourneyJobHuntPage() {
   const router = useRouter();
@@ -32,6 +50,49 @@ export default function JourneyJobHuntPage() {
   const [applicationsCount, setApplicationsCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [jobsError, setJobsError] = useState<string | null>(null);
+  const [roadmaps, setRoadmaps] = useState<RoadmapListItem[]>([]);
+  const [isLoadingRoadmaps, setIsLoadingRoadmaps] = useState(true);
+  const [roadmapsError, setRoadmapsError] = useState<string | null>(null);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
+  const [assessmentError, setAssessmentError] = useState("");
+  const [nextTestCode, setNextTestCode] = useState("Test_001");
+  const [selectedAssessmentOptionId, setSelectedAssessmentOptionId] = useState("");
+
+  const selectedAssessmentOption = useMemo(
+    () => roadmaps.find((roadmap) => roadmap.id === selectedAssessmentOptionId) || null,
+    [roadmaps, selectedAssessmentOptionId],
+  );
+
+  useEffect(() => {
+    let alive = true;
+
+    const loadRoadmaps = async () => {
+      setIsLoadingRoadmaps(true);
+      setRoadmapsError(null);
+
+      const response = await roadmapService.listRoadmaps();
+      if (!alive) {
+        return;
+      }
+
+      if (!response.success || !response.data) {
+        setRoadmaps([]);
+        setRoadmapsError(response.message || "Unable to load roadmaps.");
+        setIsLoadingRoadmaps(false);
+        return;
+      }
+
+      setRoadmaps(normalizeRoadmapListPayload(response.data));
+      setIsLoadingRoadmaps(false);
+    };
+
+    void loadRoadmaps();
+
+    return () => {
+      alive = false;
+    };
+  }, []);
 
 
   useEffect(() => {
@@ -107,6 +168,69 @@ export default function JourneyJobHuntPage() {
 
     return `${applicationsCount} tracked application${applicationsCount === 1 ? "" : "s"} so far.`;
   }, [applicationsCount]);
+
+  const resolveDefaultAssessmentOptionId = useCallback(() => {
+    if (
+      selectedTrack?.roadmapId &&
+      roadmaps.some((roadmap) => roadmap.id === selectedTrack.roadmapId)
+    ) {
+      return selectedTrack.roadmapId;
+    }
+
+    return roadmaps[0]?.id || "";
+  }, [roadmaps, selectedTrack]);
+
+  const handleStartTestClick = useCallback(async () => {
+    setAssessmentError("");
+
+    if (isLoadingRoadmaps || isAuthLoading) {
+      return;
+    }
+
+    if (!roadmaps.length) {
+      setAssessmentError(roadmapsError || "No roadmap assessment is available yet.");
+      return;
+    }
+
+    setSelectedAssessmentOptionId(resolveDefaultAssessmentOptionId());
+
+    if (user?.id) {
+      const sessionsRes = await skillAssessmentService.getUserSessions(user.id);
+      const submittedCount =
+        sessionsRes.success && sessionsRes.data
+          ? sessionsRes.data.filter((session) => session.status === "submitted").length
+          : 0;
+      setNextTestCode(`Test_${String(submittedCount + 1).padStart(3, "0")}`);
+    }
+
+    setIsConfirmOpen(true);
+  }, [
+    isAuthLoading,
+    isLoadingRoadmaps,
+    resolveDefaultAssessmentOptionId,
+    roadmaps.length,
+    roadmapsError,
+    user?.id,
+  ]);
+
+  const handleStartAssessment = (questions: number) => {
+    if (!selectedAssessmentOption) {
+      return;
+    }
+
+    setIsStarting(true);
+
+    const params = new URLSearchParams({
+      targetId: selectedAssessmentOption.id,
+      targetName: selectedAssessmentOption.title,
+      sessionType: "roadmap",
+      numQuestions: String(questions),
+    });
+
+    setIsConfirmOpen(false);
+    router.push(`/skill-feature/questions?${params.toString()}`);
+    setIsStarting(false);
+  };
 
   // Delay render until all data is ready
   const isInitializing = isLoadingTracks || isLoading || isAuthLoading;
@@ -236,7 +360,7 @@ export default function JourneyJobHuntPage() {
           <div style={{ gridArea: "3 / 1 / 4 / 2" }}>
             <LevelCard
               style={{ backgroundColor: "var(--medium-blue)" }}
-              onClick={() => router.push("/features/skill")}
+              onClick={handleStartTestClick}
             />
           </div>
 
@@ -277,6 +401,46 @@ export default function JourneyJobHuntPage() {
             <p style={{ margin: 0, color: "#FFD3D3", gridArea: "3 / 2 / 4 / 5", alignSelf: "end" }}>
               {trackError || jobsError}
             </p>
+          ) : null}
+
+          {assessmentError ? (
+            <div
+              style={{
+                position: "fixed",
+                bottom: "20px",
+                left: "50%",
+                transform: "translateX(-50%)",
+                backgroundColor: "rgba(127, 29, 29, 0.92)",
+                color: "#fee2e2",
+                padding: "10px 16px",
+                borderRadius: "12px",
+                zIndex: 1001,
+                fontSize: "13px",
+                maxWidth: "70vw",
+              }}
+            >
+              {assessmentError}
+            </div>
+          ) : null}
+
+          {isConfirmOpen && roadmaps.length > 0 ? (
+            <SkillConfirmPopup
+              skillName={selectedAssessmentOption?.title || roadmaps[0].title}
+              skillOptions={roadmaps.map((roadmap) => ({
+                id: roadmap.id,
+                label: roadmap.title,
+              }))}
+              selectedSkillId={selectedAssessmentOptionId}
+              onSkillChange={setSelectedAssessmentOptionId}
+              isLoading={isStarting}
+              testCode={nextTestCode}
+              onCancel={() => {
+                if (!isStarting) {
+                  setIsConfirmOpen(false);
+                }
+              }}
+              onConfirm={handleStartAssessment}
+            />
           ) : null}
         </div>
       )}
