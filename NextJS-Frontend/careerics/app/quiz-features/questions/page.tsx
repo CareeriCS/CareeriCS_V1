@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Bookmark } from "lucide-react";
@@ -33,6 +34,7 @@ import type {
   UnifiedBookmarkDraft,
   UnifiedBookmarkEntry,
 } from "@/types";
+import { cn } from "@/lib/utils";
 
 interface QuestionGroup {
   groupId: string;
@@ -40,6 +42,10 @@ interface QuestionGroup {
   cardType: "hobby" | "technical";
   questions: APICareerQuestionResponse[];
 }
+
+type RatingValue = 1 | 2 | 3 | 4 | 5;
+
+const ratingValues = [1, 2, 3, 4, 5] as const;
 
 function getQuestionCardId(question: APICareerQuestionResponse): string {
   if (question.type === "hobby") {
@@ -54,6 +60,7 @@ function buildQuestionGroups(
   selectedCards: APICareerSelectedCardRead[],
 ): QuestionGroup[] {
   const selectedCardMap = new Map<string, APICareerSelectedCardRead>();
+
   for (const card of selectedCards) {
     selectedCardMap.set(card.id, card);
   }
@@ -81,6 +88,7 @@ function buildQuestionGroups(
 
   for (const selected of selectedCards) {
     const group = grouped.get(selected.id);
+
     if (!group) {
       continue;
     }
@@ -95,6 +103,84 @@ function buildQuestionGroups(
   }
 
   return ordered;
+}
+
+function getRatingButtonClass(value: RatingValue, isSelected: boolean) {
+  const sizeClass =
+    value === 1 || value === 5
+      ? "h-9 w-9 sm:h-10 sm:w-10"
+      : value === 2 || value === 4
+        ? "h-8 w-8 sm:h-9 sm:w-9"
+        : "h-7 w-7 sm:h-8 sm:w-8";
+
+  const selectedColorClass =
+    value === 1
+      ? "bg-[var(--light-red)]"
+      : value === 2
+        ? "bg-[#FFD0D0]"
+        : value === 3
+          ? "bg-[var(--light-blue)]"
+          : value === 4
+            ? "bg-[var(--light-green)]"
+            : "bg-[var(--primary-green)]";
+
+  return cn(
+    sizeClass,
+    "shrink-0 rounded-full border border-transparent transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-card-soft)]",
+    isSelected
+      ? `${selectedColorClass} scale-110 shadow-sm`
+      : "bg-[var(--bg-grey)] hover:scale-105 hover:bg-[var(--light-blue)]",
+  );
+}
+
+type QuizNavButtonProps = {
+  direction: "previous" | "next";
+  disabled?: boolean;
+  isLoading?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+};
+
+function QuizNavButton({
+  direction,
+  disabled,
+  isLoading,
+  onClick,
+  children,
+}: QuizNavButtonProps) {
+  const isPrevious = direction === "previous";
+
+  const icon = (
+    <span
+      aria-hidden="true"
+      className="flex h-[1.65rem] w-[1.65rem] shrink-0 items-center justify-center rounded-full bg-[var(--white)] text-[length:var(--text-xs)] leading-none text-[var(--dark-blue)]"
+    >
+      {isPrevious ? "↩" : "↪"}
+    </span>
+  );
+
+  return (
+    <Button
+      variant={isPrevious ? "secondary-inverted" : "primary"}
+      size="md"
+      disabled={disabled}
+      isLoading={isLoading}
+      onClick={onClick}
+      className="w-full rounded-full px-[var(--space-lg)] sm:w-auto"
+    >
+      {isPrevious ? (
+        <>
+          {icon}
+          {children}
+        </>
+      ) : (
+        <>
+          {children}
+          {!isLoading ? icon : null}
+        </>
+      )}
+    </Button>
+  );
 }
 
 export default function CareerQuestionsPage() {
@@ -116,7 +202,8 @@ export default function CareerQuestionsPage() {
   const [isFinished, setIsFinished] = useState(false);
   const [bookmarkedTrackIds, setBookmarkedTrackIds] = useState<string[]>([]);
   const [replaceCandidates, setReplaceCandidates] = useState<UnifiedBookmarkEntry[]>([]);
-  const [pendingCareerBookmark, setPendingCareerBookmark] = useState<UnifiedBookmarkDraft | null>(null);
+  const [pendingCareerBookmark, setPendingCareerBookmark] =
+    useState<UnifiedBookmarkDraft | null>(null);
   const [isReplacingBookmark, setIsReplacingBookmark] = useState(false);
   const [bookmarkError, setBookmarkError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -203,14 +290,17 @@ export default function CareerQuestionsPage() {
         setCurrentStepId(1);
         setUnlockedStepId(1);
         setIsFinished(true);
+
         if (!isAuthLoading && userId) {
           const nextBookmarks = await getLatestUnifiedBookmarks();
+
           if (cancelled) {
             return;
           }
 
           applyUnifiedBookmarks(nextBookmarks);
         }
+
         setIsLoadingQuestions(false);
         return;
       }
@@ -254,13 +344,20 @@ export default function CareerQuestionsPage() {
     return () => {
       cancelled = true;
     };
-  }, [applyUnifiedBookmarks, getLatestUnifiedBookmarks, isAuthLoading, isResultsView, sessionId, userId]);
+  }, [
+    applyUnifiedBookmarks,
+    getLatestUnifiedBookmarks,
+    isAuthLoading,
+    isResultsView,
+    sessionId,
+    userId,
+  ]);
 
   const sidebarSteps = useMemo(() => {
     return questionGroups.map((group, index) => ({
       id: index + 1,
       title: group.title,
-      text: `${group.questions.length} question${group.questions.length === 1 ? "" : "s"}`,
+      text: "",
     }));
   }, [questionGroups]);
 
@@ -269,16 +366,21 @@ export default function CareerQuestionsPage() {
   }, [questionGroups]);
 
   const currentGroup = questionGroups[currentStepId - 1] || null;
-  const allAnswered = allQuestions.length > 0 && allQuestions.every((question) => Boolean(ratings[question.id]));
+  const allAnswered =
+    allQuestions.length > 0 && allQuestions.every((question) => Boolean(ratings[question.id]));
+
   const displayedTrackScores = results?.track_scores ? [...results.track_scores] : [];
+
   if (requestedTrackId) {
     displayedTrackScores.sort((left, right) => {
       if (left.track_id === requestedTrackId) {
         return -1;
       }
+
       if (right.track_id === requestedTrackId) {
         return 1;
       }
+
       return 0;
     });
   }
@@ -300,6 +402,7 @@ export default function CareerQuestionsPage() {
 
     const loadBookmarksForResults = async () => {
       const nextBookmarks = await getLatestUnifiedBookmarks();
+
       if (cancelled) {
         return;
       }
@@ -372,6 +475,7 @@ export default function CareerQuestionsPage() {
     }));
 
     const submitResponse = await careerService.submitAnswers(sessionId, answersPayload);
+
     if (!submitResponse.success) {
       setIsSubmitting(false);
       setError(submitResponse.message || "Unable to submit your answers.");
@@ -379,6 +483,7 @@ export default function CareerQuestionsPage() {
     }
 
     const evaluateResponse = await careerService.evaluateCareerQuiz(sessionId);
+
     if (evaluateResponse.success && evaluateResponse.data) {
       registerTrackRoadmapLinksFromRecommendations(evaluateResponse.data.track_scores);
       setResults(evaluateResponse.data);
@@ -387,8 +492,8 @@ export default function CareerQuestionsPage() {
       return;
     }
 
-    // Fallback if evaluation already exists for this session.
     const cachedResponse = await careerService.getCareerResults(sessionId);
+
     if (cachedResponse.success && cachedResponse.data) {
       registerTrackRoadmapLinksFromRecommendations(cachedResponse.data.track_scores);
       setResults(cachedResponse.data);
@@ -418,9 +523,11 @@ export default function CareerQuestionsPage() {
     if (currentStepId < questionGroups.length) {
       const nextStep = currentStepId + 1;
       setCurrentStepId(nextStep);
+
       if (nextStep > unlockedStepId) {
         setUnlockedStepId(nextStep);
       }
+
       return;
     }
 
@@ -438,6 +545,7 @@ export default function CareerQuestionsPage() {
 
   const handleToggleBookmark = async (trackId: string) => {
     const selectedTrack = results?.track_scores.find((item) => item.track_id === trackId);
+
     if (!selectedTrack) {
       return;
     }
@@ -463,6 +571,7 @@ export default function CareerQuestionsPage() {
 
     if (existingBookmark) {
       const removal = await removeBookmarkEntryFromUnifiedList(existingBookmark, userId);
+
       if (!removal.success) {
         setBookmarkError(removal.message || "Unable to remove bookmark right now. Please try again.");
         return;
@@ -493,6 +602,7 @@ export default function CareerQuestionsPage() {
     }
 
     const addResponse = await roadmapService.toggleRoadmapBookmark(selectedTrack.roadmap_id, userId);
+
     if (!addResponse.success || !addResponse.data?.bookmarked) {
       setBookmarkError(addResponse.message || "Unable to save your bookmark right now.");
       return;
@@ -512,6 +622,7 @@ export default function CareerQuestionsPage() {
       setIsReplacingBookmark(true);
 
       const removal = await removeBookmarkEntryFromUnifiedList(bookmarkToReplace, userId);
+
       if (!removal.success) {
         setBookmarkError(removal.message || "Unable to replace bookmark right now. Please try again.");
         setIsReplacingBookmark(false);
@@ -548,340 +659,209 @@ export default function CareerQuestionsPage() {
   if (!isFinished) {
     return (
       <Interview
-          questions={sidebarSteps.map(step => ({ ...step, text: "" }))}
-          currentActiveId={currentStepId}
-          unlockedStepId={currentStepId} 
-          onQuestionClick={(id) => {
-            if (id <= (unlockedStepId ?? 0)) {
-              setCurrentStepId(id);
-            }
-          }}
-          title="Career Quiz"
-          label="Step"
-        >
-        <div
-          style={{
-            width: "100%",
-            height: "fit-content",
-            display: "flex",
-            flexDirection: "column",
-            padding: "5vh 4vw",
-            boxSizing: "border-box",
-            gap: "3vh",
-          }}
-        >
-          <div
-            style={{
-              flex: 1,
-              display: "flex",
-              flexDirection: "column",
-              gap: "2vh",
-              justifyContent: "center",
-              overflowY: "auto",
-            }}
-          >
-            {isLoadingQuestions ? (
-              <div style={{ color: "#E5E7EB", textAlign: "center", fontSize: "2.2vh" }}>
-                Loading quiz questions...
-              </div>
-            ) : currentGroup ? (
-              <>
+        questions={sidebarSteps}
+        currentActiveId={currentStepId}
+        unlockedStepId={unlockedStepId}
+        onQuestionClick={(id) => {
+          if (id <= unlockedStepId) {
+            setCurrentStepId(id);
+            setError(null);
+          }
+        }}
+        title="Career Quiz"
+        label=""
+      >
+        <section className="mx-auto flex w-full min-w-0 max-w-[52rem] flex-col items-center gap-[var(--space-xl)]">
+          {isLoadingQuestions ? (
+            <div className="text-center text-[length:var(--text-md)] text-[var(--text-primary)]">
+              Loading quiz questions...
+            </div>
+          ) : currentGroup ? (
+            <>
+              <div className="flex w-full min-w-0 flex-col gap-[var(--space-lg)]">
                 {currentGroup.questions.map((question) => (
-                  <div
+                  <article
                     key={question.id}
-                    style={{
-                      backgroundColor: "#222939",
-                      borderRadius: "4vh",
-                      padding: "4vh 2vw",
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      gap: "2.5vh",
-                      border: "0.1vh solid rgba(255, 255, 255, 0.03)",
-                    }}
+                  className="flex w-full min-w-0 flex-col items-center gap-[var(--space-lg)] rounded-[var(--radius-2xl)] border border-[rgba(255,255,255,0.12)] bg-[rgba(61,67,84,0.68)] px-[var(--space-lg)] py-[var(--space-xl)] shadow-sm backdrop-blur-sm sm:px-[var(--space-xl)]"
                   >
                     <p
-                      style={{
-                        color: "#D1D5DB",
-                        fontSize: "2.2vh",
-                        fontFamily: "var(--font-nova-square)",
-                        margin: 0,
-                        textAlign: "center",
-                      }}
+                      className="m-0 w-full break-words text-center text-[length:var(--text-base)] font-medium leading-[var(--line-normal)] text-[var(--text-primary)]"
+                      style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
                     >
                       {question.text}
                     </p>
 
-                    <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "2.5vw",
-                          flexWrap: "wrap",
-                          justifyContent: "center",
-                        }}
+                    <div className="flex w-full flex-col items-center justify-center gap-[var(--space-md)] md:flex-row md:gap-[var(--space-lg)]">
+                      <span
+                       className="text-center text-[length:var(--text-sm)] font-medium text-[var(--light-red)]"
+                        style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
                       >
-                        <span style={{ color: "#FFB2B2", fontSize: "2.2vh", fontWeight: 600 }}>
-                          Strongly Disagree
-                        </span>
+                        Strongly Disagree
+                      </span>
 
-                        <div style={{ display: "flex", alignItems: "center", gap: "1.8vw" }}>
-                          {[1, 2, 3, 4, 5].map((value) => {
-                            const sizes = ["5vh", "4vh", "2.8vh", "4vh", "5vh"];
-                            const isSelected = ratings[question.id] === value;
+                      <div className="flex flex-wrap items-center justify-center gap-[var(--space-md)]">
+                        {ratingValues.map((value) => {
+                          const isSelected = ratings[question.id] === value;
 
-                            const getCircleColor = (val: number, selected: boolean) => {
-                              if (!selected) return "#6B7280"; 
-                              
-                              switch (val) {
-                                case 1: return "#FF4D4D"; // Red
-                                case 2: return "#FF8585"; // Light Red
-                                case 3: return "#3B82F6"; // Blue
-                                case 4: return "#D9FF8F"; // Light Neon
-                                case 5: return "#B8EF46"; // Neon Green
-                                default: return "#6B7280";
-                              }
-                            };
-
-                            return (
-                              <div
-                                key={value}
-                                onClick={() => handleRate(question.id, value)}
-                                style={{
-                                  width: sizes[value - 1],
-                                  height: sizes[value - 1],
-                                  borderRadius: "50%",
-                                  backgroundColor: getCircleColor(value, isSelected),
-                                  cursor: "pointer",
-                                  transition: "all 0.3s ease",
-                                  transform: isSelected ? "scale(1.15)" : "scale(1)",
-                                 
-                                }}
-                              />
-                            );
-                          })}
-                        </div>
-
-                        <span style={{ color: "#E6FFB2", fontSize: "2.2vh", fontWeight: 600 }}>
-                          Strongly Agree
-                        </span>
+                          return (
+                            <button
+                              key={value}
+                              type="button"
+                              aria-label={`Rate ${value} out of 5`}
+                              aria-pressed={isSelected}
+                              onClick={() => handleRate(question.id, value)}
+                              className={getRatingButtonClass(value, isSelected)}
+                            />
+                          );
+                        })}
                       </div>
-                  </div>
+
+                      <span
+                        className="text-center text-[length:var(--text-sm)] font-medium text-[var(--light-green)]"
+                        style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
+                      >
+                        Strongly Agree
+                      </span>
+                    </div>
+                  </article>
                 ))}
-              </>
-            ) : (
-              <div style={{ color: "#FFD3D3", textAlign: "center", fontSize: "2.2vh" }}>
-                {error || "Questions are not available for this session."}
               </div>
-            )}
-          </div>
 
-          <div style={{ display: "flex", flexDirection: "column", width: "100%", gap: "1.2vh" }}>
-            {error ? (
-              <p style={{ color: "#FFD3D3", margin: 0, fontSize: "1.9vh" }}>
-                {error}
-              </p>
-            ) : null}
+              {error ? (
+                <p className="m-0 text-center text-[length:var(--text-sm)] leading-[var(--line-normal)] text-[var(--text-danger)]">
+                  {error}
+                </p>
+              ) : null}
 
-<div style={{ 
-  display: "flex", 
-  justifyContent: "space-between", 
-  width: "50%", 
-  gap: "1.2vh",
-  marginTop: "2vh",
-  position:"relative",
-  left:"31vw"
-}}>
-  
-  {/* Previous Button */}
-  <Button
-  variant="primary-inverted"
-    onClick={() => setCurrentStepId((prev) => Math.max(1, prev - 1))}
-    disabled={currentStepId === 1 || isLoadingQuestions || isSubmitting}
-    style={{
+              <div className="flex w-full flex-col-reverse items-stretch justify-center gap-[var(--space-md)] sm:w-auto sm:flex-row sm:items-center">
+                <QuizNavButton
+                  direction="previous"
+                  onClick={() => {
+                    setCurrentStepId((prev) => Math.max(1, prev - 1));
+                    setError(null);
+                  }}
+                  disabled={currentStepId === 1 || isLoadingQuestions || isSubmitting}
+                >
+                  Previous
+                </QuizNavButton>
 
-      color: "black",
-      border: "1px solid #6B7280",
-      padding: "1.5vh 4vw",
-      borderRadius: "1.2vh",
-      fontSize: "2vh",
-      fontWeight: 600,
-      height: "auto",
-      minWidth: "12vw",
-      cursor: currentStepId === 1 ? "not-allowed" : "pointer",
-      opacity: currentStepId === 1 ? 0.4 : 1,
-      visibility: currentStepId === 1 ? "hidden" : "visible", 
-    }}
-  >
-    Back
-  </Button>
-
-  {/* Next/Finish Button */}
-  <Button
-  variant="primary"
-    onClick={handleNext}
-    disabled={isLoadingQuestions || isSubmitting || !currentGroup}
-    style={{
-      color: "#000",
-      padding: "1.5vh 5vw",
-      borderRadius: "1.2vh",
-      fontSize: "2.2vh",
-      fontWeight: 800,
-      height: "auto",
-      minWidth: "5vw",
-      opacity: isLoadingQuestions || isSubmitting || !currentGroup ? 0.6 : 1,
-    }}
-  >
-    {isSubmitting ? "Submitting..." : currentStepId === questionGroups.length ? "Finish" : "Next"}
-  </Button>
-</div>
-          </div>
-        </div>
+                <QuizNavButton
+                  direction="next"
+                  onClick={handleNext}
+                  disabled={isLoadingQuestions || isSubmitting || !currentGroup}
+                  isLoading={isSubmitting}
+                >
+                  {isSubmitting
+                    ? "Submitting..."
+                    : currentStepId === questionGroups.length
+                      ? "Finish"
+                      : "Next"}
+                </QuizNavButton>
+              </div>
+            </>
+          ) : (
+            <div className="text-center text-[length:var(--text-md)] text-[var(--text-danger)]">
+              {error || "Questions are not available for this session."}
+            </div>
+          )}
+        </section>
       </Interview>
     );
   }
 
   return (
-    <div
-      style={{
-        width: "100%",
-        minHeight: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: "5vh",
-        padding: "2rem",
-      }}
-    >
-      <h1 style={{ color: "#fff", fontSize: "5vh", fontFamily: "var(--font-nova-square)", margin: 0 }}>
-        Your Best Matches Are
-      </h1>
-
-      {bookmarkError ? (
-        <p style={{ margin: 0, color: "#FFD3D3", fontSize: "2vh", textAlign: "center" }}>
-          {bookmarkError}
-        </p>
-      ) : null}
-
-      <div
-        style={{
-          display: "flex",
-          gap: "1.3rem",
-          flexWrap: "wrap",
-          justifyContent: "center",
-          width: "100%",
-          maxWidth: "1200px",
-        }}
-      >
-        {displayedTrackScores.map((track) => (
-          <div
-            key={track.track_id}
-            style={{
-              width: "min(320px, 90vw)",
-              backgroundColor: "var(--medium-blue)",
-              borderRadius: "3vh",
-              padding: "4vh 1.3rem 3.2vh 1.3rem",
-              display: "flex",
-              flexDirection: "column",
-              gap: "5vh",
-              position: "relative",
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => {
-                void handleToggleBookmark(track.track_id);
-              }}
-              disabled={isReplacingBookmark || isAuthLoading || !userId}
-              aria-label={
+    <section className="grid h-full min-h-0 w-full grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden px-[var(--space-xl)] pb-[var(--space-xl)] pt-[calc(var(--icon-lg)+var(--space-2xl))] sm:px-[var(--space-2xl)]">
+      <header className="mx-auto flex w-full max-w-[72rem] shrink-0 flex-col items-center text-center">
+        <h1
+          className="m-0 text-center text-[length:var(--text-2xl)] font-semibold leading-[var(--line-tight)] text-[var(--text-primary)]"
+          style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
+        >
+          Your Best Matches Are
+        </h1>
+  
+        {bookmarkError ? (
+          <p className="m-0 mt-[var(--space-sm)] max-w-[42rem] text-center text-[length:var(--text-sm)] leading-[var(--line-normal)] text-[var(--text-danger)]">
+            {bookmarkError}
+          </p>
+        ) : null}
+      </header>
+  
+      <main className="flex min-h-0 w-full items-start justify-center overflow-y-auto px-[var(--space-xs)] py-[var(--space-lg)] sm:items-center sm:px-0 sm:py-[var(--space-2xl)]">
+        {displayedTrackScores.length ? (
+          <div className="grid w-full max-w-[72rem] grid-cols-1 justify-items-center gap-[var(--space-xl)] sm:grid-cols-2 lg:grid-cols-3">
+            {displayedTrackScores.slice(0, 3).map((track) => {
+              const isBookmarked =
                 bookmarkedTrackIds.includes(track.track_id) ||
-                (track.roadmap_id ? bookmarkedTrackIds.includes(track.roadmap_id) : false)
-                  ? "Remove bookmark"
-                  : "Bookmark track"
-              }
-              style={{
-                position: "absolute",
-                top: "2.5vh",
-                right: "1rem",
-                width: "5vh",
-                height: "5vh",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                background: "transparent",
-                border: "none",
-                cursor:
-                  isReplacingBookmark || isAuthLoading || !userId ? "not-allowed" : "pointer",
-                color:
-                  bookmarkedTrackIds.includes(track.track_id) ||
-                  (track.roadmap_id ? bookmarkedTrackIds.includes(track.roadmap_id) : false)
-                    ? "#D4EF9F"
-                    : "#EAF1FF",
-                padding: 0,
-                opacity: isReplacingBookmark || isAuthLoading || !userId ? 0.65 : 1,
-              }}
-            >
-              <Bookmark
-                size={20}
-                strokeWidth={2.1}
-                className={
-                  bookmarkedTrackIds.includes(track.track_id) ||
-                  (track.roadmap_id ? bookmarkedTrackIds.includes(track.roadmap_id) : false)
-                    ? "fill-current"
-                    : undefined
-                }
-              />
-            </button>
-
-            <img
-              src="/landing/Rectangle.svg"
-              alt={track.track_name}
-              style={{ width: "15vh", height: "auto", alignSelf: "flex-start" }}
-            />
-
-            <h2 style={{ color: "#fff", fontSize: "3vh", margin: 0, fontFamily: "var(--font-nova-square)" }}>
-              {track.track_name}
-            </h2>
-
-            <p style={{ margin: 0, color: "var(--light-green)", fontWeight: 700, fontSize: "2vh" }}>
-              Match Score: {track.score}%
-            </p>
-
-            <p style={{ color: "#A0AEC0", fontSize: "1.9vh", margin: 0, lineHeight: "1.4" }}>
-              {track.track_description || "This track aligns strongly with your selected cards and responses."}
-            </p>
-
-            <Link
-              href={buildCareerTrackDetailsHref(track.track_name, track.track_id)}
-              style={{ textDecoration: "none" }}
-            >
-              <Button
-              variant="secondary"
-                style={{
-                  color: "#000000",
-                  padding: "2vh 2vw",
-                  height: "6vh",
-                  width: "100%",
-                  borderRadius: "1vh",
-                  marginTop: "1vh",
-                  fontSize: "2vh",
-                  minHeight: "0",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                Learn More
-              </Button>
-            </Link>
+                (track.roadmap_id ? bookmarkedTrackIds.includes(track.roadmap_id) : false);
+  
+              return (
+                <article
+                  key={track.track_id}
+                 className="relative flex min-h-[20rem] w-full max-w-[19.5rem] flex-col rounded-[var(--radius-2xl)] bg-[var(--medium-blue)] px-[var(--space-lg)] py-[var(--space-lg)] shadow-sm sm:min-h-[23rem] sm:max-w-[20rem] sm:px-[var(--space-xl)] sm:py-[var(--space-xl)]"
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void handleToggleBookmark(track.track_id);
+                    }}
+                    disabled={isReplacingBookmark || isAuthLoading || !userId}
+                    aria-label={isBookmarked ? "Remove bookmark" : "Bookmark track"}
+                    className="absolute right-[var(--space-lg)] top-[var(--space-lg)] flex h-[var(--min-touch-target)] w-[var(--min-touch-target)] items-center justify-center rounded-full bg-transparent text-[var(--text-primary)] transition hover:bg-[rgba(255,255,255,0.12)] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <Bookmark
+                      size={22}
+                      strokeWidth={2.1}
+                      className={isBookmarked ? "fill-current text-[var(--light-green)]" : undefined}
+                    />
+                  </button>
+  
+                  <Image
+                    src="/landing/Rectangle.svg"
+                    alt=""
+                    width={118}
+                    height={118}
+                    className="h-auto w-[7.4rem] shrink-0"
+                  />
+  
+                  <h2
+                    className="m-0 mt-[var(--space-md)] pr-[var(--space-xl)] text-[length:var(--text-lg)] font-semibold leading-[var(--line-tight)] text-[var(--text-primary)]"
+                    style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
+                  >
+                    {track.track_name}
+                  </h2>
+  
+                  <p className="m-0 mt-[var(--space-md)] text-[length:var(--text-sm)] font-bold text-[var(--light-green)]">
+                    Match Score: {track.score}%
+                  </p>
+  
+                  <p className="m-0 mt-[var(--space-md)] line-clamp-3 flex-1 text-[length:var(--text-sm)] leading-[var(--line-relaxed)] text-[var(--text-secondary)]">
+                    {track.track_description ||
+                      "This track aligns strongly with your selected cards and responses."}
+                  </p>
+  
+                  <Link
+                    href={buildCareerTrackDetailsHref(track.track_name, track.track_id)}
+                    className="mt-[var(--space-lg)] block"
+                  >
+                    <Button variant="secondary" size="md" className="w-full rounded-[var(--radius-lg)]">
+                      Learn More
+                    </Button>
+                  </Link>
+                </article>
+              );
+            })}
           </div>
-        ))}
-      </div>
-
-      <div style={{ display: "flex", gap: "2vw", flexWrap: "wrap", justifyContent: "center" }}>
+        ) : (
+          <div className="text-center text-[length:var(--text-base)] text-[var(--text-primary)]">
+            No career matches were found for this quiz.
+          </div>
+        )}
+      </main>
+  
+      <footer className="mx-auto flex w-full max-w-[32rem] shrink-0 flex-col items-stretch justify-center gap-[var(--space-md)] sm:flex-row sm:items-center">
         <Button
-        variant="secondary"
+          variant="secondary"
+          size="md"
           onClick={() => {
             if (sessionId) {
               router.push(buildCareerQuizSelectionHref(sessionId));
@@ -889,40 +869,22 @@ export default function CareerQuestionsPage() {
               router.push("/features/career");
             }
           }}
-          style={{
-            color: "#000",
-            padding: "1vh 4vw",
-            borderRadius: "1.5vh",
-            height: "auto",
-            fontWeight: 800,
-          }}
+          className="w-full rounded-[var(--radius-lg)] sm:w-auto sm:min-w-[10rem]"
         >
-          Redo Quiz
+          Retake Quiz
         </Button>
-
-        <Link href="/features/home" style={{ textDecoration: "none" }}>
+  
+        <Link href="/features/home" className="w-full sm:w-auto">
           <Button
-          variant="primary"
-            style={{
-          
-              color: "#000",
-              padding: "0 3vw",
-              height: "6vh",
-              borderRadius: "1.5vh",
-              fontSize: "2vh",
-              fontWeight: 800,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              whiteSpace: "nowrap",
-              width: "fit-content",
-            }}
+            variant="primary"
+            size="md"
+            className="w-full rounded-[var(--radius-lg)] sm:min-w-[10rem]"
           >
-            Go Back Home
+            Back to Home
           </Button>
         </Link>
-      </div>
-
+      </footer>
+  
       {pendingCareerBookmark ? (
         <BookmarkReplacePopup
           incomingTitle={pendingCareerBookmark.title}
@@ -934,6 +896,6 @@ export default function CareerQuestionsPage() {
           onCancel={closeReplacePopup}
         />
       ) : null}
-    </div>
+    </section>
   );
 }

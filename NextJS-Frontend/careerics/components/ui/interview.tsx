@@ -49,10 +49,10 @@ export default function SidebarLogicOnly({
             {questions.map((question) => {
               const isSelected = currentActiveId === question.id;
               const isLocked = unlockedStepId !== undefined ? question.id > unlockedStepId : false;
-              const defaultTitle = `${label} ${question.id}`;
               const normalizedTitle = question.title?.trim() || "";
+              const defaultTitle = label ? `${label} ${question.id}` : normalizedTitle || `Item ${question.id}`;
               const shouldShowTitle =
-                isSelected &&
+                Boolean(label) &&
                 normalizedTitle.length > 0 &&
                 normalizedTitle.toLowerCase() !== defaultTitle.toLowerCase();
               const normalizedText = question.text?.trim() || "";
@@ -79,7 +79,12 @@ export default function SidebarLogicOnly({
                   )}
                   style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
                 >
-                  <span className="block text-[length:var(--text-sm)] font-semibold leading-[var(--line-tight)]">
+                  <span
+                    className={cn(
+                      "block text-[length:var(--text-sm)] font-semibold leading-[var(--line-tight)]",
+                      isLocked ? "opacity-70" : ""
+                    )}
+                  >
                     {defaultTitle}
                   </span>
 
