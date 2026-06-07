@@ -203,22 +203,22 @@ export default function CourseActionPopup({
               width: "100%",
               justifyContent: "flex-start",
               alignItems: "center",
-              gap: "var(--space-md)"
+              gap: "var(--space-md)",
             }}
           >
-              <Button
-                onClick={onCancel}
-                variant="popup-inverted"
-                disabled={isLoading}
-                style={{
-                  minWidth: 0,
-                  flex: 1,
-                  whiteSpace: "nowrap",
-                }}
-              >
-                Cancel
-              </Button>
-              
+            <Button
+              onClick={onContinue ?? onCancel}
+              variant="popup-inverted"
+              disabled={isLoading}
+              style={{
+                minWidth: 0,
+                flex: 1,
+                whiteSpace: "nowrap",
+              }}
+            >
+              View
+            </Button>
+
             <Button
               onClick={onConfirm}
               variant="popup"
@@ -232,7 +232,6 @@ export default function CourseActionPopup({
             >
               Enroll
             </Button>
-
           </div>
         ) : null}
 

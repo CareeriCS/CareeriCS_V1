@@ -189,11 +189,16 @@ export const authService: AuthService = {
       headers,
     });
 
-    if (response.ok) {
+    const payload = await response.json().catch(() => ({} as { detail?: string; success?: boolean }));
+
+    if (response.ok && payload?.success === true) {
       return;
     }
 
-    const payload = await response.json().catch(() => ({}));
+    if (response.ok) {
+      throw new Error("Account deletion could not be confirmed.");
+    }
+
     throw new Error(payload?.detail || "Unable to delete account.");
   },
 

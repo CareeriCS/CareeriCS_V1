@@ -63,7 +63,7 @@ export default function CourseLibraryPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [courseProgressError, setCourseProgressError] = useState<string | null>(null);
-  const [activePopupMode, setActivePopupMode] = useState<"enroll" | "complete" | null>(null);
+  const [activePopupMode, setActivePopupMode] = useState<"enroll" | "complete" | "retake" | null>(null);
   const [activePopupCourse, setActivePopupCourse] = useState<
     RoadmapCoursesRead["sections"][number]["courses"][number] | null
   >(null);
@@ -188,11 +188,11 @@ export default function CourseLibraryPage() {
     }
 
     if (courseStatusById[course.id] === "completed") {
-      window.open(course.url, "_blank", "noopener,noreferrer");
+      setActivePopupCourse(course);
+      setActivePopupMode("retake");
       return;
     }
 
-    window.open(course.url, "_blank", "noopener,noreferrer");
     setActivePopupCourse(course);
     setActivePopupMode("enroll");
   };
@@ -484,14 +484,16 @@ export default function CourseLibraryPage() {
           onConfirm={
             activePopupMode === "enroll"
               ? confirmEnrollment
-              : confirmCompletion
+              : activePopupMode === "retake"
+                ? handleContinueCourse
+                : confirmCompletion
           }
           onCancel={() => {
             setActivePopupCourse(null);
             setActivePopupMode(null);
           }}
           onContinue={
-            activePopupMode === "complete"
+            activePopupMode === "complete" || activePopupMode === "enroll"
               ? handleContinueCourse
               : undefined
           }

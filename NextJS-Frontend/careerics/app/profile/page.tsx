@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import InputField from "@/components/ui/input-field";
 import AccountDeletePopup from "@/components/ui/account-delete-popup";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type SyntheticEvent } from "react";
 import { authService } from "@/services/auth.service";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useAuth } from "@/providers/auth-provider";
@@ -16,6 +16,7 @@ import type { ApiResponse, UserProfile, UserProfileUpsertRequest } from "@/types
 const PROFILE_PHOTO_BUCKET = "profile-pictures";
 const MAX_PROFILE_PHOTO_SIZE_BYTES = 5 * 1024 * 1024;
 const PROFILE_PHOTO_SIGNED_URL_TTL_SECONDS = 60 * 60 * 24 * 7;
+const DEFAULT_PROFILE_IMAGE = "/sidebar/profile.svg";
 const PROFILE_PHOTO_ALLOWED_TYPES = new Set([
   "image/png",
   "image/jpeg",
@@ -176,11 +177,36 @@ export default function Profile() {
   const [github, setGithub] = useState("");
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState("");
   const [persistedAvatarUrl, setPersistedAvatarUrl] = useState("");
+  const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
+  const [avatarUseFallback, setAvatarUseFallback] = useState(false);
 
   const isMutatingProfile = isSavingProfile || isDeletingAccount || isUploadingPhoto;
   const canEditName = isEditingName && !isMutatingProfile && !isLoadingProfile;
   const canEditFields = isEditingFields && !isMutatingProfile && !isLoadingProfile;
-  const displayedAvatarUrl = avatarPreviewUrl || persistedAvatarUrl || user?.avatarUrl || "/sidebar/profile.svg";
+  const displayedAvatarUrl = avatarLoadFailed || avatarUseFallback
+    ? DEFAULT_PROFILE_IMAGE
+    : avatarPreviewUrl || persistedAvatarUrl || user?.avatarUrl || DEFAULT_PROFILE_IMAGE;
+  const isDefaultProfileImage = displayedAvatarUrl.endsWith(DEFAULT_PROFILE_IMAGE);
+
+  const handleAvatarImageError = (event: React.SyntheticEvent<HTMLImageElement>) => {
+    const image = event.currentTarget;
+    if (image.src.endsWith(DEFAULT_PROFILE_IMAGE)) {
+      return;
+    }
+
+    if (avatarPreviewUrl) {
+      if (avatarPreviewUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(avatarPreviewUrl);
+      }
+      setAvatarPreviewUrl("");
+    } else if (persistedAvatarUrl) {
+      setPersistedAvatarUrl("");
+    } else {
+      setAvatarUseFallback(true);
+    }
+
+    image.src = DEFAULT_PROFILE_IMAGE;
+  };
 
   const applyProfileToForm = (profile: UserProfile, nextAvatarUrl?: string | null) => {
     setFullName(profile.full_name || "");
@@ -206,6 +232,7 @@ export default function Profile() {
 
     if (typeof nextAvatarUrl !== "undefined") {
       setPersistedAvatarUrl(nextAvatarUrl || "");
+      setAvatarUseFallback(false);
     }
   };
 
@@ -436,6 +463,7 @@ export default function Profile() {
     setProfileError(null);
     setProfileSuccess(null);
     setAvatarPreviewUrl(previewUrl);
+    setAvatarUseFallback(false);
     setIsEditingPhoto(true);
     setIsUploadingPhoto(true);
 
@@ -467,6 +495,7 @@ export default function Profile() {
 
       setPersistedAvatarUrl(resolvedAvatarUrl || "");
       setAvatarPreviewUrl("");
+      setAvatarUseFallback(false);
       setProfileSuccess("Profile photo updated successfully.");
     } catch (error) {
       setPersistedAvatarUrl(previousAvatarUrl);
@@ -706,20 +735,35 @@ export default function Profile() {
                   width: "var(--icon-3xl)",
                   height: "var(--icon-3xl)",
                   position: "relative",
-                  overflow: "hidden",
+                  overflow: "visible",
                   flexShrink: 0,
                 }}
               >
-                <img
-                  src={displayedAvatarUrl}
-                  alt="Profile"
+                <div
                   style={{
-                    borderRadius: "999px",
                     width: "100%",
                     height: "100%",
-                    objectFit: "cover",
+                    borderRadius: "999px",
+                    overflow: "hidden",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: "transparent",
                   }}
-                />
+                >
+                  <img
+                    src={displayedAvatarUrl}
+                    alt=""
+                    onError={handleAvatarImageError}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: isDefaultProfileImage ? "contain" : "cover",
+                      padding: isDefaultProfileImage ? "8%" : undefined,
+                      backgroundColor: "transparent",
+                    }}
+                  />
+                </div>
 
                 <img
                   src={isEditingPhoto ? "/profile/save.svg" : "/profile/edit.svg"}
@@ -729,8 +773,9 @@ export default function Profile() {
                     height: "var(--icon-md)",
                     cursor: isMutatingProfile ? "not-allowed" : "pointer",
                     position: "absolute",
-                    right: 0,
-                    bottom: 0,
+                    right: "-0.15rem",
+                    bottom: "-0.15rem",
+                    zIndex: 2,
                     opacity: isMutatingProfile ? 0.6 : 1,
                   }}
                   onClick={handleProfilePhotoIconClick}

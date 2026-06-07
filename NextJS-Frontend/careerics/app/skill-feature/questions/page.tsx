@@ -1,7 +1,10 @@
 "use client";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import Interview from "@/components/ui/interview";
+import { Button } from "@/components/ui";
 import { useAuth } from "@/providers/auth-provider";
 import { skillAssessmentService } from "@/services";
 import type {
@@ -10,7 +13,7 @@ import type {
   APIAssessmentSessionType,
   APISubmitAssessmentResponse,
 } from "@/types";
-import { Button } from "@/components/ui";
+import { cn } from "@/lib/utils";
 
 const STORAGE_PREFIX = "skill-assessment:";
 const STATUS_STORAGE_PREFIX = "skill-assessment:status:";
@@ -33,13 +36,80 @@ function normalizeSessionType(rawType: string | null): APIAssessmentSessionType 
   if (rawType === "roadmap" || rawType === "section" || rawType === "step") {
     return rawType;
   }
+
   return "skills";
+}
+
+function persistAssessmentState(
+  nextSessionId: string,
+  nextQuestions: APIAssessmentQuestion[],
+  nextAnswers: Record<string, string>,
+  nextCurrentQuestion: number,
+  nextUnlockedStepId: number
+) {
+  const cacheKey = `${STORAGE_PREFIX}${nextSessionId}`;
+  const payload: CachedAssessmentState = {
+    sessionId: nextSessionId,
+    questions: nextQuestions,
+    userAnswers: nextAnswers,
+    currentQuestion: nextCurrentQuestion,
+    unlockedStepId: nextUnlockedStepId,
+  };
+
+  sessionStorage.setItem(cacheKey, JSON.stringify(payload));
+}
+
+type AssessmentNavButtonProps = {
+  direction: "previous" | "next";
+  disabled?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+};
+
+function AssessmentNavButton({
+  direction,
+  disabled,
+  onClick,
+  children,
+}: AssessmentNavButtonProps) {
+  const isPrevious = direction === "previous";
+  const icon = (
+    <span
+      aria-hidden="true"
+      className="flex h-[1.75rem] w-[1.75rem] shrink-0 items-center justify-center rounded-full bg-[var(--white)] text-[length:var(--text-sm)] leading-none text-[var(--dark-blue)]"
+    >
+      {isPrevious ? "↩" : "↪"}
+    </span>
+  );
+
+  return (
+    <Button
+      variant={isPrevious ? "secondary-inverted" : "primary"}
+      size="md"
+      disabled={disabled}
+      onClick={onClick}
+      className="w-full rounded-full sm:w-auto"
+    >
+      {isPrevious ? (
+        <>
+          {icon}
+          {children}
+        </>
+      ) : (
+        <>
+          {children}
+          {icon}
+        </>
+      )}
+    </Button>
+  );
 }
 
 export default function AssessmentPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isLoading: isAuthLoading } = useAuth();
+  const userId = user?.id ?? "";
 
   const legacySkillId = searchParams.get("skillId") || "";
   const legacySkillName = searchParams.get("skillName") || "";
@@ -48,9 +118,10 @@ export default function AssessmentPage() {
   const sessionType = normalizeSessionType(searchParams.get("sessionType"));
   const resumeSessionId = searchParams.get("sessionId") || "";
   const parsedNumQuestions = Number(searchParams.get("numQuestions") || "7");
-  const numQuestions = Number.isFinite(parsedNumQuestions) && parsedNumQuestions > 0
-    ? Math.min(parsedNumQuestions, 20)
-    : 7;
+  const numQuestions =
+    Number.isFinite(parsedNumQuestions) && parsedNumQuestions > 0
+      ? Math.min(parsedNumQuestions, 20)
+      : 7;
 
   const [currentQuestion, setCurrentQuestion] = useState(1);
   const [expandedId, setExpandedId] = useState(1);
@@ -77,38 +148,28 @@ export default function AssessmentPage() {
 
   const resultByQuestionId = useMemo(() => {
     const map = new Map<string, APIAssessmentQuestionResult>();
+
     for (const item of resultsData?.results || []) {
       map.set(item.question_id, item);
     }
+
     return map;
   }, [resultsData]);
 
-  const sidebarQuestions = questions.map((q, idx) => ({
-    id: idx + 1,
-    title: "",
-    text: q.question_text,
-  }));
+  const sidebarQuestions = useMemo(
+    () =>
+      questions.map((q, idx) => ({
+        id: idx + 1,
+        title: `Question ${idx + 1}`,
+        text: q.question_text,
+      })),
+    [questions]
+  );
 
-  const persistAssessmentState = (
-    nextSessionId: string,
-    nextQuestions: APIAssessmentQuestion[],
-    nextAnswers: Record<string, string>,
-    nextCurrentQuestion: number,
-    nextUnlockedStepId: number,
-  ) => {
-    const cacheKey = `${STORAGE_PREFIX}${nextSessionId}`;
-    const payload: CachedAssessmentState = {
-      sessionId: nextSessionId,
-      questions: nextQuestions,
-      userAnswers: nextAnswers,
-      currentQuestion: nextCurrentQuestion,
-      unlockedStepId: nextUnlockedStepId,
-    };
-    sessionStorage.setItem(cacheKey, JSON.stringify(payload));
-  };
-
-  const startNewSession = async () => {
-    if (!user?.id || !targetId) return;
+  const startNewSession = useCallback(async () => {
+    if (!userId || !targetId) {
+      return;
+    }
 
     setIsInitializing(true);
     setError("");
@@ -116,7 +177,7 @@ export default function AssessmentPage() {
     setIsReviewing(false);
     setResultsData(null);
 
-    const response = await skillAssessmentService.startSession(user.id, {
+    const response = await skillAssessmentService.startSession(userId, {
       target_id: targetId,
       num_questions: numQuestions,
       session_type: sessionType,
@@ -155,37 +216,41 @@ export default function AssessmentPage() {
     }
 
     router.replace(`/skill-feature/questions?${params.toString()}`);
-
     setIsInitializing(false);
-  };
+  }, [numQuestions, router, sessionType, targetId, targetName, userId]);
 
   useEffect(() => {
     if (isAuthLoading) {
       return;
     }
 
-    const initKey = `${user?.id || ""}:${sessionType}:${targetId}:${resumeSessionId}:${numQuestions}`;
-    if (initKeyRef.current === initKey) return;
+    const initKey = `${userId}:${sessionType}:${targetId}:${resumeSessionId}:${numQuestions}`;
+    if (initKeyRef.current === initKey) {
+      return;
+    }
+
     initKeyRef.current = initKey;
 
-    if (!user?.id) {
-      setIsInitializing(false);
-      setError("Please sign in to start the assessment.");
-      return;
-    }
-
-    if (!targetId) {
-      setIsInitializing(false);
-      setError("Missing assessment target. Please select a topic or skill first.");
-      return;
-    }
-
     const initialize = async () => {
+      if (!userId) {
+        setIsInitializing(false);
+        setError("Please sign in to start the assessment.");
+        return;
+      }
+
+      if (!targetId) {
+        setIsInitializing(false);
+        setError("Missing assessment target. Please select a topic or skill first.");
+        return;
+      }
+
       if (resumeSessionId) {
         const cached = sessionStorage.getItem(`${STORAGE_PREFIX}${resumeSessionId}`);
+
         if (cached) {
           try {
             const parsed = JSON.parse(cached) as CachedAssessmentState;
+
             if (parsed.sessionId && parsed.questions?.length) {
               setSessionId(parsed.sessionId);
               setQuestions(parsed.questions);
@@ -206,15 +271,28 @@ export default function AssessmentPage() {
     };
 
     void initialize();
-  }, [isAuthLoading, numQuestions, resumeSessionId, sessionType, targetId, targetName, user?.id]);
+  }, [
+    isAuthLoading,
+    numQuestions,
+    resumeSessionId,
+    sessionType,
+    startNewSession,
+    targetId,
+    userId,
+  ]);
 
   useEffect(() => {
-    if (!sessionId || !questions.length) return;
+    if (!sessionId || !questions.length) {
+      return;
+    }
+
     persistAssessmentState(sessionId, questions, userAnswers, currentQuestion, unlockedStepId);
   }, [currentQuestion, questions, sessionId, unlockedStepId, userAnswers]);
 
   const handleChoiceClick = (choiceValue: string) => {
-    if (!currentQData || isReviewing) return;
+    if (!currentQData || isReviewing) {
+      return;
+    }
 
     setUserAnswers((prev) => ({
       ...prev,
@@ -226,17 +304,29 @@ export default function AssessmentPage() {
     }
   };
 
+  const handlePrevious = () => {
+    const prevQ = currentQuestion - 1;
+
+    if (prevQ >= 1) {
+      setCurrentQuestion(prevQ);
+      setExpandedId(prevQ);
+    }
+  };
+
   const handleNext = () => {
     if (currentQuestion < questions.length) {
       const nextQ = currentQuestion + 1;
       setCurrentQuestion(nextQ);
       setExpandedId(nextQ);
-      if (nextQ > unlockedStepId) setUnlockedStepId(nextQ);
+
+      if (nextQ > unlockedStepId) {
+        setUnlockedStepId(nextQ);
+      }
     }
   };
 
   const handleFinish = async () => {
-    if (!user?.id || !sessionId || !allAnswered || isSubmitting || !questions.length) {
+    if (!userId || !sessionId || !allAnswered || isSubmitting || !questions.length) {
       return;
     }
 
@@ -252,9 +342,9 @@ export default function AssessmentPage() {
       .filter((answer) => Boolean(answer.selected_answer));
 
     const submitResponse = await skillAssessmentService.submitAnswers(
-      user.id,
+      userId,
       sessionId,
-      answersPayload,
+      answersPayload
     );
 
     if (!submitResponse.success || !submitResponse.data) {
@@ -266,11 +356,9 @@ export default function AssessmentPage() {
 
     sessionStorage.setItem(`${STATUS_STORAGE_PREFIX}${sessionId}`, "submitted");
 
-    const resultsResponse = await skillAssessmentService.getResults(user.id, sessionId);
+    const resultsResponse = await skillAssessmentService.getResults(userId, sessionId);
     const finalResults =
-      resultsResponse.success && resultsResponse.data
-        ? resultsResponse.data
-        : submitResponse.data;
+      resultsResponse.success && resultsResponse.data ? resultsResponse.data : submitResponse.data;
 
     setResultsData(finalResults);
     setShowResult(true);
@@ -280,26 +368,33 @@ export default function AssessmentPage() {
     setIsSubmitting(false);
   };
 
-  const handleViewDetails = () => {
+  const handleReviewAnswers = () => {
     setIsReviewing(true);
     setShowResult(false);
     setCurrentQuestion(1);
     setExpandedId(1);
 
-    if (!resultsData) return;
+    if (!resultsData) {
+      return;
+    }
+
     const answeredQuestionIds = new Set(resultsData.results.map((r) => r.question_id));
     let unlocked = 1;
+
     for (let i = 0; i < questions.length; i += 1) {
       if (answeredQuestionIds.has(questions[i].id)) {
         unlocked = i + 1;
       }
     }
+
     setUnlockedStepId(Math.max(1, unlocked));
   };
 
-  const percentage = Math.round(resultsData?.score || 0);
+  const percentage = Math.max(0, Math.min(100, Math.round(resultsData?.score || 0)));
+  const scoreRadius = 90;
+  const scoreCircumference = 2 * Math.PI * scoreRadius;
+  const proficiencyLevel = getProficiencyLevel(percentage);
 
-  
   return (
     <Interview
       questions={sidebarQuestions}
@@ -307,192 +402,248 @@ export default function AssessmentPage() {
       unlockedStepId={unlockedStepId}
       onQuestionClick={(id) => {
         setExpandedId(id);
+
         if (id <= unlockedStepId) {
           setCurrentQuestion(id);
         }
       }}
       title={targetName}
     >
-      <div style={{
-        width: "100%", height: "100%", display: "flex", flexDirection: "column",
-        alignItems: "center", justifyContent: "center", position: "fixed",
-       boxSizing: "border-box", paddingTop: "20vh",overflowY: "auto",paddingLeft: "7vw"
-      }}
-      >
-        
+      <div className="flex w-full min-w-0 max-w-full flex-col items-center justify-center">
         {isInitializing ? (
-          <div style={{ textAlign: "center", color: "white" }}>
-            <h2 style={{ fontSize: "28px", fontFamily: "var(--font-nova-square)", marginBottom: "12px" }}>
+          <section className="mx-auto flex w-full max-w-[var(--container-md)] flex-col items-center justify-center text-center">
+            <h2
+              className="m-0 text-[length:var(--text-xl)] font-semibold leading-[var(--line-tight)] text-[var(--text-primary)]"
+              style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
+            >
               {isAuthLoading ? "Checking your session..." : "Preparing your assessment..."}
             </h2>
-            {error ? <p style={{ color: "#ffd3d3" }}>{error}</p> : null}
-          </div>
+
+            {error ? (
+              <p className="mt-[var(--space-lg)] text-[length:var(--text-base)] leading-[var(--line-normal)] text-[var(--text-danger)]">
+                {error}
+              </p>
+            ) : null}
+          </section>
         ) : showResult ? (
-          /* --- RESULT SCREEN --- */
-          <div style={{ display: "flex", width: "100%", maxWidth: "900px", justifyContent: "space-between", alignItems: "center", gap: "50px" }}>
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center" }}>
-              <h2 style={{ color: "white", fontSize: "32px", fontFamily: "var(--font-nova-square)", marginBottom: "40px" }}>Your Got</h2>
-              <div style={{ position: "relative", width: "200px", height: "200px" }}>
-                <svg width="200" height="200" style={{ transform: "rotate(-90deg)" }}>
-                  <circle cx="100" cy="100" r="90" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="15" />
-                  <circle   
-                    cx="100" cy="100" r="90" fill="none" stroke="#D4FF47" strokeWidth="15" 
-                    strokeDasharray="565" strokeDashoffset={565 - (565 * percentage) / 100}
-                    strokeLinecap="round" style={{ transition: "stroke-dashoffset 1s ease-out" }}
+          <section className="grid w-full max-w-[62rem] gap-[var(--space-2xl)] rounded-[var(--radius-2xl)] border border-[var(--border-subtle)] bg-[rgba(255,255,255,0.03)] p-[var(--space-xl)] md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] md:items-center md:p-[var(--space-2xl)]">
+            <div className="flex min-w-0 flex-col items-center text-center">
+              <h2
+                className="m-0 text-[length:var(--text-xl)] font-semibold leading-[var(--line-tight)] text-[var(--text-primary)]"
+                style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
+              >
+                Your Score
+              </h2>
+
+              <div className="relative mt-[var(--space-xl)] h-[clamp(9rem,28vw,12.5rem)] w-[clamp(9rem,28vw,12.5rem)]">
+                <svg className="h-full w-full -rotate-90" viewBox="0 0 200 200" aria-hidden="true">
+                  <circle
+                    cx="100"
+                    cy="100"
+                    r={scoreRadius}
+                    fill="none"
+                    stroke="rgba(255,255,255,0.12)"
+                    strokeWidth="15"
+                  />
+                  <circle
+                    cx="100"
+                    cy="100"
+                    r={scoreRadius}
+                    fill="none"
+                    stroke="var(--primary-green)"
+                    strokeWidth="15"
+                    strokeDasharray={scoreCircumference}
+                    strokeDashoffset={scoreCircumference - (scoreCircumference * percentage) / 100}
+                    strokeLinecap="round"
+                    className="transition-[stroke-dashoffset] duration-1000 ease-out"
                   />
                 </svg>
-                <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: "40px", fontWeight: "800", fontFamily: "var(--font-nova-square)" }}>
+
+                <div
+                  className="absolute inset-0 flex items-center justify-center text-[length:var(--text-2xl)] font-extrabold text-[var(--text-primary)]"
+                  style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
+                >
                   {percentage}%
                 </div>
               </div>
-              <button onClick={handleViewDetails} style={{ marginTop: "60px", width: "100%", maxWidth: "250px", backgroundColor: "var(--primary-green)", border: "none", padding: "12px", borderRadius: "12px", fontWeight: "bold", fontSize: "16px", cursor: "pointer", color: "#111827" }}>
-                View Details
-              </button>
+
+              <Button
+                variant="primary"
+                size="md"
+                className="mt-[var(--space-xl)] w-full max-w-[16rem]"
+                onClick={handleReviewAnswers}
+              >
+                Review Answers
+              </Button>
             </div>
 
-            <div style={{ width: "2px", height: "300px", backgroundColor: "rgba(255,255,255,0.2)" }}></div>
+            <div className="hidden h-[18rem] w-px bg-[var(--border-muted)] md:block" />
 
-            <div style={{ flex: 1, color: "white" }}>
-              <h2 style={{ fontSize: "32px", fontFamily: "var(--font-nova-square)", marginBottom: "15px" }}>Your Proficiency Level</h2>
-              <h1 style={{ fontSize: "56px", color: "#D4FF47", fontWeight: "500", marginBottom: "20px", fontFamily: "var(--font-nova-square)" }}>
-                {getProficiencyLevel(percentage)}
-              </h1>
-              <p style={{ fontSize: "18px", opacity: 0.8, lineHeight: "1.6", marginBottom: "40px" }}>
-                Assessment complete. You can now review each question to see the correct answers.
+            <div className="flex min-w-0 flex-col items-center text-center md:items-start md:text-left">
+              <h2
+                className="m-0 text-[length:var(--text-xl)] font-semibold leading-[var(--line-tight)] text-[var(--text-primary)]"
+                style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
+              >
+                Your Proficiency Level
+              </h2>
+
+              <p
+                className="m-0 mt-[var(--space-md)] text-[length:var(--text-3xl)] font-semibold leading-[var(--line-tight)] text-[var(--primary-green)]"
+                style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
+              >
+                {proficiencyLevel}
               </p>
+
+              <p className="mt-[var(--space-lg)] max-w-[30rem] text-[length:var(--text-base)] leading-[var(--line-relaxed)] text-[var(--text-secondary)]">
+                Assessment complete. You can review each question to see the correct answers, or
+                retake the assessment to generate a fresh session.
+              </p>
+
               <Button
-              variant="secondary"
+                variant="secondary"
+                size="md"
+                className="mt-[var(--space-xl)] w-full max-w-[16rem]"
                 onClick={() => {
                   void startNewSession();
                 }}
-                style={{ width: "100%", maxWidth: "250px", border: "none", padding: "25px", borderRadius: "12px", fontWeight: "bold", fontSize: "16px", cursor: "pointer", color: "#111827",marginTop: "20px"  }}
               >
                 Retake Assessment
               </Button>
             </div>
-          </div>
-
+          </section>
         ) : isCalculating ? (
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
-            <h2 style={{ color: "white", fontSize: "28px", fontFamily: "var(--font-nova-square)", marginBottom: "10px" }}>Our Model is calculating your score,</h2>
-            <p style={{ color: "white", fontSize: "20px", opacity: 0.8, marginBottom: "40px" }}>Give us a moment</p>
-            <div style={{ width: "300px", height: "300px" }}><img src="/interview/analyzing.svg" alt="Calculating" style={{ width: "100%", height: "auto" }} /></div>
-          </div>
+          <section className="mx-auto flex w-full max-w-[var(--container-sm)] flex-col items-center justify-center text-center">
+            <h2
+              className="m-0 text-[length:var(--text-xl)] font-semibold leading-[var(--line-tight)] text-[var(--text-primary)]"
+              style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
+            >
+              Calculating your score...
+            </h2>
 
+            <p className="mt-[var(--space-sm)] text-[length:var(--text-base)] leading-[var(--line-normal)] text-[var(--text-secondary)]">
+              This may take a moment.
+            </p>
+
+            <div className="relative mt-[var(--space-2xl)] h-[clamp(12rem,34vw,18rem)] w-[clamp(12rem,34vw,18rem)]">
+              <Image
+                src="/interview/analyzing.svg"
+                alt="Calculating assessment score"
+                fill
+                className="object-contain"
+                priority
+              />
+            </div>
+          </section>
         ) : (
-          <div style={{ width: "100%", maxWidth: "680px", display: "flex", flexDirection: "column", alignItems: "center" }}>
-            <h3 style={{ color: "white", fontSize: "24px", marginBottom: "35px", textAlign: "center", fontFamily: 'var(--font-nova-square)' }}>
-              {currentQuestion}. {currentQData?.question_text}
-            </h3>
+          <section className="mx-auto flex w-full min-w-0 max-w-[46rem] flex-col items-center px-0">
+            <h2
+              className="m-0 w-full max-w-full break-words text-center text-[length:var(--text-lg)] font-semibold leading-[var(--line-normal)] text-[var(--text-primary)]"
+              style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
+            >
+              {currentQData
+                ? `${currentQuestion}. ${currentQData.question_text}`
+                : "Question unavailable"}
+            </h2>
 
             {error ? (
-              <p style={{ color: "#ffd3d3", marginTop: "0", marginBottom: "20px" }}>{error}</p>
+              <p className="mt-[var(--space-lg)] text-center text-[length:var(--text-sm)] leading-[var(--line-normal)] text-[var(--text-danger)]">
+                {error}
+              </p>
             ) : null}
 
-            <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: "12px" }}>
+            <div className="mt-[var(--space-xl)] flex w-full min-w-0 flex-col gap-[var(--space-md)]">
               {(currentQData?.options || []).map((choice) => {
                 const isSelected = selectedChoice === choice;
-                const questionResult = currentQData ? resultByQuestionId.get(currentQData.id) : undefined;
+                const questionResult = currentQData
+                  ? resultByQuestionId.get(currentQData.id)
+                  : undefined;
                 const isCorrect = questionResult?.correct_answer === choice;
-                let bgColor = "white";
-                if (isReviewing) {
-                  if (isCorrect) bgColor = "#dff98c";
-                  else if (isSelected && !isCorrect) bgColor = "#fd8686";
-                }
+                const isWrongSelection = isReviewing && isSelected && !isCorrect;
+
                 return (
-                  <div key={choice} onClick={() => handleChoiceClick(choice)}
-                    style={{
-                      backgroundColor: bgColor, borderRadius: "15px", padding: "16px 25px",
-                      display: "flex", justifyContent: "space-between", alignItems: "center",
-                      cursor: isReviewing ? "default" : "pointer", color: "#111827",
-                      transition: "0.2s ease",
-                    }}>
-                    <span style={{ fontSize: "17px", fontWeight: "500" }}>{choice}</span>
-                    <div 
-                        style={{ 
-                            width: "22px", 
-                            height: "22px", 
-                            minWidth: "22px",   
-                            minHeight: "22px",  
-                            flexShrink: 0,     
-                            borderRadius: "50%", 
-                            border: "2px solid #111827", 
-                            display: "flex", 
-                            alignItems: "center", 
-                            justifyContent: "center" 
-                          }}
-                        >                 
-                       {isReviewing && isCorrect ? (
-                        <span style={{ fontSize: "12px", fontWeight: "bold" }}>✓</span>
-                      ) : isReviewing && isSelected && !isCorrect ? (
-                        <span style={{ fontSize: "12px", fontWeight: "bold" }}>✕</span>
-                      ) : (
-                        isSelected && <div style={{ width: "10px", height: "10px", borderRadius: "50%", backgroundColor: "#111827" }} />
-                      )}
-                    </div>
-                  </div>
+                  <button
+                    key={choice}
+                    type="button"
+                    disabled={isReviewing}
+                    aria-pressed={isSelected}
+                    onClick={() => handleChoiceClick(choice)}
+                    className={cn(
+                      "group flex min-h-[var(--min-touch-target)] w-full min-w-0 max-w-full items-center justify-between gap-[var(--space-md)] rounded-[var(--radius-lg)] border px-[var(--space-lg)] py-[var(--space-md)] text-left text-[var(--dark-blue)] transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-color)] disabled:cursor-default",
+                      isReviewing && isCorrect
+                        ? "border-[var(--primary-green)] bg-[var(--light-green)]"
+                        : isWrongSelection
+                          ? "border-[var(--light-red)] bg-[var(--light-red)]"
+                          : isSelected
+                            ? "border-transparent bg-[var(--white)]"
+                            : "border-transparent bg-[var(--white)] hover:bg-[var(--light-blue)]"
+                    )}
+                    style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
+                  >
+                    <span className="min-w-0 flex-1 break-words text-[length:var(--text-base)] font-medium leading-[var(--line-normal)]">
+                      {choice}
+                    </span>
+
+                    <span className="flex h-[1.45rem] w-[1.45rem] shrink-0 items-center justify-center rounded-full border-2 border-[var(--dark-blue)] text-[length:var(--text-xs)] font-extrabold">
+                      {isReviewing && isCorrect ? (
+                        "✓"
+                      ) : isWrongSelection ? (
+                        "✕"
+                      ) : isSelected ? (
+                        <span className="h-[0.6rem] w-[0.6rem] rounded-full bg-[var(--dark-blue)]" />
+                      ) : null}
+                    </span>
+                  </button>
                 );
               })}
             </div>
 
-            <div style={{ display: "flex", gap: "30px", marginTop: "35px", marginBottom: "30px" }}>
-              <Button 
-              variant="secondary"
-                onClick={() => {
-                  const prevQ = currentQuestion - 1;
-                  if (prevQ >= 1) {
-                    setCurrentQuestion(prevQ);
-                    setExpandedId(prevQ);
-                  }
-                }}
+            <div className="mt-[var(--space-xl)] flex w-full min-w-0 flex-col-reverse items-stretch justify-center gap-[var(--space-md)] sm:flex-row sm:items-center">
+              <AssessmentNavButton
+                direction="previous"
+                onClick={handlePrevious}
                 disabled={currentQuestion === 1}
-                style={{
-                  display: "flex", alignItems: "center", backgroundColor: "#C1CBE6",
-                  border: "none", borderRadius: "50px", padding: "25px 15px 25px 5px",
-                  cursor: currentQuestion === 1 ? "not-allowed" : "pointer",
-                  opacity: currentQuestion === 1 ? 0.5 : 1, transition: "0.3s"
-                }}
               >
-                <div style={{ width: "48px", height: "48px", backgroundColor: "white", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", marginRight: "15px",position: "relative",right: "4px" }}><img src="/auth/redo.svg" alt="prev" style={{ width: "18px" }} /></div>
-                <span style={{ color: "#111827", fontWeight: "bold", fontSize: "16px", fontFamily: 'var(--font-nova-square)' }}>Previous</span>
-              </Button>
+                Previous
+              </AssessmentNavButton>
 
               {currentQuestion < questions.length ? (
-                <Button 
-                variant="primary-inverted"
+                <AssessmentNavButton
+                  direction="next"
                   onClick={handleNext}
                   disabled={!isAnswered}
-                  style={{
-                    display: "flex", alignItems: "center", 
-                    border: "none", borderRadius: "50px", padding: "25px 15px 25px 25px",
-                    cursor: !isAnswered ? "not-allowed" : "pointer",
-                    opacity: !isAnswered ? 0.5 : 1, transition: "0.3s"
-                  }}
                 >
-                  <span style={{ color: "#111827", fontWeight: "bold", fontSize: "16px", fontFamily: 'var(--font-nova-square)', marginRight: "15px" }}>Next</span>
-                  <div style={{ width: "47px", height: "47px", backgroundColor: "white", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", transform: "rotate(180deg)", left: "15px", position: "relative" }}><img src="/auth/redo.svg" alt="next" style={{ width: "18px" }} /></div>
+                  Next
+                </AssessmentNavButton>
+              ) : !isReviewing ? (
+                <Button
+                  variant="primary"
+                  size="md"
+                  className="w-full rounded-full sm:w-auto"
+                  onClick={() => {
+                    void handleFinish();
+                  }}
+                  disabled={!allAnswered || isSubmitting}
+                  isLoading={isSubmitting}
+                >
+                  {isSubmitting ? "Submitting..." : "Finish Assessment"}
                 </Button>
-              ) : (
-                !isReviewing && (
-                  <Button
-                    variant="primary"
-
-                    onClick={() => {
-                      void handleFinish();
-                    }}
-                    disabled={!allAnswered || isSubmitting}
-                    style={{ width: "200px",  border: "none", padding: "25px 15px", borderRadius: "12px", fontWeight: "800", fontSize: "16px", color: "#111827", opacity: allAnswered && !isSubmitting ? 1 : 0.4, cursor: allAnswered && !isSubmitting ? "pointer" : "not-allowed" }}
-                  >
-                    {isSubmitting ? "Submitting..." : "Back to Results"}
-                  </Button>
-                )
-              )}
+              ) : null}
             </div>
-            
-            {isReviewing && (
-              <button onClick={() => setShowResult(true)} style={{ color: "white", background: "none", border: "1px solid white", padding: "8px 20px", borderRadius: "8px", cursor: "pointer", opacity: 0.7 }}>Back to Results</button>
-            )}
-          </div>
+
+            {isReviewing && resultsData ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-[var(--space-lg)]"
+                onClick={() => {
+                  setIsReviewing(false);
+                  setShowResult(true);
+                }}
+              >
+                Back to Results
+              </Button>
+            ) : null}
+          </section>
         )}
       </div>
     </Interview>

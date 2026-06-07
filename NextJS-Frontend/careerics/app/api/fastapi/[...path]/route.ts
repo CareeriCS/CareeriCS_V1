@@ -90,6 +90,8 @@ const HOP_BY_HOP_HEADERS = new Set([
   "upgrade",
   "host",
   "content-length",
+  "content-encoding",
+  "accept-encoding",
 ]);
 
 function getFastApiBaseUrl(): string {
@@ -359,6 +361,9 @@ async function handleProxy(
   if (location) {
     responseHeaders.set("location", rewriteLocationHeader(location, req, upstreamBase));
   }
+
+  responseHeaders.delete("content-encoding");
+  responseHeaders.delete("content-length");
 
   return new Response(upstreamResponse.body, {
     status: upstreamResponse.status,
