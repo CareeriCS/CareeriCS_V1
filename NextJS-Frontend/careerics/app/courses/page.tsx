@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { LoaderCircle } from "lucide-react";
 
 import RoadmapProgress from "@/components/ui/roadmapProgress";
 import CourseActionPopup from "@/components/ui/course-action-popup";
 import { CourseCard } from "@/components/ui/courseCards";
+import { SearchBar } from "@/components/ui/searchbar";
 import { useAuth } from "@/providers/auth-provider";
 import { roadmapService } from "@/services";
 import {
@@ -21,20 +22,9 @@ import type { RoadmapCoursesRead } from "@/types";
 
 function LoadingState({ label }: { label: string }) {
   return (
-    <div
-      style={{
-        width: "100%",
-        marginBottom:"auto",
-        display: "flex",
-        alignItems: "flex-start",
-        justifyContent: "center",
-        gap: "12px",
-        color: "#D7E3FF",
-        fontFamily: "var(--font-jura)",
-      }}
-    >
+    <div className="flex w-full items-start justify-center gap-[var(--space-md)] px-[var(--space-xl)] py-[var(--space-xl)] text-[var(--text-secondary)] sm:px-[var(--space-2xl)]">
       <LoaderCircle size={22} className="course-page-spinner" />
-      <span>{label}</span>
+      <span style={{ fontFamily: "var(--font-jura), sans-serif" }}>{label}</span>
       <style jsx>{`
         .course-page-spinner {
           animation: course-page-spin 1s linear infinite;
@@ -53,6 +43,7 @@ function LoadingState({ label }: { label: string }) {
 }
 
 export default function CourseLibraryPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const roadmapId = searchParams.get("roadmapId") || "";
   const { user } = useAuth();
@@ -262,17 +253,8 @@ export default function CourseLibraryPage() {
   if (error) {
     return (
       <div
-        style={{
-          width: "100%",
-          minHeight: "300px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "#FFD3D3",
-          fontFamily: "var(--font-jura)",
-          textAlign: "center",
-          padding: "20px 40px",
-        }}
+        className="flex min-h-[18.75rem] w-full items-center justify-center px-[var(--space-xl)] py-[var(--space-xl)] text-center text-[var(--text-danger)] sm:px-[var(--space-2xl)]"
+        style={{ fontFamily: "var(--font-jura), sans-serif" }}
       >
         {error}
       </div>
@@ -281,172 +263,78 @@ export default function CourseLibraryPage() {
 
   return (
     <div
+      className="no-scrollbar flex h-full min-h-0 w-full flex-col overflow-y-auto overflow-x-hidden px-[var(--space-xl)] py-[var(--space-xl)] text-[var(--text-primary)] sm:px-[var(--space-2xl)]"
       style={{
-        width: "100%",
-        height: "100%",
-        padding: "var(--space-md)",
-        color: "white",
-        display: "flex",
-        flexDirection: "column",
-        fontFamily: "var(--font-nova-square)",
+        fontFamily: "var(--font-nova-square), sans-serif",
+        scrollbarWidth: "none",
       }}
     >
       {courseProgressError ? (
         <div
-          style={{
-            color: "#FFD3D3",
-            fontFamily: "var(--font-jura)",
-            marginBottom: "12px",
-          }}
+          className="mb-[var(--space-md)] text-[var(--text-danger)]"
+          style={{ fontFamily: "var(--font-jura), sans-serif" }}
         >
           {courseProgressError}
         </div>
       ) : null}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          marginBottom: "25px",
-        }}
-      >
-        <div
-          style={{
-            flex: 1,
-          }}
-        >
-          {/* Title / Search bar */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "flex-start",
-              gap: "30px",
-              marginBottom: "20px",
-              justifyContent:"space-between",
-            }}
-          >
-            <h1
-              style={{
-                fontSize: "var(--text-lg)",
-                margin: 0,
-              }}
-            >
-              {roadmapCourses?.roadmap_title || "Courses"}
-            </h1>
 
-            <div
-              style={{
-                position: "relative",
-                width: "300px",
-                maxWidth:"40vw",
-              }}
-            >
-              <input
-                type="text"
-                placeholder="search"
+      <header className="mb-[var(--space-xl)] flex flex-col gap-[var(--space-md)]">
+        <div className="flex flex-col gap-[var(--space-md)] sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="m-0 text-[length:var(--text-xl)] font-normal leading-[var(--line-tight)]">
+            {roadmapCourses?.roadmap_title || "Courses"}
+          </h1>
+
+          <div className="flex w-full items-center gap-[var(--space-md)] sm:w-auto sm:justify-end">
+            <div className="min-w-0 flex-1 sm:max-w-[22rem]">
+              <SearchBar
                 value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                style={{
-                  width: "100%",
-                  backgroundColor: "transparent",
-                  border: "1px solid rgb(255, 255, 255)",
-                  borderRadius: "18px",
-                  padding: "var(--space-md)",
-                  color: "white",
-                  outline: "none",
-                }}
-              />
-
-              <img
-                src="/global/search.svg"
-                alt="search"
-                style={{
-                  position: "absolute",
-                  right: "5px",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  width: "40px",
-                  pointerEvents: "none",
-                }}
+                onChange={setSearchTerm}
+                placeholder="search"
+                inputStyle={{ width: "100%" }}
               />
             </div>
-          </div>
 
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: "var(--space-xl)",
-              alignItems: "center",
-            }}
-          >
-            <RoadmapProgress
-              text="All Topics"
-              done={String(totalTopics)}
-            />
-            <RoadmapProgress
-              text="All Courses"
-              done={String(totalCourses)}
-            />
-            <RoadmapProgress
-              text="Completed Courses"
-              done={String(completedCount)}
-              total={String(totalCourses)}
-            />
+            <button
+              type="button"
+              onClick={() => router.back()}
+              aria-label="Close courses"
+              className="flex h-[var(--icon-lg)] w-[var(--icon-lg)] shrink-0 items-center justify-center rounded-full border-none bg-transparent p-0 transition hover:bg-[var(--light-red)]"
+            >
+              <img
+                src="/global/close.svg"
+                alt=""
+                aria-hidden="true"
+                className="h-full w-full object-contain"
+              />
+            </button>
           </div>
         </div>
-      </div>
 
-      <hr
-        style={{
-          border: "none",
-          borderTop: "2px solid rgba(255, 251, 251, 0.72)",
-          marginBottom: "20px",
-          opacity: 1,
-          width: "100%",
-        }}
-      />
+        <div className="flex flex-wrap items-center gap-[var(--space-xl)]">
+          <RoadmapProgress text="All Topics" done={String(totalTopics)} />
+          <RoadmapProgress text="All Courses" done={String(totalCourses)} />
+          <RoadmapProgress
+            text="Completed Courses"
+            done={String(completedCount)}
+            total={String(totalCourses)}
+          />
+        </div>
+      </header>
 
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "var(--space-md)",
-          overflowY: "auto",
-          overflowX: "hidden",
-          minHeight: 0,
-          flex: 1,
-          scrollbarWidth: "none",
-          paddingBottom: "var(--space-lg)",
-        }}
-      >
+      <hr className="mb-[var(--space-lg)] w-full border-0 border-t-2 border-[var(--border-muted)]" />
+
+      <div className="flex min-h-0 flex-1 flex-col gap-[var(--space-md)] pb-[var(--space-lg)]">
         {filteredSections.length ? (
           filteredSections.map((section) => (
-            <div
+            <section
               key={section.section_id}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "var(--space-md)",
-              }}
+              className="flex flex-col gap-[var(--space-md)]"
             >
-              <h3
-                style={{
-                  fontSize: "var(--text-md)",
-                  fontWeight: "400",
-                }}
-              >
+              <h3 className="m-0 text-[length:var(--text-md)] font-normal leading-[var(--line-normal)]">
                 {section.section_title}:
               </h3>
 
-              <div
-                style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: "var(--space-md)",
-                  marginBottom:"var(--space-lg)"
-                }}
-              >
+              <div className="grid w-full grid-cols-1 gap-[var(--space-md)] sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                 {section.courses.map((course) => (
                   <CourseCard
                     key={course.id}
@@ -461,15 +349,12 @@ export default function CourseLibraryPage() {
                   />
                 ))}
               </div>
-            </div>
+            </section>
           ))
         ) : (
           <div
-            style={{
-              color: "#D7E3FF",
-              fontFamily: "var(--font-jura)",
-              textAlign: "center",
-            }}
+            className="text-center text-[var(--text-secondary)]"
+            style={{ fontFamily: "var(--font-jura), sans-serif" }}
           >
             No courses matched your search.
           </div>
