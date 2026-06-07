@@ -34,7 +34,7 @@ const baseClasses =
 
 const sizeClasses: Record<ButtonSize, string> = {
   sm: "min-h-[var(--button-height-sm)] px-[var(--space-lg)] py-[var(--button-padding-y)] text-[length:var(--text-sm)]",
-  md: "min-h-[var(--button-height-md)] px-[var(--button-padding-x)] py-[var(--button-padding-y)] text-[length:var(--text-base)]",
+  md: "min-h-[var(--button-height-sm)] px-[var(--button-padding-x)] py-[var(--button-padding-y)] text-[length:var(--text-base)]",
   lg: "min-h-[var(--button-height-lg)] px-[var(--space-2xl)] py-[var(--button-padding-y)] text-[length:var(--text-md)]",
   icon: "h-[var(--min-touch-target)] w-[var(--min-touch-target)] p-0 text-[length:var(--text-base)]",
 };
