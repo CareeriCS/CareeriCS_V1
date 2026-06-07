@@ -48,7 +48,7 @@ function renderChain(
         (isCurrent ? (
           <div
             style={{
-              width: isAheadOfMax ? "12rem" : "100%",
+              width: isAheadOfMax ? `calc(3.25rem * ${maxReached - current})` : "100%",
               display: "flex",
               flexShrink: 0,
             }}
