@@ -27,7 +27,7 @@ export default function InterviewContainer({
     >
       {questionTitle ? (
         <h2
-          className="m-0 max-w-[52rem] text-center text-[length:var(--text-lg)] font-semibold leading-[var(--line-normal)] text-[var(--text-primary)]"
+          className="m-0 max-w-[52rem] text-center text-[length:var(--text-lg)] font-normal leading-[var(--line-normal)] text-[var(--text-primary)]"
           style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
         >
           {questionTitle}

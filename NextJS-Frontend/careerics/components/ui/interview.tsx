@@ -17,6 +17,9 @@ interface SidebarLogicProps {
   label?: string;
   title?: string;
   children?: ReactNode;
+  showOnlyCurrentQuestion?: boolean;
+  singleLineItems?: boolean;
+  disableNavigation?: boolean;
 }
 
 export default function SidebarLogicOnly({
@@ -27,14 +30,23 @@ export default function SidebarLogicOnly({
   label = "Question",
   title = "Skill Assessment",
   children,
+  showOnlyCurrentQuestion = false,
+  singleLineItems = false,
+  disableNavigation = false,
 }: SidebarLogicProps) {
+  const activeQuestion = questions.find((question) => question.id === currentActiveId);
+  const visibleQuestions = showOnlyCurrentQuestion && activeQuestion ? [activeQuestion] : questions;
+
   return (
-    <div className="grid h-full min-h-0 w-full min-w-0 max-w-full grid-rows-[auto_minmax(0,1fr)] bg-transparent max-lg:overflow-x-hidden lg:grid-cols-[minmax(17rem,20rem)_minmax(0,1fr)] lg:grid-rows-1 lg:overflow-hidden">
-      <aside className="min-h-0 max-h-[7.5rem] w-full min-w-0 shrink-0 border-b border-[var(--border-subtle)] bg-[var(--bg-grey)] px-[var(--space-md)] py-[var(--space-sm)] text-[var(--dark-blue)] lg:max-h-none lg:h-full lg:border-b-0 lg:border-r lg:px-[var(--space-xl)] lg:py-[var(--space-2xl)]">
+    <div className="interview-layout-shell grid h-full min-h-0 w-full min-w-0 max-w-full grid-rows-[auto_minmax(0,1fr)] bg-transparent max-lg:overflow-x-hidden lg:grid-cols-[minmax(17rem,20rem)_minmax(0,1fr)] lg:grid-rows-1 lg:overflow-hidden">
+      <aside className="no-scrollbar min-h-0 max-h-[7.5rem] w-full min-w-0 shrink-0 overflow-hidden border-b border-[var(--border-subtle)] bg-[var(--bg-grey)] px-[var(--space-md)] py-[var(--space-sm)] text-[var(--dark-blue)] lg:max-h-none lg:h-full lg:border-b-0 lg:border-r lg:px-[var(--space-xl)] lg:py-[var(--space-2xl)]">
         <div className="flex h-full min-h-0 flex-col gap-[var(--space-sm)] lg:gap-[var(--space-lg)]">
           <h1
-            className="m-0 shrink-0 truncate text-[length:var(--text-lg)] font-bold leading-[var(--line-tight)] text-[var(--dark-blue)]"
-            style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
+            className="m-0 shrink-0 truncate text-[length:var(--text-lg)] font-normal leading-[var(--line-tight)] text-[var(--dark-blue)]"
+            style={{
+              fontFamily: "var(--font-nova-square), sans-serif",
+              fontWeight: 400,
+            }}
             title={title}
           >
             {title}
@@ -46,16 +58,15 @@ export default function SidebarLogicOnly({
             aria-label={`${title} navigation`}
             className="no-scrollbar -mx-[var(--space-xs)] flex min-h-0 min-w-0 flex-1 gap-[var(--space-sm)] overflow-x-auto overflow-y-hidden px-[var(--space-xs)] pb-[var(--space-xxs)] lg:mx-0 lg:flex-col lg:overflow-x-hidden lg:overflow-y-auto lg:px-0 lg:pb-0"
           >
-            {questions.map((question) => {
+            {visibleQuestions.map((question) => {
               const isSelected = currentActiveId === question.id;
-              const isLocked = unlockedStepId !== undefined ? question.id > unlockedStepId : false;
-              const normalizedTitle = question.title?.trim() || "";
-              const defaultTitle = label ? `${label} ${question.id}` : normalizedTitle || `Item ${question.id}`;
-              const shouldShowTitle =
-                Boolean(label) &&
-                normalizedTitle.length > 0 &&
-                normalizedTitle.toLowerCase() !== defaultTitle.toLowerCase();
-              const normalizedText = question.text?.trim() || "";
+              const isFutureLocked =
+                unlockedStepId !== undefined ? question.id > unlockedStepId : false;
+              const isNavigationLocked = disableNavigation && question.id !== currentActiveId;
+              const isLocked = isFutureLocked || isNavigationLocked;
+
+              const questionText = question.text?.trim() || question.title?.trim() || "";
+              const questionLabel = label ? `${label} ${question.id}` : `Item ${question.id}`;
 
               return (
                 <button
@@ -63,7 +74,7 @@ export default function SidebarLogicOnly({
                   type="button"
                   disabled={isLocked}
                   aria-current={isSelected ? "step" : undefined}
-                  aria-label={`${defaultTitle}${shouldShowTitle ? `: ${normalizedTitle}` : ""}${
+                  aria-label={`${questionLabel}${questionText ? `: ${questionText}` : ""}${
                     isLocked ? " locked" : ""
                   }`}
                   onClick={() => {
@@ -73,30 +84,37 @@ export default function SidebarLogicOnly({
                   }}
                   className={cn(
                     "shrink-0 rounded-[var(--radius-lg)] border border-transparent px-[var(--space-md)] py-[var(--space-sm)] text-left transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-grey)] disabled:cursor-not-allowed disabled:opacity-45 max-lg:min-w-[7rem] lg:min-w-0 lg:px-[var(--space-md)] lg:py-[var(--space-md)]",
+                    singleLineItems
+                      ? "flex items-center gap-[var(--space-sm)] overflow-hidden whitespace-nowrap"
+                      : "flex flex-col gap-[var(--space-xxs)]",
                     isSelected
                       ? "bg-[var(--primary-green)] text-[var(--dark-blue)] shadow-sm"
                       : "bg-[rgba(10,10,10,0.06)] text-[var(--dark-blue)] hover:bg-[rgba(10,10,10,0.1)]"
                   )}
-                  style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
+                  style={{
+                    fontFamily: "var(--font-nova-square), sans-serif",
+                    fontWeight: 400,
+                  }}
                 >
                   <span
                     className={cn(
-                      "block text-[length:var(--text-sm)] font-semibold leading-[var(--line-tight)]",
+                      "shrink-0 text-[length:var(--text-sm)] font-normal leading-[var(--line-tight)]",
                       isLocked ? "opacity-70" : ""
                     )}
+                    style={{ fontWeight: 400 }}
                   >
-                    {defaultTitle}
+                    {questionLabel}
                   </span>
 
-                  {shouldShowTitle ? (
-                    <span className="mt-[var(--space-xxs)] hidden truncate text-[length:var(--text-xs)] font-semibold leading-[var(--line-normal)] opacity-90 lg:block lg:whitespace-normal">
-                      {normalizedTitle}
-                    </span>
-                  ) : null}
-
-                  {isSelected && normalizedText ? (
-                    <span className="mt-[var(--space-sm)] hidden text-[length:var(--text-xs)] leading-[var(--line-normal)] opacity-80 lg:block lg:line-clamp-3">
-                      {normalizedText}
+                  {questionText ? (
+                    <span
+                      className={cn(
+                        "min-w-0 text-[length:var(--text-xs)] font-normal leading-[var(--line-normal)] opacity-90",
+                        singleLineItems ? "flex-1 truncate" : "line-clamp-2"
+                      )}
+                      style={{ fontWeight: 400 }}
+                    >
+                      {questionText}
                     </span>
                   ) : null}
                 </button>
@@ -106,11 +124,28 @@ export default function SidebarLogicOnly({
         </div>
       </aside>
 
-      <main className="min-h-0 min-w-0 max-w-full overflow-y-auto overflow-x-hidden bg-transparent px-[var(--space-md)] py-[var(--space-lg)] sm:px-[var(--space-lg)] sm:py-[var(--space-xl)] lg:px-[var(--space-2xl)] lg:py-[var(--space-2xl)]">
+      <main className="no-scrollbar min-h-0 min-w-0 max-w-full overflow-y-auto overflow-x-hidden bg-transparent px-[var(--space-md)] py-[var(--space-lg)] sm:px-[var(--space-lg)] sm:py-[var(--space-xl)] lg:px-[var(--space-2xl)] lg:py-[var(--space-2xl)]">
         <div className="mx-auto flex min-h-full w-full min-w-0 max-w-full items-start justify-center lg:items-center">
           {children}
         </div>
       </main>
+
+      <style jsx global>{`
+        .no-scrollbar,
+        .interview-layout-shell,
+        .interview-layout-shell * {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+
+        .no-scrollbar::-webkit-scrollbar,
+        .interview-layout-shell::-webkit-scrollbar,
+        .interview-layout-shell *::-webkit-scrollbar {
+          display: none;
+          width: 0;
+          height: 0;
+        }
+      `}</style>
     </div>
   );
 }
