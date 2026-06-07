@@ -17,6 +17,9 @@ import { useAuth } from "@/providers/auth-provider";
 import { jobService, roadmapService, skillAssessmentService } from "@/services";
 import type { JobUiModel, RoadmapListItem } from "@/types";
 import { InlineContainer } from "@/components/ui/containers/inline";
+import JourneyTreeVertical from "@/components/ui/journey-tree-vertical";
+import { useResponsive } from "@/hooks/useResponsive";
+import { StackContainer } from "@/components/ui/containers/stack";
 
 function normalizeRoadmapListPayload(payload: unknown): RoadmapListItem[] {
   if (Array.isArray(payload)) {
@@ -232,12 +235,12 @@ export default function JourneyJobHuntPage() {
     setIsStarting(false);
   };
 
-  // Delay render until all data is ready
-  const isInitializing = isLoadingTracks || isLoading || isAuthLoading;
-
   const { isLarge, isMedium, isSmall } = useResponsive();
   const Orientation = isLarge ? JourneyTree : JourneyTreeVertical;
+  const RecentlyViewed = isSmall ? StackContainer : InlineContainer;
 
+  // Delay render until all data is ready
+  const isInitializing = isLoadingTracks || isLoading || isAuthLoading;
   if (isInitializing && !selectedTrack) {
     return (
       <Orientation
@@ -328,96 +331,110 @@ export default function JourneyJobHuntPage() {
     );
   }
 
-  const RecentlyViewed = isSmall ? StackContainer : InlineContainer;
+
   return (
     <Orientation
       current={5}
       maxReached={5}
       resolvePhasePath={(phase) => buildJourneyPhaseHref(phase, selectedTrack?.id)}
       renderContent={() => (
-       <div
-      style={{
-        display: "grid",
-
-        gridTemplateColumns: isLarge
-          ? "1fr 2fr repeat(2, 1fr)"
-          : isMedium
-            ? "3fr 1fr"
-            : "2fr 1fr",
-
-        gridTemplateRows: isLarge
-          ? "repeat(3, 1fr)"
-          : isMedium
-            ? "repeat(4, 1fr)"
-            : "repeat(4, 1fr)",
-
-        gridColumnGap: "var(--space-lg)",
-        gridRowGap: "var(--space-lg)",
-
-        padding: "var(--space-xl)",
-
-        width: "100%",
-        height: "100%",
-        flexGrow: 0,
-      }}
-    >
-      {/* BOOKMARK CARD */}
-      <div
-        style={{
-          gridArea: isLarge
-            ? "1 / 1 / 2 / 3"
-            : isMedium
-              ? "2 / 1 / 3 / 3"
-              : "2 / 1 / 3 / 3",
-        }}
-      >
-        <BookmarkCard description="All of your saved jobs are here" />
-      </div>
-
-      {/* CONTINUE CARD */}
-      <div
-        style={{
-          gridArea: isLarge
-            ? "1 / 3 / 2 / 5"
-            : isMedium
-              ? "1 / 1 / 2 / 2"
-              : "1 / 1 / 2 / 2",
-        }}
-      >
-        <ContinueCard 
-        description="Your next opportunity awaits" 
-        style={{
-          backgroundColor: isSmall?"var(--medium-blue)":"var(--dark-blue)",
-        }} />
-      </div>
-
-      {/* TIP CARD */}
-
-      {(!isSmall &&
         <div
           style={{
-            gridArea: isLarge
-              ? "2 / 1 / 3 / 5"
-              : "3 / 1 / 4 / 3"
+            display: "grid",
+
+            gridTemplateColumns: isLarge
+              ? "1fr 2fr repeat(2, 1fr)"
+              : isMedium
+                ? "3fr 1fr"
+                : "2fr 1fr",
+
+            gridTemplateRows: isLarge
+              ? "repeat(3, 1fr)"
+              : isMedium
+                ? "repeat(4, 1fr)"
+                : "repeat(4, 1fr)",
+
+            gridColumnGap: "var(--space-lg)",
+            gridRowGap: "var(--space-lg)",
+
+            padding: "var(--space-xl)",
+
+            width: "100%",
+            height: "100%",
           }}
         >
-          <TipCard
-            title="Tip of the day"
-            description="Research the company and interviewers before your interview so you understand the company's goals and show how you fit."
-            icon="/global/tip.svg"
-          />
-        </div>
-      )}
-
-          <div style={{ gridArea: "3 / 1 / 4 / 2" }}>
-            <LevelCard
-              style={{ backgroundColor: "var(--medium-blue)" }}
-              onClick={handleStartTestClick}
-            />
+          {/* BOOKMARK CARD */}
+          <div
+            style={{
+              gridArea: isLarge
+                ? "1 / 1 / 2 / 3"
+                : isMedium
+                  ? "2 / 1 / 3 / 3"
+                  : "2 / 1 / 3 / 3",
+            }}
+          >
+            <BookmarkCard description="All of your saved jobs are here" />
           </div>
 
-          <InlineContainer
-            style={{ gridArea: "3 / 2 / 4 / 5", backgroundColor: "var(--medium-blue)" }}
+          {/* CONTINUE CARD */}
+          <div
+            style={{
+              gridArea: isLarge
+                ? "1 / 3 / 2 / 5"
+                : isMedium
+                  ? "1 / 1 / 2 / 2"
+                  : "1 / 1 / 2 / 2",
+            }}
+          >
+            <ContinueCard
+              description="Your next opportunity awaits"
+              style={{
+                backgroundColor: isSmall ? "var(--medium-blue)" : "var(--dark-blue)",
+              }} />
+          </div>
+
+          {/* TIP CARD */}
+
+          {(!isSmall &&
+            <div
+              style={{
+                gridArea: isLarge
+                  ? "2 / 1 / 3 / 5"
+                  : "3 / 1 / 4 / 3"
+              }}
+            >
+              <TipCard
+                title="Tip of the day"
+                description="Research the company and interviewers before your interview so you understand the company's goals and show how you fit."
+                icon="/global/tip.svg"
+              />
+            </div>
+          )}
+
+          {/* LEVEL CARD */}
+          <div
+            style={{
+              gridArea: isLarge
+                ? "3 / 1 / 4 / 2"
+                : isMedium
+                  ? "1 / 2 / 2 / 3"
+                  : "1 / 2 / 2 / 3",
+            }}
+          >
+            <LevelCard onClick={handleStartTestClick} />
+          </div>
+
+          {/* RECENTLY VIEWED */}
+          <RecentlyViewed
+            style={{
+              gridArea: isLarge
+                ? "3 / 2 / 4 / 5"
+                : isMedium
+                  ? "4 / 1 / 5 / 3"
+                  : "3 / 1 / 5 / 3",
+
+              backgroundColor: "var(--dark-blue)",
+            }}
             Title="Recently Viewed"
             centerTitle
           >
@@ -426,34 +443,37 @@ export default function JourneyJobHuntPage() {
                 <div
                   key={job.id}
                   onClick={() => router.push(buildJobDetailsHref(job.id))}
-                  style={{ cursor: "pointer" }}
+                  style={{
+                    cursor: "pointer",
+                  }}
                 >
                   <RectangularCard
                     Title={job.title}
+                    titleVariant={isSmall ? "full" : "clip"}
                     isSubtextVisible
                     subtext={job.company}
-                    font="nova"
                     variant="radio"
-                    style={{ height: "70%" }}
+                    font="nova"
+                    style={{
+                      width: "100%",
+                      flex: 1,
+                    }}
                   />
                 </div>
               ))
             ) : !isLoading ? (
-              <div style={{ display: "flex", alignItems: "center", color: "white", opacity: 0.8 }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  color: "white",
+                  opacity: 0.8,
+                }}
+              >
                 No recently viewed jobs yet.
               </div>
-            ) : (
-              <div style={{ display: "flex", alignItems: "center", color: "white", opacity: 0.8 }}>
-                Loading jobs...
-              </div>
-            )}
-          </InlineContainer>
-
-          {trackError || jobsError ? (
-            <p style={{ margin: 0, color: "#FFD3D3", gridArea: "3 / 2 / 4 / 5", alignSelf: "end" }}>
-              {trackError || jobsError}
-            </p>
-          ) : null}
+            ) : null}
+          </RecentlyViewed>
 
           {assessmentError ? (
             <div
