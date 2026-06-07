@@ -59,48 +59,55 @@ function persistAssessmentState(
   sessionStorage.setItem(cacheKey, JSON.stringify(payload));
 }
 
-type AssessmentNavButtonProps = {
+type SkillNavButtonProps = {
   direction: "previous" | "next";
   disabled?: boolean;
+  isLoading?: boolean;
+  inactive?: boolean;
   onClick: () => void;
   children: React.ReactNode;
 };
 
-function AssessmentNavButton({
+function SkillNavButton({
   direction,
   disabled,
+  isLoading,
+  inactive = false,
   onClick,
   children,
-}: AssessmentNavButtonProps) {
+}: SkillNavButtonProps) {
   const isPrevious = direction === "previous";
-  const icon = (
-    <span
-      aria-hidden="true"
-      className="flex h-[1.75rem] w-[1.75rem] shrink-0 items-center justify-center rounded-full bg-[var(--white)] text-[length:var(--text-sm)] leading-none text-[var(--dark-blue)]"
-    >
-      {isPrevious ? "↩" : "↪"}
-    </span>
-  );
 
   return (
     <Button
-      variant={isPrevious ? "secondary-inverted" : "primary"}
-      size="md"
-      disabled={disabled}
-      onClick={onClick}
-      className="w-full rounded-full sm:w-auto"
-    >
-      {isPrevious ? (
-        <>
-          {icon}
-          {children}
-        </>
-      ) : (
-        <>
-          {children}
-          {icon}
-        </>
+      variant={isPrevious ? "secondary-inverted" : "primary-inverted"}
+      type="button"
+      onClick={inactive ? undefined : onClick}
+      disabled={disabled || inactive}
+      isLoading={isLoading}
+      aria-hidden={inactive}
+      tabIndex={inactive ? -1 : undefined}
+      className={cn(
+        "relative min-h-[var(--button-height-md)] overflow-hidden rounded-full px-[var(--space-md)] font-normal sm:w-auto sm:min-w-[7.5rem]",
+        isPrevious
+          ? "pl-[2.55rem] pr-[var(--space-md)] hover:!bg-[var(--white)]"
+          : "pl-[var(--space-md)] pr-[2.55rem] !bg-[var(--light-green)] hover:!bg-[var(--primary-green)]",
+        inactive ? "pointer-events-none opacity-0" : ""
       )}
+    >
+      {!isLoading ? (
+        <span
+          aria-hidden="true"
+          className={cn(
+            "absolute top-1/2 flex h-[2rem] w-[2rem] -translate-y-1/2 items-center justify-center rounded-full bg-[var(--white)] text-[length:var(--text-sm)] leading-none text-[var(--dark-blue)]",
+            isPrevious ? "left-[0.25rem]" : "right-[0.25rem]"
+          )}
+        >
+          {isPrevious ? "↩" : "↪"}
+        </span>
+      ) : null}
+
+      <span>{children}</span>
     </Button>
   );
 }
@@ -145,6 +152,7 @@ export default function AssessmentPage() {
   const selectedChoice = currentQData ? userAnswers[currentQData.id] || null : null;
   const isAnswered = Boolean(selectedChoice);
   const allAnswered = questions.length > 0 && questions.every((q) => Boolean(userAnswers[q.id]));
+  const isFinalQuestion = currentQuestion === questions.length;
 
   const resultByQuestionId = useMemo(() => {
     const map = new Map<string, APIAssessmentQuestionResult>();
@@ -426,118 +434,99 @@ export default function AssessmentPage() {
             ) : null}
           </section>
         ) : showResult ? (
-          <section className="grid w-full max-w-[62rem] gap-[var(--space-2xl)] rounded-[var(--radius-2xl)] border border-[var(--border-subtle)] bg-[rgba(255,255,255,0.03)] p-[var(--space-xl)] md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] md:items-center md:p-[var(--space-2xl)]">
-            <div className="flex min-w-0 flex-col items-center text-center">
-              <h2
-                className="m-0 text-[length:var(--text-xl)] font-semibold leading-[var(--line-tight)] text-[var(--text-primary)]"
-                style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
-              >
-                Your Score
-              </h2>
+<section className="grid w-full max-w-[62rem] gap-x-[var(--space-2xl)] gap-y-[var(--space-xl)] rounded-[var(--radius-2xl)] border border-[var(--border-subtle)] bg-[rgba(255,255,255,0.03)] p-[var(--space-xl)] md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] md:p-[var(--space-2xl)]">
+  <div className="flex min-w-0 flex-col items-center text-center">
+    <h2
+      className="m-0 text-[length:var(--text-xl)] font-normal leading-[var(--line-tight)] text-[var(--text-primary)]"
+      style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
+    >
+      Your Score
+    </h2>
 
-              <div className="relative mt-[var(--space-xl)] h-[clamp(9rem,28vw,12.5rem)] w-[clamp(9rem,28vw,12.5rem)]">
-                <svg className="h-full w-full -rotate-90" viewBox="0 0 200 200" aria-hidden="true">
-                  <circle
-                    cx="100"
-                    cy="100"
-                    r={scoreRadius}
-                    fill="none"
-                    stroke="rgba(255,255,255,0.12)"
-                    strokeWidth="15"
-                  />
-                  <circle
-                    cx="100"
-                    cy="100"
-                    r={scoreRadius}
-                    fill="none"
-                    stroke="var(--primary-green)"
-                    strokeWidth="15"
-                    strokeDasharray={scoreCircumference}
-                    strokeDashoffset={scoreCircumference - (scoreCircumference * percentage) / 100}
-                    strokeLinecap="round"
-                    className="transition-[stroke-dashoffset] duration-1000 ease-out"
-                  />
-                </svg>
+    <div className="relative mt-[var(--space-xl)] h-[clamp(8rem,22vw,10.5rem)] w-[clamp(8rem,22vw,10.5rem)]">
+      <svg className="h-full w-full -rotate-90" viewBox="0 0 200 200" aria-hidden="true">
+        <circle
+          cx="100"
+          cy="100"
+          r={scoreRadius}
+          fill="none"
+          stroke="rgba(255,255,255,0.12)"
+          strokeWidth="15"
+        />
+        <circle
+          cx="100"
+          cy="100"
+          r={scoreRadius}
+          fill="none"
+          stroke="var(--primary-green)"
+          strokeWidth="15"
+          strokeDasharray={scoreCircumference}
+          strokeDashoffset={scoreCircumference - (scoreCircumference * percentage) / 100}
+          strokeLinecap="round"
+          className="transition-[stroke-dashoffset] duration-1000 ease-out"
+        />
+      </svg>
 
-                <div
-                  className="absolute inset-0 flex items-center justify-center text-[length:var(--text-2xl)] font-extrabold text-[var(--text-primary)]"
-                  style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
-                >
-                  {percentage}%
-                </div>
-              </div>
+      <div
+        className="absolute inset-0 flex items-center justify-center text-[length:var(--text-xl)] font-normal text-[var(--text-primary)]"
+        style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
+      >
+        {percentage}%
+      </div>
+    </div>
+  </div>
 
-              <Button
-                variant="primary"
-                size="md"
-                className="mt-[var(--space-xl)] w-full max-w-[16rem]"
-                onClick={handleReviewAnswers}
-              >
-                Review Answers
-              </Button>
-            </div>
+  <div className="hidden h-full min-h-[18rem] w-px bg-[var(--border-muted)] md:row-span-2 md:block" />
 
-            <div className="hidden h-[18rem] w-px bg-[var(--border-muted)] md:block" />
+  <div className="flex min-w-0 flex-col items-center text-center md:items-start md:text-left">
+    <h2
+      className="m-0 text-[length:var(--text-xl)] font-normal leading-[var(--line-tight)] text-[var(--text-primary)]"
+      style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
+    >
+      Your Proficiency Level
+    </h2>
 
-            <div className="flex min-w-0 flex-col items-center text-center md:items-start md:text-left">
-              <h2
-                className="m-0 text-[length:var(--text-xl)] font-semibold leading-[var(--line-tight)] text-[var(--text-primary)]"
-                style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
-              >
-                Your Proficiency Level
-              </h2>
+    <p
+      className="m-0 mt-[var(--space-md)] text-[length:var(--text-xl)] font-normal leading-[var(--line-tight)] text-[var(--primary-green)]"
+      style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
+    >
+      {proficiencyLevel}
+    </p>
 
-              <p
-                className="m-0 mt-[var(--space-md)] text-[length:var(--text-3xl)] font-semibold leading-[var(--line-tight)] text-[var(--primary-green)]"
-                style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
-              >
-                {proficiencyLevel}
-              </p>
+    <p className="mt-[var(--space-lg)] max-w-[30rem] text-[length:var(--text-md)] font-normal leading-[var(--line-relaxed)] text-[var(--text-secondary)]">
+      Assessment complete. You can review each question to see the correct answers, or
+      retake the assessment to generate a fresh session.
+    </p>
+  </div>
 
-              <p className="mt-[var(--space-lg)] max-w-[30rem] text-[length:var(--text-base)] leading-[var(--line-relaxed)] text-[var(--text-secondary)]">
-                Assessment complete. You can review each question to see the correct answers, or
-                retake the assessment to generate a fresh session.
-              </p>
+  <div className="flex justify-center">
+    <Button
+      variant="primary"
+      size="md"
+      className="w-full font-normal sm:w-auto sm:min-w-[14rem]"
+      onClick={handleReviewAnswers}
+    >
+      Review Answers
+    </Button>
+  </div>
 
-              <Button
-                variant="secondary"
-                size="md"
-                className="mt-[var(--space-xl)] w-full max-w-[16rem]"
-                onClick={() => {
-                  void startNewSession();
-                }}
-              >
-                Retake Assessment
-              </Button>
-            </div>
-          </section>
-        ) : isCalculating ? (
-          <section className="mx-auto flex w-full max-w-[var(--container-sm)] flex-col items-center justify-center text-center">
-            <h2
-              className="m-0 text-[length:var(--text-xl)] font-semibold leading-[var(--line-tight)] text-[var(--text-primary)]"
-              style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
-            >
-              Calculating your score...
-            </h2>
-
-            <p className="mt-[var(--space-sm)] text-[length:var(--text-base)] leading-[var(--line-normal)] text-[var(--text-secondary)]">
-              This may take a moment.
-            </p>
-
-            <div className="relative mt-[var(--space-2xl)] h-[clamp(12rem,34vw,18rem)] w-[clamp(12rem,34vw,18rem)]">
-              <Image
-                src="/interview/analyzing.svg"
-                alt="Calculating assessment score"
-                fill
-                className="object-contain"
-                priority
-              />
-            </div>
-          </section>
+  <div className="flex justify-center">
+    <Button
+      variant="secondary-inverted"
+      size="md"
+      className="w-full font-normal sm:w-auto sm:min-w-[14rem]"
+      onClick={() => {
+        void startNewSession();
+      }}
+    >
+      Retake Assessment
+    </Button>
+  </div>
+</section>
         ) : (
           <section className="mx-auto flex w-full min-w-0 max-w-[46rem] flex-col items-center px-0">
             <h2
-              className="m-0 w-full max-w-full break-words text-center text-[length:var(--text-lg)] font-semibold leading-[var(--line-normal)] text-[var(--text-primary)]"
+              className="m-0 w-full max-w-full break-words text-center text-[length:var(--text-lg)] font-normal leading-[var(--line-normal)] text-[var(--text-primary)]"
               style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
             >
               {currentQData
@@ -579,7 +568,7 @@ export default function AssessmentPage() {
                     )}
                     style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
                   >
-                    <span className="min-w-0 flex-1 break-words text-[length:var(--text-base)] font-medium leading-[var(--line-normal)]">
+                    <span className="min-w-0 flex-1 break-words text-[length:var(--text-base)] font-normal leading-[var(--line-normal)]">
                       {choice}
                     </span>
 
@@ -597,38 +586,43 @@ export default function AssessmentPage() {
               })}
             </div>
 
-            <div className="mt-[var(--space-xl)] flex w-full min-w-0 flex-col-reverse items-stretch justify-center gap-[var(--space-md)] sm:flex-row sm:items-center">
-              <AssessmentNavButton
-                direction="previous"
-                onClick={handlePrevious}
-                disabled={currentQuestion === 1}
-              >
-                Previous
-              </AssessmentNavButton>
+            <footer className="mt-[var(--space-xl)] grid w-full grid-cols-1 items-center gap-[var(--space-md)] sm:grid-cols-[1fr_auto_1fr]">
+              <div />
 
-              {currentQuestion < questions.length ? (
-                <AssessmentNavButton
+              <div className="flex items-center justify-center gap-[var(--space-md)]">
+                <SkillNavButton
+                  direction="previous"
+                  onClick={handlePrevious}
+                  disabled={currentQuestion === 1}
+                >
+                  Previous
+                </SkillNavButton>
+
+                <SkillNavButton
                   direction="next"
                   onClick={handleNext}
                   disabled={!isAnswered}
+                  inactive={isFinalQuestion}
                 >
                   Next
-                </AssessmentNavButton>
-              ) : !isReviewing ? (
-                <Button
-                  variant="primary"
-                  size="md"
-                  className="w-full rounded-full sm:w-auto"
-                  onClick={() => {
-                    void handleFinish();
-                  }}
-                  disabled={!allAnswered || isSubmitting}
-                  isLoading={isSubmitting}
-                >
-                  {isSubmitting ? "Submitting..." : "Finish Assessment"}
-                </Button>
-              ) : null}
-            </div>
+                </SkillNavButton>
+              </div>
+
+              <div className="flex justify-end">
+                {isFinalQuestion && !isReviewing ? (
+                  <SkillNavButton
+                    direction="next"
+                    onClick={() => {
+                      void handleFinish();
+                    }}
+                    disabled={!allAnswered || isSubmitting}
+                    isLoading={isSubmitting}
+                  >
+                    {isSubmitting ? "Submitting..." : "Finish Assessment"}
+                  </SkillNavButton>
+                ) : null}
+              </div>
+            </footer>
 
             {isReviewing && resultsData ? (
               <Button

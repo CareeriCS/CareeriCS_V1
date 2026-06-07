@@ -55,6 +55,7 @@ export default function JourneyLayout({
             }}
         >
             <div
+                className="relative"
                 style={{
                     background: "linear-gradient(180deg, var(--dark-blue) 0%, #000000 100%)",
                     borderRadius: "5vh",
@@ -81,35 +82,20 @@ export default function JourneyLayout({
                 </div>
 
 
-                {/* Exit Button*/}
-<button
-        type="button"
-        onClick={() => void handleClose()}
-        disabled={isClosing}
-        aria-label="Close skill assessment"
-        style={{
-            position: "absolute", // 1. Khallih tayir fo2 el elements
-            top: "30px",          // 2. Eb3ed 3an el sa2f sanna
-            right: "30px",        // 3. Elza2 f el ymeen bel-zabt
-            width: "35px",        // 4. Esta5dem px a7san men vh le-de2et el icon
-            height: "35px",
-            cursor: isClosing ? "not-allowed" : "pointer",
-            background: "none",
-            border: "none",
-            zIndex: 100,         
-            padding: 0,
-            opacity: isClosing ? 0.6 : 1,
-        }}
-    >
-        <img
-            src="/global/close.svg"
-            alt="Close"
-            style={{
-                width: "100%",
-                height: "100%",
-            }}
-        />
-    </button>
+                <button
+                    type="button"
+                    onClick={() => void handleClose()}
+                    disabled={isClosing}
+                    aria-label="Close skill assessment"
+                    className="absolute right-[var(--space-md)] top-[calc(var(--space-md)+0.25rem)] z-[100] flex h-[var(--icon-lg)] w-[var(--icon-lg)] items-center justify-center rounded-full border-none bg-transparent p-0 transition hover:bg-[var(--light-red)] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                    <img
+                        src="/global/close.svg"
+                        alt=""
+                        aria-hidden="true"
+                        className="h-full w-full object-contain"
+                    />
+                </button>
             </div>
         </div>
     );
