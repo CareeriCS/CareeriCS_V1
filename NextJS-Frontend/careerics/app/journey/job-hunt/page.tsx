@@ -364,17 +364,17 @@ export default function JourneyJobHuntPage() {
           }}
         >
           {/* BOOKMARK CARD */}
-          <div
+            <BookmarkCard 
+            description="All of your saved jobs are here" 
             style={{
               gridArea: isLarge
                 ? "1 / 1 / 2 / 3"
                 : isMedium
                   ? "2 / 1 / 3 / 3"
                   : "2 / 1 / 3 / 3",
+              backgroundColor:"var(--medium-blue)",
             }}
-          >
-            <BookmarkCard description="All of your saved jobs are here" />
-          </div>
+            />
 
           {/* CONTINUE CARD */}
           <div
@@ -388,9 +388,8 @@ export default function JourneyJobHuntPage() {
           >
             <ContinueCard
               description="Your next opportunity awaits"
-              style={{
-                backgroundColor: isSmall ? "var(--medium-blue)" : "var(--dark-blue)",
-              }} />
+              theme="light"
+              />
           </div>
 
           {/* TIP CARD */}
@@ -421,7 +420,12 @@ export default function JourneyJobHuntPage() {
                   : "1 / 2 / 2 / 3",
             }}
           >
-            <LevelCard onClick={handleStartTestClick} />
+            <LevelCard 
+            onClick={handleStartTestClick}
+            style={{
+              backgroundColor:"var(--medium-blue)"
+            }}
+             />
           </div>
 
           {/* RECENTLY VIEWED */}
@@ -433,7 +437,8 @@ export default function JourneyJobHuntPage() {
                   ? "4 / 1 / 5 / 3"
                   : "3 / 1 / 5 / 3",
 
-              backgroundColor: "var(--dark-blue)",
+              backgroundColor: "var(--bg-grey)",
+              color:"black",
             }}
             Title="Recently Viewed"
             centerTitle
@@ -453,6 +458,7 @@ export default function JourneyJobHuntPage() {
                     isSubtextVisible
                     subtext={job.company}
                     variant="radio"
+                    theme="grey"
                     font="nova"
                     style={{
                       width: "100%",
