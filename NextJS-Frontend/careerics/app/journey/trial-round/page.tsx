@@ -316,7 +316,7 @@ export default function JourneyTrialRoundPage() {
           disabled={isLoading || isStartingInterview}
           buttonLabel={startButtonLabel}
           icon="/interview/hr.svg"
-          style={{ gridArea: isLarge ? "1 / 1 / 2 / 2" : "1 / 1 / 2 / 2" }}
+          style={{ gridArea: isLarge ? "1 / 1 / 2 / 2" : "1 / 1 / 2 / 2",backgroundColor: "var(--medium-blue)" }}
         />
 
         <CardType
@@ -327,20 +327,21 @@ export default function JourneyTrialRoundPage() {
           disabled={isLoading || isStartingInterview}
           buttonLabel={startButtonLabel}
           icon="/interview/tech.svg"
-          style={{ gridArea: isLarge ? "1 / 2 / 2 / 3" : "2 / 1 / 3 / 2" }}
+          style={{ gridArea: isLarge ? "1 / 2 / 2 / 3" : "2 / 1 / 3 / 2",backgroundColor: "var(--medium-blue)" }}
         />
 
         {!isSmall && (
           <StackContainer
             Title="Interviews Archive"
             centerTitle
-            style={{ gridArea: isLarge ? "1 / 3 / 2 / 4" : "1 / 2 / 4 / 3" }}
+            style={{ gridArea: isLarge ? "1 / 3 / 2 / 4" : "1 / 2 / 4 / 3",backgroundColor: "var(--bg-grey)",color:"black" }}
           >
             {archiveItems.length ? (
               archiveItems.map((item) => (
                 <ActivityCard
                   key={item.report_id}
                   title={item.session_name}
+                  theme="dark"
                   date={formatInterviewArchiveDate(item.report_created_at || item.session_created_at)}
                   variant="download"
                   onClick={() => handleDownloadArchiveItem(item)}
