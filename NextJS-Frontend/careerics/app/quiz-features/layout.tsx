@@ -56,7 +56,7 @@ export default function JourneyLayout({ children }: { children: ReactNode }) {
           onClick={() => void handleClose()}
           disabled={isClosing}
           aria-label="Close career quiz"
-          className="absolute right-[var(--space-md)] top-[var(--space-md)] z-20 flex h-[var(--icon-lg)] w-[var(--icon-lg)] items-center justify-center rounded-full transition hover:bg-[rgba(255,255,255,0.08)] disabled:cursor-not-allowed disabled:opacity-60"
+          className="absolute right-[var(--space-md)] top-[calc(var(--space-md)+0.25rem)] z-20 flex h-[var(--icon-lg)] w-[var(--icon-lg)] items-center justify-center rounded-full transition hover:bg-[var(--light-red)] disabled:cursor-not-allowed disabled:opacity-60"
         >
           <img
             src="/global/close.svg"

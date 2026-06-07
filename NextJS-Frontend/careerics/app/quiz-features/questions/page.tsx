@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Bookmark } from "lucide-react";
@@ -34,6 +33,7 @@ import type {
   UnifiedBookmarkDraft,
   UnifiedBookmarkEntry,
 } from "@/types";
+import { normalizeBackendAssetUrl } from "@/lib/asset-url";
 import { cn } from "@/lib/utils";
 
 interface QuestionGroup {
@@ -46,6 +46,32 @@ interface QuestionGroup {
 type RatingValue = 1 | 2 | 3 | 4 | 5;
 
 const ratingValues = [1, 2, 3, 4, 5] as const;
+
+function getTrackIconSrc(track: APICareerEvaluationRead["track_scores"][number]) {
+  const trackWithIcon = track as typeof track & {
+    icon_url?: string | null;
+    icon?: string | null;
+    image_url?: string | null;
+    image?: string | null;
+    track_icon?: string | null;
+    track_icon_url?: string | null;
+    career_icon?: string | null;
+    career_icon_url?: string | null;
+  };
+
+  return normalizeBackendAssetUrl(
+    trackWithIcon.icon_url ||
+      trackWithIcon.icon ||
+      trackWithIcon.image_url ||
+      trackWithIcon.image ||
+      trackWithIcon.track_icon ||
+      trackWithIcon.track_icon_url ||
+      trackWithIcon.career_icon ||
+      trackWithIcon.career_icon_url ||
+      (track.track_id ? `/tracks/${track.track_id}.svg` : "") ||
+      "/landing/Rectangle.svg",
+  );
+}
 
 function getQuestionCardId(question: APICareerQuestionResponse): string {
   if (question.type === "hobby") {
@@ -113,7 +139,7 @@ function getRatingButtonClass(value: RatingValue, isSelected: boolean) {
         ? "h-8 w-8 sm:h-9 sm:w-9"
         : "h-7 w-7 sm:h-8 sm:w-8";
 
-  const selectedColorClass =
+  const colorClass =
     value === 1
       ? "bg-[var(--light-red)]"
       : value === 2
@@ -124,12 +150,23 @@ function getRatingButtonClass(value: RatingValue, isSelected: boolean) {
             ? "bg-[var(--light-green)]"
             : "bg-[var(--primary-green)]";
 
+  const hoverColorClass =
+    value === 1
+      ? "hover:bg-[var(--light-red)]"
+      : value === 2
+        ? "hover:bg-[#FFD0D0]"
+        : value === 3
+          ? "hover:bg-[var(--light-blue)]"
+          : value === 4
+            ? "hover:bg-[var(--light-green)]"
+            : "hover:bg-[var(--primary-green)]";
+
   return cn(
     sizeClass,
     "shrink-0 rounded-full border border-transparent transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-card-soft)]",
     isSelected
-      ? `${selectedColorClass} scale-110 shadow-sm`
-      : "bg-[var(--bg-grey)] hover:scale-105 hover:bg-[var(--light-blue)]",
+      ? `${colorClass} scale-110 shadow-sm`
+      : `bg-[var(--bg-grey)] hover:scale-105 ${hoverColorClass}`,
   );
 }
 
@@ -137,6 +174,7 @@ type QuizNavButtonProps = {
   direction: "previous" | "next";
   disabled?: boolean;
   isLoading?: boolean;
+  inactive?: boolean;
   onClick: () => void;
   children: React.ReactNode;
 };
@@ -145,40 +183,42 @@ function QuizNavButton({
   direction,
   disabled,
   isLoading,
+  inactive = false,
   onClick,
   children,
 }: QuizNavButtonProps) {
   const isPrevious = direction === "previous";
 
-  const icon = (
-    <span
-      aria-hidden="true"
-      className="flex h-[1.65rem] w-[1.65rem] shrink-0 items-center justify-center rounded-full bg-[var(--white)] text-[length:var(--text-xs)] leading-none text-[var(--dark-blue)]"
-    >
-      {isPrevious ? "↩" : "↪"}
-    </span>
-  );
-
   return (
-    <Button
-      variant={isPrevious ? "secondary-inverted" : "primary"}
-      size="md"
-      disabled={disabled}
-      isLoading={isLoading}
-      onClick={onClick}
-      className="w-full rounded-full px-[var(--space-lg)] sm:w-auto"
-    >
-      {isPrevious ? (
-        <>
-          {icon}
-          {children}
-        </>
-      ) : (
-        <>
-          {children}
-          {!isLoading ? icon : null}
-        </>
-      )}
+<Button
+  variant={isPrevious ? "secondary-inverted" : "primary-inverted"}
+  type="button"
+  onClick={inactive ? undefined : onClick}
+  disabled={disabled || inactive}
+  isLoading={isLoading}
+  aria-hidden={inactive}
+  tabIndex={inactive ? -1 : undefined}
+  className={cn(
+    "relative min-h-[var(--button-height-md)] overflow-hidden rounded-full px-[var(--space-md)] font-normal sm:w-auto sm:min-w-[7.5rem]",
+    isPrevious
+      ? "pl-[2.55rem] pr-[var(--space-md)] hover:!bg-[var(--white)]"
+      : "pl-[var(--space-md)] pr-[2.55rem] !bg-[var(--light-green)] hover:!bg-[var(--primary-green)]",
+    inactive ? "pointer-events-none opacity-0" : ""
+  )}
+>
+      {!isLoading ? (
+        <span
+          aria-hidden="true"
+          className={cn(
+            "absolute top-1/2 flex h-[2rem] w-[2rem] -translate-y-1/2 items-center justify-center rounded-full bg-[var(--white)] text-[length:var(--text-sm)] leading-none text-[var(--dark-blue)]",
+            isPrevious ? "left-[0.25rem]" : "right-[0.25rem]"
+          )}
+        >
+          {isPrevious ? "↩" : "↪"}
+        </span>
+      ) : null}
+
+      <span>{children}</span>
     </Button>
   );
 }
@@ -366,6 +406,7 @@ export default function CareerQuestionsPage() {
   }, [questionGroups]);
 
   const currentGroup = questionGroups[currentStepId - 1] || null;
+  const isFinalStep = currentStepId === questionGroups.length;
   const allAnswered =
     allQuestions.length > 0 && allQuestions.every((question) => Boolean(ratings[question.id]));
 
@@ -685,7 +726,7 @@ export default function CareerQuestionsPage() {
                   className="flex w-full min-w-0 flex-col items-center gap-[var(--space-lg)] rounded-[var(--radius-2xl)] border border-[rgba(255,255,255,0.12)] bg-[rgba(61,67,84,0.68)] px-[var(--space-lg)] py-[var(--space-xl)] shadow-sm backdrop-blur-sm sm:px-[var(--space-xl)]"
                   >
                     <p
-                      className="m-0 w-full break-words text-center text-[length:var(--text-base)] font-medium leading-[var(--line-normal)] text-[var(--text-primary)]"
+                      className="m-0 w-full break-words text-center text-[length:var(--text-base)] font-normal leading-[var(--line-normal)] text-[var(--text-primary)]"
                       style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
                     >
                       {question.text}
@@ -693,7 +734,7 @@ export default function CareerQuestionsPage() {
 
                     <div className="flex w-full flex-col items-center justify-center gap-[var(--space-md)] md:flex-row md:gap-[var(--space-lg)]">
                       <span
-                       className="text-center text-[length:var(--text-sm)] font-medium text-[var(--light-red)]"
+                        className="text-center text-[length:var(--text-sm)] font-normal text-[var(--light-red)]"
                         style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
                       >
                         Strongly Disagree
@@ -717,7 +758,7 @@ export default function CareerQuestionsPage() {
                       </div>
 
                       <span
-                        className="text-center text-[length:var(--text-sm)] font-medium text-[var(--light-green)]"
+                        className="text-center text-[length:var(--text-sm)] font-normal text-[var(--light-green)]"
                         style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
                       >
                         Strongly Agree
@@ -733,31 +774,44 @@ export default function CareerQuestionsPage() {
                 </p>
               ) : null}
 
-              <div className="flex w-full flex-col-reverse items-stretch justify-center gap-[var(--space-md)] sm:w-auto sm:flex-row sm:items-center">
-                <QuizNavButton
-                  direction="previous"
-                  onClick={() => {
-                    setCurrentStepId((prev) => Math.max(1, prev - 1));
-                    setError(null);
-                  }}
-                  disabled={currentStepId === 1 || isLoadingQuestions || isSubmitting}
-                >
-                  Previous
-                </QuizNavButton>
+              <footer className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-[var(--space-md)]">
+                <div />
 
-                <QuizNavButton
-                  direction="next"
-                  onClick={handleNext}
-                  disabled={isLoadingQuestions || isSubmitting || !currentGroup}
-                  isLoading={isSubmitting}
-                >
-                  {isSubmitting
-                    ? "Submitting..."
-                    : currentStepId === questionGroups.length
-                      ? "Finish"
-                      : "Next"}
-                </QuizNavButton>
-              </div>
+                <div className="flex items-center justify-center gap-[var(--space-md)]">
+                  <QuizNavButton
+                    direction="previous"
+                    onClick={() => {
+                      setCurrentStepId((prev) => Math.max(1, prev - 1));
+                      setError(null);
+                    }}
+                    disabled={currentStepId === 1 || isLoadingQuestions || isSubmitting}
+                  >
+                    Previous
+                  </QuizNavButton>
+
+                  <QuizNavButton
+                    direction="next"
+                    onClick={handleNext}
+                    disabled={isLoadingQuestions || isSubmitting || !currentGroup}
+                    inactive={isFinalStep}
+                  >
+                    Next
+                  </QuizNavButton>
+                </div>
+
+                <div className="flex justify-end">
+                  {isFinalStep ? (
+                    <QuizNavButton
+                      direction="next"
+                      onClick={handleNext}
+                      disabled={isLoadingQuestions || isSubmitting || !currentGroup}
+                      isLoading={isSubmitting}
+                    >
+                      {isSubmitting ? "Submitting..." : "Finish"}
+                    </QuizNavButton>
+                  ) : null}
+                </div>
+              </footer>
             </>
           ) : (
             <div className="text-center text-[length:var(--text-md)] text-[var(--text-danger)]">
@@ -773,7 +827,7 @@ export default function CareerQuestionsPage() {
     <section className="grid h-full min-h-0 w-full grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden px-[var(--space-xl)] pb-[var(--space-xl)] pt-[calc(var(--icon-lg)+var(--space-2xl))] sm:px-[var(--space-2xl)]">
       <header className="mx-auto flex w-full max-w-[72rem] shrink-0 flex-col items-center text-center">
         <h1
-          className="m-0 text-center text-[length:var(--text-2xl)] font-semibold leading-[var(--line-tight)] text-[var(--text-primary)]"
+          className="m-0 text-center text-[length:var(--text-xl)] font-normal leading-[var(--line-tight)] text-[var(--text-primary)]"
           style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
         >
           Your Best Matches Are
@@ -806,31 +860,29 @@ export default function CareerQuestionsPage() {
                     }}
                     disabled={isReplacingBookmark || isAuthLoading || !userId}
                     aria-label={isBookmarked ? "Remove bookmark" : "Bookmark track"}
-                    className="absolute right-[var(--space-lg)] top-[var(--space-lg)] flex h-[var(--min-touch-target)] w-[var(--min-touch-target)] items-center justify-center rounded-full bg-transparent text-[var(--text-primary)] transition hover:bg-[rgba(255,255,255,0.12)] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="absolute right-[var(--space-lg)] top-[var(--space-lg)] flex h-[3rem] w-[3rem] items-center justify-center rounded-full bg-transparent text-[var(--text-primary)] transition hover:bg-[rgba(255,255,255,0.12)] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <Bookmark
-                      size={22}
+                      size={28}
                       strokeWidth={2.1}
                       className={isBookmarked ? "fill-current text-[var(--light-green)]" : undefined}
                     />
                   </button>
   
-                  <Image
-                    src="/landing/Rectangle.svg"
+                  <img
+                    src={getTrackIconSrc(track)}
                     alt=""
-                    width={118}
-                    height={118}
-                    className="h-auto w-[7.4rem] shrink-0"
+                    className="h-auto w-[4.75rem] shrink-0 sm:w-[5.25rem]"
                   />
   
                   <h2
-                    className="m-0 mt-[var(--space-md)] pr-[var(--space-xl)] text-[length:var(--text-lg)] font-semibold leading-[var(--line-tight)] text-[var(--text-primary)]"
+                    className="m-0 mt-[var(--space-md)] pr-[var(--space-xl)] text-[length:var(--text-lg)] font-normal leading-[var(--line-tight)] text-[var(--text-primary)]"
                     style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
                   >
                     {track.track_name}
                   </h2>
   
-                  <p className="m-0 mt-[var(--space-md)] text-[length:var(--text-sm)] font-bold text-[var(--light-green)]">
+                  <p className="m-0 mt-[var(--space-md)] text-[length:var(--text-sm)] font-normal text-[var(--light-green)]">
                     Match Score: {track.score}%
                   </p>
   
@@ -843,7 +895,7 @@ export default function CareerQuestionsPage() {
                     href={buildCareerTrackDetailsHref(track.track_name, track.track_id)}
                     className="mt-[var(--space-lg)] block"
                   >
-                    <Button variant="secondary" size="md" className="w-full rounded-[var(--radius-lg)]">
+                    <Button variant="secondary-inverted" size="md" className="w-full rounded-[var(--radius-lg)] font-normal">
                       Learn More
                     </Button>
                   </Link>
@@ -858,9 +910,11 @@ export default function CareerQuestionsPage() {
         )}
       </main>
   
-      <footer className="mx-auto flex w-full max-w-[32rem] shrink-0 flex-col items-stretch justify-center gap-[var(--space-md)] sm:flex-row sm:items-center">
+      <footer className="mx-auto grid w-full max-w-[72rem] shrink-0 grid-cols-1 gap-[var(--space-md)] sm:grid-cols-[1fr_auto_0.55fr_auto_1fr] sm:items-center">
+        <div className="hidden sm:block" />
+
         <Button
-          variant="secondary"
+          variant="secondary-inverted"
           size="md"
           onClick={() => {
             if (sessionId) {
@@ -869,20 +923,24 @@ export default function CareerQuestionsPage() {
               router.push("/features/career");
             }
           }}
-          className="w-full rounded-[var(--radius-lg)] sm:w-auto sm:min-w-[10rem]"
+          className="w-full rounded-[var(--radius-lg)] font-normal sm:w-auto sm:min-w-[10rem] sm:justify-self-center"
         >
           Retake Quiz
         </Button>
-  
-        <Link href="/features/home" className="w-full sm:w-auto">
+
+        <div className="hidden sm:block" />
+
+        <Link href="/features/home" className="w-full sm:w-auto sm:justify-self-center">
           <Button
             variant="primary"
             size="md"
-            className="w-full rounded-[var(--radius-lg)] sm:min-w-[10rem]"
+            className="w-full rounded-[var(--radius-lg)] font-normal sm:min-w-[10rem]"
           >
             Back to Home
           </Button>
         </Link>
+
+        <div className="hidden sm:block" />
       </footer>
   
       {pendingCareerBookmark ? (
