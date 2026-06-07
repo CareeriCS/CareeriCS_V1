@@ -22,6 +22,9 @@ import { interviewService } from "@/services/interview.service";
 import { reportsService } from "@/services/reports.service";
 import { useAuth } from "@/providers/auth-provider";
 import type { APIInterviewArchiveItem } from "@/types";
+import JourneyTreeVertical from "@/components/ui/journey-tree-vertical";
+import { useResponsive } from "@/hooks/useResponsive";
+import ChoiceCardHorizontal from "@/components/ui/choice-card-horizontal";
 
 export default function JourneyTrialRoundPage() {
   const router = useRouter();
@@ -44,46 +47,33 @@ export default function JourneyTrialRoundPage() {
   const [selectedTechnicalType, setSelectedTechnicalType] = useState("");
   const [startError, setStartError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (isLoading) {
+  const loadArchive = useCallback(async () => {
+    if (!user?.id) {
+      setArchiveItems([]);
+      setArchiveError(null);
+      setIsArchiveLoading(false);
       return;
     }
 
-    let alive = true;
+    setIsArchiveLoading(true);
+    setArchiveError(null);
 
-    const loadArchive = async () => {
-      if (!user?.id) {
-        setArchiveItems([]);
-        setArchiveError(null);
-        setIsArchiveLoading(false);
-        return;
-      }
-
-      setIsArchiveLoading(true);
-
-      const response = await interviewService.getUserArchive(user.id);
-      if (!alive) {
-        return;
-      }
-
-      if (!response.success) {
-        setArchiveItems([]);
-        setArchiveError(response.message || "Unable to load completed interview reports.");
-        setIsArchiveLoading(false);
-        return;
-      }
-
-      setArchiveItems(response.data ?? []);
-      setArchiveError(null);
+    const response = await interviewService.getUserArchive(user.id);
+    if (!response.success) {
+      setArchiveItems([]);
+      setArchiveError(response.message || "Unable to load completed interview reports.");
       setIsArchiveLoading(false);
-    };
+      return;
+    }
 
+    setArchiveItems(response.data ?? []);
+    setArchiveError(null);
+    setIsArchiveLoading(false);
+  }, [user?.id]);
+
+  useEffect(() => {
     void loadArchive();
-
-    return () => {
-      alive = false;
-    };
-  }, [isLoading, user?.id]);
+  }, [loadArchive]);
 
   const loadTechnicalTypes = useCallback(async () => {
     if (technicalTypes.length || isLoadingTechnicalTypes) {
@@ -108,46 +98,85 @@ export default function JourneyTrialRoundPage() {
     setIsLoadingTechnicalTypes(false);
   }, [isLoadingTechnicalTypes, technicalTypes.length]);
 
-  const handleStartInterview = useCallback(async (interviewType: string) => {
-    if (isStartingInterview) {
-      return false;
+  const startInterview = useCallback(
+    async (interviewType: string) => {
+      if (isStartingInterview) {
+        return false;
+      }
+
+      setIsStartingInterview(true);
+      setTechnicalPopupError(null);
+      setStartError(null);
+
+      try {
+        if (!isLoading && !user?.id) {
+          router.push("/auth/login");
+          return false;
+        }
+
+        if (!user?.id) {
+          return false;
+        }
+
+        const normalizedType = normalizeInterviewType(interviewType);
+        const response = await interviewService.createSession({
+          name: buildInterviewSessionName(normalizedType),
+          type: normalizedType,
+          status: "in_progress",
+          user_id: user.id,
+        });
+
+        if (!response.success || !response.data?.id) {
+          const message = response.message || "Failed to start interview session.";
+          setTechnicalPopupError(message);
+          setStartError(message);
+          return false;
+        }
+
+        router.push(buildInterviewRecordingRoute(normalizedType, response.data.id));
+        return true;
+      } finally {
+        setIsStartingInterview(false);
+      }
+    },
+    [isLoading, isStartingInterview, router, user?.id],
+  );
+
+  const handleStartBehavioral = useCallback(() => {
+    void startInterview("HR");
+  }, [startInterview]);
+
+  const handleOpenTechnicalPopup = useCallback(() => {
+    if (!isLoading && !user?.id) {
+      router.push("/auth/login");
+      return;
     }
 
-    setIsStartingInterview(true);
-    setTechnicalPopupError(null);
-    setStartError(null);
+    setIsTechnicalPopupOpen(true);
+    void loadTechnicalTypes();
+  }, [isLoading, loadTechnicalTypes, router, user?.id]);
 
-    try {
-      if (!isLoading && !user?.id) {
-        router.push("/auth/login");
-        return false;
+  const handleStartTechnical = useCallback(
+    async (technicalType: string) => {
+      setSelectedTechnicalType(technicalType);
+      const started = await startInterview(technicalType);
+      if (started) {
+        setIsTechnicalPopupOpen(false);
       }
+    },
+    [startInterview],
+  );
 
-      if (!user?.id) {
-        return false;
-      }
-
-      const normalizedType = normalizeInterviewType(interviewType);
-      const response = await interviewService.createSession({
-        name: buildInterviewSessionName(normalizedType),
-        type: normalizedType,
-        status: "in_progress",
-        user_id: user.id,
-      });
-
-      if (!response.success || !response.data?.id) {
-        const message = response.message || "Failed to start interview session.";
-        setTechnicalPopupError(message);
-        setStartError(message);
-        return false;
-      }
-
-      router.push(buildInterviewRecordingRoute(normalizedType, response.data.id));
-      return true;
-    } finally {
-      setIsStartingInterview(false);
-    }
-  }, [isLoading, isStartingInterview, router, user?.id]);
+  const handleDownloadArchiveItem = useCallback((item: APIInterviewArchiveItem) => {
+    const downloadUrl = reportsService.getReportDownloadUrl(item.report_id);
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.download = item.report_filename;
+    link.rel = "noopener noreferrer";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }, []);
 
   const startButtonLabel = useMemo(() => {
     if (isStartingInterview) {
@@ -161,42 +190,14 @@ export default function JourneyTrialRoundPage() {
     return "Start";
   }, [isLoading, isStartingInterview]);
 
-  const isStartDisabled = isLoading || isStartingInterview;
-
-  const handleOpenTechnicalPopup = useCallback(() => {
-    if (!isLoading && !user?.id) {
-      router.push("/auth/login");
-      return;
-    }
-
-    setIsTechnicalPopupOpen(true);
-    void loadTechnicalTypes();
-  }, [isLoading, loadTechnicalTypes, router, user?.id]);
-
-  const handleStartTechnical = useCallback(async (technicalType: string) => {
-    setSelectedTechnicalType(technicalType);
-    const started = await handleStartInterview(technicalType);
-    if (started) {
-      setIsTechnicalPopupOpen(false);
-    }
-  }, [handleStartInterview]);
-
-  const handleDownloadArchiveItem = useCallback((item: APIInterviewArchiveItem) => {
-    const downloadUrl = reportsService.getReportDownloadUrl(item.report_id);
-    const link = document.createElement("a");
-    link.href = downloadUrl;
-    link.download = item.report_filename;
-    link.rel = "noopener noreferrer";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-  }, []);
+  const { isLarge, isMedium, isSmall } = useResponsive();
+  const Orientation = isLarge ? JourneyTree : JourneyTreeVertical;
 
   // Delay render until all data is ready
   const isInitializing = isLoadingTracks || isLoading;
   if (isInitializing && !selectedTrack) {
     return (
-      <JourneyTree
+      <Orientation
         current={4}
         maxReached={4}
         renderContent={() => (
@@ -241,7 +242,7 @@ export default function JourneyTrialRoundPage() {
 
   if (!selectedTrack && !isLoadingTracks) {
     return (
-      <JourneyTree
+      <Orientation
         current={4}
         maxReached={4}
         renderContent={() => (
@@ -287,53 +288,53 @@ export default function JourneyTrialRoundPage() {
   const nextPhase = maxReached < 5
     ? maxReached + 1
     : maxReached;
-
+  const CardType = isLarge ? ChoiceCard : ChoiceCardHorizontal;
   return (
-    <JourneyTree
+    <Orientation
       current={4}
       maxReached={nextPhase}
       resolvePhasePath={(phase) => buildJourneyPhaseHref(phase, selectedTrack?.id)}
       renderContent={() => (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
-            gridTemplateRows: "repeat(3, 1fr)",
-            gridColumnGap: "25px",
-            gridRowGap: "20px",
-            width: "100%",
-            height: "100%",
-            padding: "40px",
-          }}
-        >
-          <ChoiceCard
-            title="Behavioral Mock Interview"
-            description="Practice common interview questions and improve how you present your skills and experience."
-            buttonVariant="primary-inverted"
-            onClick={() => {
-              void handleStartInterview("HR");
-            }}
-            disabled={isStartDisabled}
-            buttonLabel={startButtonLabel}
-            icon="/interview/hr.svg"
-            style={{ gridArea: "1 / 1 / 3 / 2", backgroundColor: "var(--medium-blue)" }}
-          />
+        <>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: isLarge ? "repeat(2, 1fr) 1.2fr" : isMedium ? "1.5fr 1fr" : "1fr",
+          gridTemplateRows: isLarge ? "2fr 1fr" : "repeat(3, 1fr)",
+          gridColumnGap: "var(--space-lg)",
+          gridRowGap: "var(--space-lg)",
+          width: "100%",
+          height: "100%",
+          padding: "var(--space-xl)",
+        }}
+      >
+        <CardType
+          title="Behavioral Mock Interview"
+          description="Practice answering the most common interview questions and improve how you present yourself and your skills."
+          buttonVariant="primary-inverted"
+          onClick={handleStartBehavioral}
+          disabled={isLoading || isStartingInterview}
+          buttonLabel={startButtonLabel}
+          icon="/interview/hr.svg"
+          style={{ gridArea: isLarge ? "1 / 1 / 2 / 2" : "1 / 1 / 2 / 2" }}
+        />
 
-          <ChoiceCard
-            title="Technical Mock Interview"
-            description="Choose the technical career you want to practice, then we will load the matching technical question bank."
-            buttonVariant="primary-inverted"
-            onClick={handleOpenTechnicalPopup}
-            disabled={isStartDisabled}
-            buttonLabel={startButtonLabel}
-            icon="/interview/tech.svg"
-            style={{ gridArea: "1 / 2 / 3 / 3", backgroundColor: "var(--medium-blue)" }}
-          />
+        <CardType
+          title="Technical Mock Interview"
+          description="Choose the technical career you want to practice, then we will load the matching technical question bank."
+          buttonVariant="primary-inverted"
+          onClick={handleOpenTechnicalPopup}
+          disabled={isLoading || isStartingInterview}
+          buttonLabel={startButtonLabel}
+          icon="/interview/tech.svg"
+          style={{ gridArea: isLarge ? "1 / 2 / 2 / 3" : "2 / 1 / 3 / 2" }}
+        />
 
+        {!isSmall && (
           <StackContainer
             Title="Interviews Archive"
             centerTitle
-            style={{ gridArea: "1 / 3 / 3 / 4" }}
+            style={{ gridArea: isLarge ? "1 / 3 / 2 / 4" : "1 / 2 / 4 / 3" }}
           >
             {archiveItems.length ? (
               archiveItems.map((item) => (
@@ -351,7 +352,7 @@ export default function JourneyTrialRoundPage() {
                   color: archiveError ? "#FFD3D3" : "#D7E3FF",
                   fontFamily: "var(--font-jura)",
                   textAlign: "center",
-                  paddingInline: "10px",
+                  paddingInline: "20px",
                 }}
               >
                 {isArchiveLoading
@@ -360,56 +361,52 @@ export default function JourneyTrialRoundPage() {
               </div>
             )}
           </StackContainer>
+        )}
 
-          <TipCard
-            title="Tip of the day"
-            description="Research the company and role before each mock. Your answers become stronger when they are contextual."
-            icon="/global/tip.svg"
-            style={{ gridArea: "3 / 1 / 4 / 4" }}
-          />
+        <TipCard
+          title="Tip of the day"
+          description="Research the company and interviewers before your interview so you understand the company's goals and show how you fit."
+          icon="/global/tip.svg"
+          style={{ gridArea: isLarge ? "2 / 1 / 3 / 4" : "3 / 1 / 4 / 2" }}
+        />
 
-          {trackError ? (
-            <p style={{ margin: 0, color: "#FFD3D3", gridArea: "3 / 1 / 4 / 4", alignSelf: "end" }}>
-              {trackError}
-            </p>
-          ) : null}
+        {startError ? (
+          <p
+            style={{
+              margin: 0,
+              color: "#FFD3D3",
+              gridArea: "3 / 1 / 4 / 4",
+              alignSelf: "end",
+              justifySelf: "center",
+              fontFamily: "var(--font-jura)",
+            }}
+          >
+            {startError}
+          </p>
+        ) : null}
+      </div>
 
-          {startError ? (
-            <p
-              style={{
-                margin: 0,
-                color: "#FFD3D3",
-                gridArea: "3 / 1 / 4 / 4",
-                alignSelf: "end",
-                justifySelf: "center",
-                fontFamily: "var(--font-jura)",
-              }}
-            >
-              {startError}
-            </p>
-          ) : null}
+      {isTechnicalPopupOpen ? (
+        <CustomizeInterviewPopup
+          onClose={() => {
+            if (isStartingInterview) {
+              return;
+            }
 
-          {isTechnicalPopupOpen ? (
-            <CustomizeInterviewPopup
-              onClose={() => {
-                if (isStartingInterview) {
-                  return;
-                }
-
-                setIsTechnicalPopupOpen(false);
-              }}
-              onStart={(technicalType) => {
-                void handleStartTechnical(technicalType);
-              }}
-              options={technicalTypes}
-              isSubmitting={isStartingInterview}
-              isLoadingOptions={isLoadingTechnicalTypes}
-              errorMessage={technicalPopupError}
-              initialValue={selectedTechnicalType}
-            />
-          ) : null}
-        </div>
-      )}
+            setIsTechnicalPopupOpen(false);
+          }}
+          onStart={(technicalType) => {
+            void handleStartTechnical(technicalType);
+          }}
+          options={technicalTypes}
+          isSubmitting={isStartingInterview}
+          isLoadingOptions={isLoadingTechnicalTypes}
+          errorMessage={technicalPopupError}
+          initialValue={selectedTechnicalType}
+        />
+      ) : null}
+    </>
+    )}
     />
   );
 }

@@ -15,6 +15,8 @@ import {
   readSelectedJourneyTrackId,
   syncSelectedJourneyTrackProgress,
 } from "@/lib/journey";
+import JourneyTreeVertical from "@/components/ui/journey-tree-vertical";
+import { useResponsive } from "@/hooks/useResponsive";
 
 export default function JourneyPage() {
   const router = useRouter();
@@ -104,9 +106,13 @@ export default function JourneyPage() {
     };
   }, [isAuthLoading, router, userId]);
 
+  const { isLarge, isMedium, isSmall } = useResponsive();
+    const Orientation = isLarge ? JourneyTree : JourneyTreeVertical;
   if (isLoading) {
+
+
     return (
-      <JourneyTree
+      <Orientation
         current={1}
         maxReached={1}
         renderContent={() => (
@@ -129,7 +135,7 @@ export default function JourneyPage() {
   }
 
   return (
-    <JourneyTree
+    <Orientation
       current={1}
       maxReached={1}
       resolvePhasePath={(phase) => buildJourneyPhaseHref(phase)}
