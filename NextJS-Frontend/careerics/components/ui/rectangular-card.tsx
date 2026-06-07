@@ -25,7 +25,7 @@ export const RectangularCard = ({
   subtext?: string;
   isSubtextVisible?: boolean;
   variant?: Variant;
-  theme?: Theme;
+  theme?: "light" | "dark" | "grey";
   selectable?: boolean;
   selected?: boolean;
   onSelect?: () => void;
@@ -41,7 +41,7 @@ export const RectangularCard = ({
   const isTouchDevice = true
 
   const baseBg =
-    theme === "dark" ? "var(--medium-blue)" : "#C1CBE6";
+    theme === "dark" ? "var(--medium-blue)" : theme === "grey" ? "var(--form-grey)" : "var(--light-blue)";
 
   const hoverBg = "var(--light-green)";
 
@@ -50,7 +50,7 @@ export const RectangularCard = ({
   const backgroundColor = active ? hoverBg : baseBg;
 
   const textColor =
-    theme === "dark" && !active ? "white" : "black";
+    theme === "dark" && !active || theme === "grey" ? "white" : "black";
 
   const handlePressStart = () => {
     if (!isTouchDevice) return;
@@ -154,7 +154,7 @@ export const RectangularCard = ({
             whiteSpace: shouldClipTitle ? "nowrap" : "normal",
             textAlign: "center",
             marginRight: "auto",
-            fontWeight: "800",
+            fontWeight: font === "jura" ? "800" : "400",
             fontFamily:
               font === "jura"
                 ? "var(--font-jura)"
