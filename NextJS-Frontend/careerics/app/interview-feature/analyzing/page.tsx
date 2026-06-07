@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import InterviewLayout from "@/components/ui/interview";
 import { interviewService } from "@/services/interview.service";
-import { buildInterviewAudioCandidates, normalizeInterviewAudioUrl } from "@/lib/interview-media";
+import { normalizeInterviewAudioUrl } from "@/lib/interview-media";
 import type { APIFollowup } from "@/types";
 import { useInterviewFlow } from "@/hooks";
 
@@ -35,6 +35,7 @@ function resetAnalysisUiState(
 
 export default function AnalyzingPage() {
   const router = useRouter();
+
   const {
     interviewType,
     sessionId,
@@ -50,16 +51,6 @@ export default function AnalyzingPage() {
   const [isEvaluating, setIsEvaluating] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [followup, setFollowup] = useState<APIFollowup | null>(null);
-  const [isReplayingFollowup, setIsReplayingFollowup] = useState(false);
-  const [isFollowupAutoplayBlocked, setIsFollowupAutoplayBlocked] = useState(false);
-
-  const followupAudioElementRef = useRef<HTMLAudioElement | null>(null);
-  const followupCandidateIndexRef = useRef(0);
-
-  const followupAudioCandidates = useMemo(
-    () => buildInterviewAudioCandidates(followup?.audio || "", "followups"),
-    [followup?.audio],
-  );
 
   const missingContext = !sessionId || !questionId;
   const isActionReady = missingContext || isFinished;
@@ -75,142 +66,6 @@ export default function AnalyzingPage() {
 
   const safeCurrentQ = Math.min(Math.max(currentQ, 1), Math.max(layoutQuestions.length, 1));
 
-  const playFollowupAudio = useCallback(
-    async (startIndex = 0): Promise<boolean> => {
-      const player = followupAudioElementRef.current;
-      if (!player || !followupAudioCandidates.length) {
-        return false;
-      }
-
-      const safeStartIndex = Math.max(0, Math.min(startIndex, followupAudioCandidates.length - 1));
-
-      for (let index = safeStartIndex; index < followupAudioCandidates.length; index += 1) {
-        const candidate = followupAudioCandidates[index];
-        followupCandidateIndexRef.current = index;
-
-        if (player.src !== candidate) {
-          player.src = candidate;
-          player.load();
-        }
-
-        player.currentTime = 0;
-        player.muted = false;
-        player.volume = 1;
-
-        try {
-          await player.play();
-          setIsFollowupAutoplayBlocked(false);
-          return true;
-        } catch (error) {
-          const blocked = error instanceof DOMException && error.name === "NotAllowedError";
-          if (blocked) {
-            setIsFollowupAutoplayBlocked(true);
-            return false;
-          }
-        }
-      }
-
-      return false;
-    },
-    [followupAudioCandidates],
-  );
-
-  const speakFollowupFallback = useCallback((): boolean => {
-    if (
-      typeof window === "undefined" ||
-      !("speechSynthesis" in window) ||
-      !followup?.text?.trim()
-    ) {
-      return false;
-    }
-
-    try {
-      const utterance = new SpeechSynthesisUtterance(followup.text.trim());
-      utterance.lang = "en-US";
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(utterance);
-      return true;
-    } catch {
-      return false;
-    }
-  }, [followup?.text]);
-
-  useEffect(() => {
-    if (!isFinished || !followup) {
-      return;
-    }
-
-    followupCandidateIndexRef.current = 0;
-
-    if (!followupAudioCandidates.length) {
-      setIsFollowupAutoplayBlocked(false);
-      speakFollowupFallback();
-      return;
-    }
-
-    void playFollowupAudio(0);
-  }, [followup, followupAudioCandidates, isFinished, playFollowupAudio, speakFollowupFallback]);
-
-  useEffect(() => {
-    if (!isFollowupAutoplayBlocked || typeof window === "undefined") {
-      return;
-    }
-
-    let disposed = false;
-
-    const retryPlayback = () => {
-      if (disposed) {
-        return;
-      }
-
-      void playFollowupAudio(followupCandidateIndexRef.current);
-    };
-
-    window.addEventListener("pointerdown", retryPlayback, { once: true });
-    window.addEventListener("keydown", retryPlayback, { once: true });
-
-    return () => {
-      disposed = true;
-      window.removeEventListener("pointerdown", retryPlayback);
-      window.removeEventListener("keydown", retryPlayback);
-    };
-  }, [isFollowupAutoplayBlocked, playFollowupAudio]);
-
-  useEffect(() => {
-    return () => {
-      if (typeof window !== "undefined" && "speechSynthesis" in window) {
-        window.speechSynthesis.cancel();
-      }
-    };
-  }, []);
-
-  const handleFollowupAudioError = () => {
-    const nextIndex = followupCandidateIndexRef.current + 1;
-    if (nextIndex < followupAudioCandidates.length) {
-      void playFollowupAudio(nextIndex);
-      return;
-    }
-
-    speakFollowupFallback();
-  };
-
-  const handleReplayFollowupAudio = async () => {
-    if (!followup || isReplayingFollowup) {
-      return;
-    }
-
-    setIsReplayingFollowup(true);
-
-    try {
-      const started = await playFollowupAudio(followupCandidateIndexRef.current);
-      if (!started) {
-        speakFollowupFallback();
-      }
-    } finally {
-      setIsReplayingFollowup(false);
-    }
-  };
-
   useEffect(() => {
     if (missingContext) {
       return;
@@ -224,6 +79,7 @@ export default function AnalyzingPage() {
     const evaluate = async () => {
       try {
         const response = await interviewService.evaluateAnswer(sessionId, questionId);
+
         if (!alive) {
           return;
         }
@@ -257,6 +113,7 @@ export default function AnalyzingPage() {
             questionId,
             sessionId,
           );
+
           if (!alive) {
             return;
           }
@@ -273,6 +130,7 @@ export default function AnalyzingPage() {
         }
 
         const followupResponse = await interviewService.getFollowupByAnswerId(resolvedAnswerId);
+
         if (!alive) {
           return;
         }
@@ -280,7 +138,7 @@ export default function AnalyzingPage() {
         if (!followupResponse.success || !followupResponse.data) {
           setErrorMessage(
             followupResponse.message ||
-              "Could not load follow-up question audio. You can continue with text only.",
+              "Could not load the follow-up question. You can continue to the next question.",
           );
           return;
         }
@@ -315,6 +173,7 @@ export default function AnalyzingPage() {
   const goToNextMainStep = () => {
     if (currentQ < questions.length) {
       const nextQuestion = questions[currentQ];
+
       router.push(
         buildRecordingUrl({
           type: interviewType,
@@ -326,6 +185,7 @@ export default function AnalyzingPage() {
           followupMode: false,
         }),
       );
+
       return;
     }
 
@@ -334,35 +194,45 @@ export default function AnalyzingPage() {
       sessionId,
       q: String(currentQ),
     });
+
     router.push(`/interview-feature/last-analysis?${nextParams.toString()}`);
   };
 
-  const handleNext = (options?: { skipFollowup?: boolean }) => {
+  const handleAnswerFollowup = () => {
     if (missingContext) {
       router.push("/features/interview");
       return;
     }
 
-    if (followup && !options?.skipFollowup) {
-      router.push(
-        buildRecordingUrl({
-          type: interviewType,
-          sessionId,
-          q: String(currentQ),
-          followup: followup.text,
-          followupAudio: followup.audio || null,
-          questionId: null,
-          followupMode: true,
-        }),
-      );
+    if (!followup) {
+      goToNextMainStep();
+      return;
+    }
+
+    router.push(
+      buildRecordingUrl({
+        type: interviewType,
+        sessionId,
+        q: String(currentQ),
+        followup: followup.text,
+        followupAudio: followup.audio || null,
+        questionId: null,
+        followupMode: true,
+      }),
+    );
+  };
+
+  const handleSkipFollowup = () => {
+    goToNextMainStep();
+  };
+
+  const handlePrimaryAction = () => {
+    if (missingContext) {
+      router.push("/features/interview");
       return;
     }
 
     goToNextMainStep();
-  };
-
-  const handleSkipFollowup = () => {
-    handleNext({ skipFollowup: true });
   };
 
   return (
@@ -371,49 +241,12 @@ export default function AnalyzingPage() {
       questions={layoutQuestions}
       currentActiveId={safeCurrentQ}
       unlockedStepId={safeCurrentQ}
-      onQuestionClick={(id: number) => {
-        const target = questions.find((q) => q.id === id);
-        router.push(
-          buildRecordingUrl({
-            type: interviewType,
-            sessionId,
-            q: String(id),
-            questionId: target?.questionId || null,
-            followup: null,
-            followupAudio: null,
-            followupMode: false,
-          }),
-        );
-      }}
+      onQuestionClick={() => {}}
+      singleLineItems
+      disableNavigation
     >
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          textAlign: "center",
-          width: "100%",
-          paddingBottom: "40px",
-        }}
-      >
-        <audio
-          ref={followupAudioElementRef}
-          preload="auto"
-          onError={handleFollowupAudioError}
-          style={{ display: "none" }}
-        />
-
-        <h2
-          style={{
-            color: "white",
-            fontSize: "24px",
-            fontFamily: "var(--font-nova-square)",
-            fontWeight: 400,
-            lineHeight: "1.6",
-            marginBottom: "24px",
-          }}
-        >
+      <div className="analysis-page">
+        <h2 className="analysis-title">
           {missingContext ? (
             <>Missing session or question context. Please restart interview flow.</>
           ) : errorMessage ? (
@@ -426,9 +259,9 @@ export default function AnalyzingPage() {
             </>
           ) : isFinished && followup ? (
             <>
-              Optional follow-up question:
+              Optional follow-up question available.
               <br />
-              {followup.text}
+              Do you want to answer it?
             </>
           ) : isFinished ? (
             <>
@@ -445,84 +278,141 @@ export default function AnalyzingPage() {
           )}
         </h2>
 
-        <div style={{ marginBottom: "60px" }}>
+        <div className="analysis-image-wrap">
           <img
             src="/interview/analyzing.svg"
             alt="AI Analysis"
+            className="analysis-image"
             style={{
-              width: "300px",
-              height: "auto",
               filter: isFinished
                 ? "drop-shadow(0 0 20px rgba(212, 255, 71, 0.4))"
                 : "drop-shadow(0 0 20px rgba(168, 85, 247, 0.3))",
-              transition: "filter 0.5s ease",
             }}
           />
         </div>
 
-        <div style={{ display: "flex", gap: "12px", alignItems: "center", justifyContent: "center" }}>
-          <button
-            onClick={() => handleNext()}
-            disabled={!isActionReady}
-            style={{
-              backgroundColor: isActionReady ? "#d4ff47" : "var(--bg-grey)",
-              color: "#1a1a1a",
-              padding: "12px 60px",
-              borderRadius: "14px",
-              border: "none",
-              fontSize: "18px",
-              fontFamily: "var(--font-nova-square)",
-              fontWeight: 600,
-              cursor: isActionReady ? "pointer" : "wait",
-              transition: "all 0.5s ease",
-              opacity: isActionReady ? 1 : 0.8,
-            }}
-          >
-            {missingContext ? "Restart Interview" : followup ? "Answer Follow-up" : "Next Question"}
-          </button>
+        {isFinished && followup ? (
+          <div className="analysis-actions">
+            <button
+              type="button"
+              onClick={handleAnswerFollowup}
+              disabled={!isActionReady}
+              className="analysis-button analysis-button-primary"
+            >
+              Answer Follow-up
+            </button>
 
-          {isFinished && followup ? (
             <button
               type="button"
               onClick={handleSkipFollowup}
-              style={{
-                backgroundColor: "rgba(255, 255, 255, 0.14)",
-                color: "#ffffff",
-                border: "1px solid rgba(255, 255, 255, 0.25)",
-                borderRadius: "14px",
-                padding: "12px 20px",
-                fontSize: "15px",
-                fontFamily: "var(--font-nova-square)",
-                fontWeight: 600,
-                cursor: "pointer",
-              }}
+              disabled={!isActionReady}
+              className="analysis-button analysis-button-secondary"
             >
               Skip Follow-up
             </button>
-          ) : null}
-
-          {isFinished && followup ? (
+          </div>
+        ) : (
+          <div className="analysis-actions">
             <button
               type="button"
-              onClick={() => void handleReplayFollowupAudio()}
-              disabled={isReplayingFollowup}
-              style={{
-                backgroundColor: "#d4ff47",
-                color: "#111827",
-                border: "none",
-                borderRadius: "999px",
-                padding: "10px 16px",
-                fontSize: "13px",
-                fontFamily: "var(--font-nova-square)",
-                fontWeight: 700,
-                cursor: isReplayingFollowup ? "not-allowed" : "pointer",
-                opacity: isReplayingFollowup ? 0.65 : 1,
-              }}
+              onClick={handlePrimaryAction}
+              disabled={!isActionReady}
+              className="analysis-button analysis-button-primary"
             >
-              {isReplayingFollowup ? "Replaying..." : "Replay"}
+              {missingContext ? "Restart Interview" : "Next Question"}
             </button>
-          ) : null}
-        </div>
+          </div>
+        )}
+
+        <style jsx>{`
+          .analysis-page,
+          .analysis-page * {
+            box-sizing: border-box;
+            font-family: var(--font-nova-square), sans-serif;
+            font-weight: 400 !important;
+          }
+
+          .analysis-page {
+            width: 100%;
+            min-height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding-bottom: 40px;
+          }
+
+          .analysis-title {
+            margin: 0 0 24px;
+            color: white;
+            font-size: 24px;
+            line-height: 1.6;
+            text-align: center;
+          }
+
+          .analysis-image-wrap {
+            margin-bottom: 60px;
+          }
+
+          .analysis-image {
+            width: 300px;
+            height: auto;
+            transition: filter 0.5s ease;
+          }
+
+          .analysis-actions {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+          }
+
+          .analysis-button {
+            border-radius: 14px;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            transition:
+              background-color 0.25s ease,
+              opacity 0.25s ease,
+              transform 0.25s ease;
+          }
+
+          .analysis-button:disabled {
+            cursor: wait;
+            opacity: 0.75;
+          }
+
+          .analysis-button:not(:disabled):hover {
+            transform: translateY(-1px);
+          }
+
+          .analysis-button-primary {
+            min-width: 230px;
+            padding: 12px 48px;
+            background-color: #d4ff47;
+            color: #1a1a1a;
+          }
+
+          .analysis-button-primary:not(:disabled):hover {
+            background-color: var(--primary-green);
+          }
+
+          .analysis-button-secondary {
+            min-width: 170px;
+            padding: 12px 24px;
+            background-color: rgba(255, 255, 255, 0.14);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            font-size: 15px;
+          }
+
+          .analysis-button-secondary:not(:disabled):hover {
+            background-color: rgba(255, 255, 255, 0.22);
+          }
+        `}</style>
       </div>
     </InterviewLayout>
   );
