@@ -45,6 +45,7 @@ type CachedApiRequest<T> = {
 
 const DEFAULT_PATH_OPTION = "__default_path__";
 const ROADMAP_DETAILS_CACHE_TTL_MS = 60_000;
+const HIDDEN_ROADMAP_DROPDOWN_TITLES = new Set(["Computer Science"]);
 
 export default function RoadmapPage() {
   const router = useRouter();
@@ -117,6 +118,11 @@ export default function RoadmapPage() {
   const options = useMemo(
     () => roadmaps.map((roadmap) => ({ id: roadmap.id, title: roadmap.title })),
     [roadmaps],
+  );
+
+  const dropdownOptions = useMemo(
+    () => options.filter((option) => !HIDDEN_ROADMAP_DROPDOWN_TITLES.has(option.title)),
+    [options],
   );
 
   const roadmapTitleById = useMemo(() => {
@@ -537,7 +543,7 @@ export default function RoadmapPage() {
         <CustomDropdown
           maxwidth="250px"
           value={selectedRoadmapId}
-          options={options}
+          options={dropdownOptions}
           placeholder="select a path to view roadmap"
           onChange={onRoadmapChange}
         />
