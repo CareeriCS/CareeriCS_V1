@@ -44,6 +44,7 @@ import {
   toProgressBucket,
 } from "@/lib/journey";
 import { useResponsive } from "@/hooks/useResponsive";
+import { isHiddenComputerScienceCourse, isHiddenComputerScienceOption } from "@/lib/hidden-ui-items";
 
 type RecentActivityItem = {
   key: string;
@@ -347,18 +348,20 @@ export default function HomePage() {
             )}&sessionId=${encodeURIComponent(session.id)}&q=1`,
           }));
 
-        const courseActivities = loadCourseProgress(user?.id).completed.map((course) => {
-          const activityDate = course.completedAt ?? course.updatedAt ?? "";
+        const courseActivities = loadCourseProgress(user?.id).completed
+          .filter((course) => !isHiddenComputerScienceCourse(course))
+          .map((course) => {
+            const activityDate = course.completedAt ?? course.updatedAt ?? "";
 
-          return {
-            key: `course:${course.id}`,
-            id: `Course Completed: ${course.title}`,
-            date: formatActivityDate(activityDate, "Completed on"),
-            type: "course" as const,
-            timestamp: toTimestamp(activityDate),
-            href: "/features/courses",
-          };
-        });
+            return {
+              key: `course:${course.id}`,
+              id: `Course Completed: ${course.title}`,
+              date: formatActivityDate(activityDate, "Completed on"),
+              type: "course" as const,
+              timestamp: toTimestamp(activityDate),
+              href: "/features/courses",
+            };
+          });
 
         const jobActivities = (
           jobApplicationsResponse.success
@@ -438,12 +441,15 @@ export default function HomePage() {
         setJourneyTracks(tracks);
         setJourneyProgressSnapshot(snapshot);
         const bookmarkedTracks = tracks.filter((track) => track.source === "bookmark");
+        const visibleBookmarkedTracks = bookmarkedTracks.filter(
+          (track) => !isHiddenComputerScienceOption(track),
+        );
 
         const persistedTrackId = snapshot.selectedTrackId || readSelectedJourneyTrackId(userId);
         const selectedFromStorage = persistedTrackId
-          ? bookmarkedTracks.find((track) => track.id === persistedTrackId) || null
+          ? visibleBookmarkedTracks.find((track) => track.id === persistedTrackId) || null
           : null;
-        const fallbackTrack = selectedFromStorage || bookmarkedTracks[0] || null;
+        const fallbackTrack = selectedFromStorage || visibleBookmarkedTracks[0] || null;
 
         setSelectedTrackId(fallbackTrack?.id || null);
         persistSelectedJourneyTrackId(fallbackTrack?.id || null, userId);
@@ -484,20 +490,38 @@ export default function HomePage() {
     return journeyTracks.filter((track) => track.source === "bookmark");
   }, [journeyTracks]);
 
+  const visibleBookmarkedJourneyTracks = useMemo(
+    () => bookmarkedJourneyTracks.filter((track) => !isHiddenComputerScienceOption(track)),
+    [bookmarkedJourneyTracks],
+  );
+
+  useEffect(() => {
+    if (!selectedTrackId || !bookmarkedJourneyTracks.length) {
+      return;
+    }
+
+    const selectedTrack = bookmarkedJourneyTracks.find((track) => track.id === selectedTrackId);
+    if (!selectedTrack || isHiddenComputerScienceOption(selectedTrack)) {
+      const firstVisible = visibleBookmarkedJourneyTracks[0] || null;
+      setSelectedTrackId(firstVisible?.id || null);
+      persistSelectedJourneyTrackId(firstVisible?.id || null, userId);
+    }
+  }, [bookmarkedJourneyTracks, selectedTrackId, userId, visibleBookmarkedJourneyTracks]);
+
   const activeTrack = useMemo(() => {
-    if (!bookmarkedJourneyTracks.length) {
+    if (!visibleBookmarkedJourneyTracks.length) {
       return null;
     }
 
     if (selectedTrackId) {
-      const matched = bookmarkedJourneyTracks.find((track) => track.id === selectedTrackId);
+      const matched = visibleBookmarkedJourneyTracks.find((track) => track.id === selectedTrackId);
       if (matched) {
         return matched;
       }
     }
 
-    return bookmarkedJourneyTracks[0];
-  }, [bookmarkedJourneyTracks, selectedTrackId]);
+    return visibleBookmarkedJourneyTracks[0];
+  }, [visibleBookmarkedJourneyTracks, selectedTrackId]);
 
   const activePhaseState = activeTrack?.id
     ? getJourneyPhaseStateFromSnapshot(
@@ -540,7 +564,7 @@ export default function HomePage() {
     setSelectedTrackId(trackId);
     persistSelectedJourneyTrackId(trackId, userId);
 
-    const selectedTrack = bookmarkedJourneyTracks.find((track) => track.id === trackId);
+    const selectedTrack = visibleBookmarkedJourneyTracks.find((track) => track.id === trackId);
     if (!selectedTrack) {
       return;
     }
@@ -607,10 +631,10 @@ export default function HomePage() {
 
       invalidateJourneyTrackCardsCache(userId);
 
-      const currentTracks = bookmarkedJourneyTracks;
-      const currentIndex = currentTracks.findIndex((item) => item.id === track.id);
-      const remainingTracks = currentTracks.filter((item) => item.id !== track.id);
-      const fallbackTrack = remainingTracks[currentIndex] || remainingTracks[currentIndex - 1] || remainingTracks[0] || null;
+      const remainingVisibleTracks = visibleBookmarkedJourneyTracks.filter(
+        (item) => item.id !== track.id,
+      );
+      const fallbackTrack = remainingVisibleTracks[0] || null;
 
       setJourneyTracks((previous) => previous.filter((item) => item.id !== track.id));
 
@@ -642,9 +666,9 @@ export default function HomePage() {
 
   const isRemovingAnyTrack = removingTrackIds.size > 0;
   const shouldShowJourneyLoadingCard =
-    isLoadingJourneyTracks && !bookmarkedJourneyTracks.length && !isRemovingAnyTrack;
+    isLoadingJourneyTracks && !visibleBookmarkedJourneyTracks.length && !isRemovingAnyTrack;
   const showJourneyPlaceholder =
-    !isLoadingJourneyTracks && !bookmarkedJourneyTracks.length && !isRemovingAnyTrack;
+    !isLoadingJourneyTracks && !visibleBookmarkedJourneyTracks.length && !isRemovingAnyTrack;
   const showSavedCareerPlaceholder = showJourneyPlaceholder && journeyTracks.length > 0;
   const isLoadingJourneyWidgets = isAuthLoading || isLoadingJourneyTracks;
 
@@ -743,26 +767,26 @@ export default function HomePage() {
           />
         ) : null}
 
-        {bookmarkedJourneyTracks.map((track) => {
-          const isRemovingTrack = removingTrackIds.has(track.id);
+        {visibleBookmarkedJourneyTracks.map((track) => {
+            const isRemovingTrack = removingTrackIds.has(track.id);
 
-          return (
-            <ChoiceCard
-              key={track.id}
-              isSelected={activeTrack?.id === track.id}
-              title={track.title}
-              image="/landing/Rectangle.svg"
-              description={track.description}
-              buttonLabel={isRemovingTrack ? "Removing..." : "Continue"}
-              disabled={isRemovingTrack}
-              onClick={() => handleSelectTrack(track.id)}
-              onAction={() => openTrackJourney(track)}
-              onRemove={() => {
-                void handleRemoveTrack(track);
-              }}
-            />
-          );
-        })}
+            return (
+              <ChoiceCard
+                key={track.id}
+                isSelected={activeTrack?.id === track.id}
+                title={track.title}
+                image="/landing/Rectangle.svg"
+                description={track.description}
+                buttonLabel={isRemovingTrack ? "Removing..." : "Continue"}
+                disabled={isRemovingTrack}
+                onClick={() => handleSelectTrack(track.id)}
+                onAction={() => openTrackJourney(track)}
+                onRemove={() => {
+                  void handleRemoveTrack(track);
+                }}
+              />
+            );
+          })}
 
 {showJourneyPlaceholder ? (
   <ChoiceCard

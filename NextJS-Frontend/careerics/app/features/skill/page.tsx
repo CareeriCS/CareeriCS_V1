@@ -31,6 +31,7 @@ import { InlineContainer } from "@/components/ui/containers/inline";
 import { FlexContainer } from "@/components/ui/containers/flex";
 import { StackContainer } from "@/components/ui/containers/stack";
 import { useResponsive } from "@/hooks/useResponsive";
+import { isHiddenComputerScienceOption } from "@/lib/hidden-ui-items";
 
 type AssessmentTarget = {
   id: string;
@@ -53,8 +54,6 @@ type SessionTitleLookup = {
 };
 
 const LAST_ACTIVE_ROADMAP_STORAGE_KEY = "roadmap:last-active-id";
-const COMPUTER_SCIENCE_TRACK_TITLE = "computer science";
-const GENERAL_SKILLS_TRACK_LABEL = "General Skills";
 const CURRENT_LEARNING_CACHE_TTL_MS = 15_000;
 const ROADMAP_DETAILS_CACHE_TTL_MS = 60_000;
 
@@ -79,10 +78,6 @@ function normalizeRoadmapListPayload(payload: unknown): RoadmapListItem[] {
   }
 
   return [];
-}
-
-function isComputerScienceTrackTitle(title?: string | null): boolean {
-  return normalizeTextForMatch(title || "") === COMPUTER_SCIENCE_TRACK_TITLE;
 }
 
 function normalizeSessionType(sessionType?: string | null): APIAssessmentSessionType {
@@ -423,7 +418,7 @@ export default function SkillAssessment() {
       }
 
       const defaultTrack =
-        tracks.find((track) => isComputerScienceTrackTitle(track.title)) || tracks[0];
+        tracks.find((track) => !isHiddenComputerScienceOption(track)) || null;
       setSelectedTrackId(defaultTrack?.id || "");
       setTrackHelperText("");
 
@@ -766,14 +761,23 @@ export default function SkillAssessment() {
 
   const trackOptions: SkillFilterTrackOption[] = useMemo(
     () =>
-      roadmapTracks.map((track) => ({
-        id: track.id,
-        title: isComputerScienceTrackTitle(track.title)
-          ? GENERAL_SKILLS_TRACK_LABEL
-          : track.title,
-      })),
+      roadmapTracks
+        .filter((track) => !isHiddenComputerScienceOption(track))
+        .map((track) => ({ id: track.id, title: track.title })),
     [roadmapTracks],
   );
+
+  useEffect(() => {
+    if (!selectedTrackId || !roadmapTracks.length) {
+      return;
+    }
+
+    const selectedTrack = roadmapTracks.find((track) => track.id === selectedTrackId);
+    if (selectedTrack && isHiddenComputerScienceOption(selectedTrack)) {
+      const firstVisible = roadmapTracks.find((track) => !isHiddenComputerScienceOption(track));
+      setSelectedTrackId(firstVisible?.id || "");
+    }
+  }, [roadmapTracks, selectedTrackId]);
 
   const sortedSections = useMemo(
     () => selectedRoadmap?.sections.slice().sort((a, b) => a.order - b.order) || [],

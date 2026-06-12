@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import { Button } from "./button";
+import { isHiddenComputerScienceOption } from "@/lib/hidden-ui-items";
 
 type SkillConfirmOption = {
   id: string;
@@ -28,7 +29,8 @@ export default function SkillConfirmPopup({
   selectedSkillId,
   onSkillChange,
 }: SkillConfirmPopupProps) {
-  const hasSkillSelector = Boolean(skillOptions?.length && onSkillChange);
+  const visibleSkillOptions = skillOptions?.filter((opt) => !isHiddenComputerScienceOption(opt));
+  const hasSkillSelector = Boolean(visibleSkillOptions?.length && onSkillChange);
   const [questions, setQuestions] = useState("");
 
   const numericValue = Number(questions);
@@ -145,7 +147,7 @@ export default function SkillConfirmPopup({
           </p>
           {hasSkillSelector ? (
             <select
-              value={selectedSkillId || skillOptions?.[0]?.id || ""}
+              value={selectedSkillId || visibleSkillOptions?.[0]?.id || ""}
               onChange={(event) => onSkillChange?.(event.target.value)}
               style={{
                 paddingInline: "1rem",
@@ -160,7 +162,7 @@ export default function SkillConfirmPopup({
                 cursor: "pointer",
               }}
             >
-              {skillOptions?.map((option) => (
+              {visibleSkillOptions?.map((option) => (
                 <option key={option.id} value={option.id}>
                   {option.label}
                 </option>

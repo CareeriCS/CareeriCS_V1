@@ -37,6 +37,7 @@ import type {
   UserRoadmapBookmark,
 } from "@/types";
 import { useResponsive } from "@/hooks/useResponsive";
+import { isHiddenComputerScienceOption } from "@/lib/hidden-ui-items";
 
 type CachedApiRequest<T> = {
   expiresAt: number;
@@ -45,7 +46,6 @@ type CachedApiRequest<T> = {
 
 const DEFAULT_PATH_OPTION = "__default_path__";
 const ROADMAP_DETAILS_CACHE_TTL_MS = 60_000;
-const HIDDEN_ROADMAP_DROPDOWN_TITLES = new Set(["Computer Science"]);
 
 export default function RoadmapPage() {
   const router = useRouter();
@@ -121,7 +121,7 @@ export default function RoadmapPage() {
   );
 
   const dropdownOptions = useMemo(
-    () => options.filter((option) => !HIDDEN_ROADMAP_DROPDOWN_TITLES.has(option.title)),
+    () => options.filter((option) => !isHiddenComputerScienceOption(option)),
     [options],
   );
 

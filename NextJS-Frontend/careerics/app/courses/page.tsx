@@ -19,6 +19,11 @@ import {
   type CourseProgressState,
 } from "@/lib/course-progress";
 import type { RoadmapCoursesRead } from "@/types";
+import {
+  hasComputerScienceUiText,
+  isHiddenComputerScienceCourse,
+  isHiddenComputerScienceOption,
+} from "@/lib/hidden-ui-items";
 
 function LoadingState({ label }: { label: string }) {
   return (
@@ -163,9 +168,31 @@ export default function CourseLibraryPage() {
     courseStatusById[course.id] = "completed";
   }
 
-  const totalTopics = filteredSections.length;
-  const totalCourses = filteredSections.reduce((acc, section) => acc + section.courses.length, 0);
-  const completedCount = filteredSections.reduce(
+  const visibleSections = useMemo(() => {
+    if (!roadmapCourses) return [];
+
+    const roadmapTitle = roadmapCourses.roadmap_title;
+    if (
+      isHiddenComputerScienceOption({ title: roadmapTitle }) ||
+      hasComputerScienceUiText(roadmapTitle)
+    ) {
+      return [];
+    }
+
+    return filteredSections
+      .map((section) => ({
+        ...section,
+        courses: section.courses.filter(
+          (course) =>
+            !isHiddenComputerScienceCourse(course, { roadmapTitle }),
+        ),
+      }))
+      .filter((section) => section.courses.length > 0);
+  }, [filteredSections, roadmapCourses]);
+
+  const totalTopics = visibleSections.length;
+  const totalCourses = visibleSections.reduce((acc, section) => acc + section.courses.length, 0);
+  const completedCount = visibleSections.reduce(
     (acc, section) =>
       acc + section.courses.filter((course) => courseStatusById[course.id] === "completed").length,
     0,
@@ -324,8 +351,8 @@ export default function CourseLibraryPage() {
       <hr className="mb-[var(--space-lg)] w-full border-0 border-t-2 border-[var(--border-muted)]" />
 
       <div className="flex min-h-0 flex-1 flex-col gap-[var(--space-md)] pb-[var(--space-lg)]">
-        {filteredSections.length ? (
-          filteredSections.map((section) => (
+        {visibleSections.length ? (
+          visibleSections.map((section) => (
             <section
               key={section.section_id}
               className="flex flex-col gap-[var(--space-md)]"
