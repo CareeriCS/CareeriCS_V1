@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import InterviewLayout from "@/components/ui/interview";
 import InterviewContainer from "@/components/ui/interview-card";
+import Animation from "@/components/ui/animation";
 import { useGoogleDriveUpload, useInterviewFlow } from "@/hooks";
 import {
   closeGoogleDriveWindow,
@@ -12,6 +13,8 @@ import {
 } from "@/lib/google-drive-popup";
 import { interviewService } from "@/services/interview.service";
 import { reportsService } from "@/services/reports.service";
+import { useResponsive } from "@/hooks/useResponsive";
+import { Button } from "@/components/ui/button";
 
 export default function LastAnalysisPage() {
   const router = useRouter();
@@ -22,6 +25,7 @@ export default function LastAnalysisPage() {
     questionsError,
   } = useInterviewFlow();
 
+  const { isLarge, isMedium, isSmall } = useResponsive();
   const [isPreparing, setIsPreparing] = useState(true);
   const [reportError, setReportError] = useState("");
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
@@ -181,41 +185,22 @@ export default function LastAnalysisPage() {
         questions={layoutQuestions}
         currentActiveId={lastStep}
         unlockedStepId={lastStep}
-        onQuestionClick={() => {}}
+        onQuestionClick={() => { }}
       >
         <div
           style={{
-            textAlign: "center",
             display: "flex",
-            flexDirection: "column",
             alignItems: "center",
-            justifyContent: "flex-start",
-            paddingTop: "10vh",
+            justifyContent: "center",
             height: "100%",
+            width: "100%",
           }}
         >
-          <h2
-            style={{
-              color: "white",
-              fontSize: "24px",
-              fontFamily: "var(--font-nova-square)",
-              marginBottom: "100px",
-              maxWidth: "600px",
-            }}
-          >
-            Our model is preparing your final analysis report,
-            <br />
-            give us a moment.
-          </h2>
-
-          <img
-            src="/interview/analyzing.svg"
-            alt="Preparing analysis"
-            style={{
-              width: "300px",
-              filter: "drop-shadow(0 0 20px rgba(168, 85, 247, 0.4))",
-            }}
-          />
+          <div style={{ maxWidth: "var(--container-sm)", }}>
+            <Animation
+              message={`Our model is preparing your final analysis report,\ngive us a moment.`}
+            />
+          </div>
         </div>
       </InterviewLayout>
     );
@@ -227,31 +212,31 @@ export default function LastAnalysisPage() {
       questions={layoutQuestions}
       currentActiveId={lastStep}
       unlockedStepId={lastStep}
-      onQuestionClick={() => {}}
+      onQuestionClick={() => { }}
     >
       <div
         style={{
-          width: "100%",
+          width: isLarge ? "55vw" : "85vw",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          padding: "0 40px",
+          position: "relative",
+          gap: "var(--space-lg)",
+          justifyContent: "space-evenly",
+          height: "100%"
         }}
       >
         <div
           style={{
             textAlign: "left",
             width: "100%",
-            maxWidth: "850px",
-            marginBottom: "30px",
           }}
         >
           <h2
             style={{
               color: "white",
-              fontSize: "24px",
+              fontSize: "var(--text-lg)",
               fontFamily: "var(--font-nova-square)",
-              margin: "0 0 10px 0",
             }}
           >
             Ready to see your interview highlights?
@@ -259,7 +244,7 @@ export default function LastAnalysisPage() {
           <p
             style={{
               color: "white",
-              fontSize: "18px",
+              fontSize: "var(--text-base)",
               fontFamily: "var(--font-nova-square)",
               opacity: 0.9,
               margin: 0,
@@ -296,39 +281,48 @@ export default function LastAnalysisPage() {
         <InterviewContainer
           questionTitle=""
           videoBoxStyle={{
-            background: "rgba(186.35, 186.35, 186.35, 0.50)",
-            width: "76%",
-            height: "390px",
-            boxShadow: "0 20px 50px rgba(0,0,0,0.3)",
+            background: "var(--medium-grey)",
+            height: "fit-content",
+            width: "100%",
+
           }}
           videoContent={
             <div
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: "60px",
-                padding: "20px",
+                gap: "var(--space-2xl)",
+                padding: "var(--space-lg)",
+                width: "fit-content",
+                height: "fit-content",
                 backgroundColor: "transparent",
+                flexDirection: isLarge ? "row" : "column",
+                aspectRatio: !isLarge ? "none" : "16 / 9",
               }}
             >
               <div
                 style={{
-                  width: "180px",
-                  height: "240px",
                   backgroundColor: "white",
                   borderRadius: "25px",
                   boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
                   overflow: "hidden",
+                  maxHeight: "200px",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
+                  aspectRatio: !isLarge ? "none" : "10 / 12",
                 }}
               >
                 {downloadUrl ? (
                   <iframe
                     src={`${downloadUrl}#view=FitH&zoom=page-fit&pagemode=none&toolbar=0`}
                     title="Interview analysis preview"
-                    style={{ width: "100%", height: "100%", border: "none" }}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      border: "none",
+                    }}
+
                   />
                 ) : (
                   <span
@@ -347,30 +341,23 @@ export default function LastAnalysisPage() {
               <div
                 style={{
                   display: "flex",
-                  flexDirection: "column",
+                  flexDirection: isLarge ? "column" : "row",
                   alignItems: "center",
-                  gap: "15px",
+                  gap: "var(--space-lg)",
+                  maxWidth: "100%"
                 }}
               >
-                <button
+                <Button
                   onClick={onDownloadReport}
                   style={{
-                    backgroundColor: "#d4ff47",
-                    color: "#1a1a1a",
-                    border: "none",
-                    padding: "14px 40px",
-                    borderRadius: "12px",
-                    fontWeight: "bold",
-                    width: "260px",
                     cursor: downloadUrl ? "pointer" : "default",
-                    fontFamily: "var(--font-nova-square)",
-                    fontSize: "16px",
                     opacity: downloadUrl ? 1 : 0.55,
+                    width: isLarge ? "100%" : "",
                   }}
                   disabled={!downloadUrl}
                 >
                   Download
-                </button>
+                </Button>
 
                 <span
                   style={{
@@ -383,25 +370,15 @@ export default function LastAnalysisPage() {
                   or
                 </span>
 
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={() => void handleSaveToGoogleDrive()}
                   disabled={isSavingToDrive || !downloadBlob}
                   style={{
-                    backgroundColor: "white",
-                    color: "#1a1a1a",
-                    border: "none",
-                    padding: "12px 20px",
-                    borderRadius: "10px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "12px",
-                    width: "260px",
-                    justifyContent: "center",
                     cursor: isSavingToDrive || !downloadBlob ? "default" : "pointer",
-                    fontSize: "14px",
-                    fontWeight: 600,
                     opacity: isSavingToDrive || !downloadBlob ? 0.7 : 1,
+                    width: isLarge ? "100%" : "",
                   }}
                 >
                   <img src="/global/drive.svg" style={{ width: "20px" }} alt="Drive" />
@@ -410,7 +387,7 @@ export default function LastAnalysisPage() {
                     : uploadedDriveFile
                       ? "Saved to Google Drive"
                       : "Save to Google Drive"}
-                </button>
+                </Button>
                 {driveUploadError ? (
                   <p
                     style={{
@@ -446,38 +423,18 @@ export default function LastAnalysisPage() {
         />
 
         <div style={{ display: "flex", gap: "40px", marginTop: "60px" }}>
-          <button
+          <Button
+            variant="primary-inverted"
             onClick={() => router.push("/features/interview")}
-            style={{
-              backgroundColor: "#d4ff47",
-              color: "black",
-              padding: "14px 60px",
-              borderRadius: "15px",
-              border: "none",
-              fontWeight: 700,
-              fontSize: "16px",
-              cursor: "pointer",
-              fontFamily: "var(--font-nova-square)",
-            }}
           >
             Practice more
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="secondary-inverted"
             onClick={() => router.push("/features/home")}
-            style={{
-              backgroundColor: "#CBD5E1",
-              color: "black",
-              padding: "14px 60px",
-              borderRadius: "15px",
-              border: "none",
-              fontWeight: 700,
-              fontSize: "16px",
-              cursor: "pointer",
-              fontFamily: "var(--font-nova-square)",
-            }}
           >
             Go back to home
-          </button>
+          </Button>
         </div>
       </div>
     </InterviewLayout>

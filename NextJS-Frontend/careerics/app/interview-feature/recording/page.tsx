@@ -10,6 +10,8 @@ import {
   buildInterviewAudioCandidates,
   type InterviewAudioKind,
 } from "@/lib/interview-media";
+import { Button } from "@/components/ui/button";
+import { useResponsive } from "@/hooks/useResponsive";
 
 export default function RecordingPage() {
   const router = useRouter();
@@ -77,16 +79,16 @@ export default function RecordingPage() {
     !user?.id
       ? "Please sign in first so an interview session can be created."
       : !sessionId
-      ? actionError || "Start your interview from the interview home first."
-      : isQuestionsLoading
-      ? "Questions are still loading."
-      : isSubmitting
-      ? "Submission is already in progress."
-      : !questions.length
-      ? "No questions are available for this interview type."
-      : !currentQuestion?.questionId
-      ? "Current question is not ready yet."
-      : "";
+        ? actionError || "Start your interview from the interview home first."
+        : isQuestionsLoading
+          ? "Questions are still loading."
+          : isSubmitting
+            ? "Submission is already in progress."
+            : !questions.length
+              ? "No questions are available for this interview type."
+              : !currentQuestion?.questionId
+                ? "Current question is not ready yet."
+                : "";
 
   const isSubmitDisabled = Boolean(submitBlockedReason);
 
@@ -440,49 +442,32 @@ export default function RecordingPage() {
 
   // 5. UI Controls
   const isPeeking = activeId !== unlockedId;
+  const { isLarge, isMedium, isSmall } = useResponsive();
 
   const controls = (
-    <div style={{ 
-      display: "flex", 
-      alignItems: "center", 
-      gap: "80px",
+    <div style={{
+      display: "flex",
+      alignItems: "center",
+      gap: "var(--space-2xl)",
       opacity: isPeeking ? 0.3 : 1, // Dim controls if looking at a future question
-      pointerEvents: isPeeking ? "none" : "auto" 
+      pointerEvents: isPeeking ? "none" : "auto"
     }}>
       <img
         src={status === "idle" ? "/interview/record.svg" : status === "recording" ? "/interview/Pause.svg" : "/interview/Play.svg"}
         alt="Control"
-        style={{ width: "60px", cursor: isQuestionsLoading ? "not-allowed" : "pointer", opacity: isQuestionsLoading ? 0.5 : 1 }}
+        style={{ height: "var(--icon-2xl)", cursor: isQuestionsLoading ? "not-allowed" : "pointer", opacity: isQuestionsLoading ? 0.5 : 1 }}
         onClick={handleCameraToggle}
       />
-      <span style={{ fontSize: "40px", color: "white", fontFamily: "var(--font-nova-square)", minWidth: "120px", textAlign: "center" }}>
+      <span style={{ fontSize: "var(--text-lg)", color: "white", fontFamily: "var(--font-nova-square)", minWidth: "120px", textAlign: "center" }}>
         {formatTime(seconds)}
       </span>
-      <img 
-        src="/interview/retake.svg" 
-        alt="Reset" 
-        style={{ width: "45px", cursor: "pointer" }} 
-        onClick={handleReset} 
+      <img
+        src="/interview/retake.svg"
+        alt="Reset"
+        style={{ height: "var(--icon-2xl)", cursor: "pointer" }}
+        onClick={handleReset}
       />
-      <button
-        type="button"
-        onClick={() => void handleReplayQuestionAudio()}
-        disabled={!canReplayQuestionAudio || isReplayingQuestion}
-        style={{
-          backgroundColor: "#d4ff47",
-          color: "#111827",
-          border: "none",
-          borderRadius: "999px",
-          padding: "10px 16px",
-          fontSize: "13px",
-          fontFamily: "var(--font-nova-square)",
-          fontWeight: 700,
-          cursor: !canReplayQuestionAudio || isReplayingQuestion ? "not-allowed" : "pointer",
-          opacity: !canReplayQuestionAudio || isReplayingQuestion ? 0.65 : 1,
-        }}
-      >
-        {isReplayingQuestion ? "Replaying..." : "Replay"}
-      </button>
+
     </div>
   );
 
@@ -494,13 +479,68 @@ export default function RecordingPage() {
       unlockedStepId={unlockedId}
       onQuestionClick={onQuestionClick}
     >
-      <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }}>
+      <div
+        style={{
+          width: isLarge ? "55vw" : "85vw",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          position: "relative",
+          gap:"var(--space-lg)",
+          justifyContent:"space-evenly",
+          height:"100%"
+        }}
+      >
         <audio
           ref={promptAudioElementRef}
           preload="auto"
           onError={handlePromptAudioError}
           style={{ display: "none" }}
-        />
+          />
+        <div
+          style={{
+            display: "flex",
+            width: "100%",
+            justifyContent: "space-between",
+            alignItems:"flex-start",
+            height:"fit-content",
+          gap:"var(--space-lg)",
+          }}
+        >
+
+          <h2
+            style={{
+              margin: 0,
+              textAlign: "center",
+              fontSize: followupText?"var(--text-xs)":"var(--text-lg)",
+              lineHeight: "var(--line-normal)",
+              color: "var(--text-primary)",
+              fontFamily: "var(--font-nova-square), sans-serif",
+            }}
+          >
+            {`${followupText?"": `${unlockedId} .`} ${currentQuestionText}`}
+          </h2>
+          <Button
+            type="button"
+            variant="primary-inverted"
+            onClick={() => void handleReplayQuestionAudio()}
+            disabled={!canReplayQuestionAudio || isReplayingQuestion}
+            style={{
+              border: "none",
+              borderRadius: "999px",
+              height: "fit-content",
+              paddingBlock: "var(--space-xs)",
+              paddingInline: "var(--space-lg)",
+              fontSize: "var(--text-sm)",
+              fontFamily: "var(--font-nova-square)",
+              fontWeight: 700,
+              cursor: !canReplayQuestionAudio || isReplayingQuestion ? "not-allowed" : "pointer",
+              opacity: !canReplayQuestionAudio || isReplayingQuestion ? 0.65 : 1,
+            }}
+          >
+            {isReplayingQuestion ? "Replaying..." : "Replay"}
+          </Button>
+        </div>
 
         <InterviewContainer
           // STICKY TITLE: Always shows the unlocked question
@@ -510,44 +550,45 @@ export default function RecordingPage() {
               {isQuestionsLoading
                 ? "Loading questions..."
                 : questionsError || actionError
-                ? questionsError || actionError
-                : !user?.id
-                ? "Please sign in to start interview session."
-                : !sessionId
-                ? "This interview session is missing. Start from the interview home first."
-                : status === "recording"
-                ? " Recording..."
-                : isFinalizingRecording
-                ? "Finalizing recording..."
-                : status === "stopped"
-                ? "⏸ Paused"
-                : recordedMedia
-                ? "Ready to submit"
-                : ""}
+                  ? questionsError || actionError
+                  : !user?.id
+                    ? "Please sign in to start interview session."
+                    : !sessionId
+                      ? "This interview session is missing. Start from the interview home first."
+                      : status === "recording"
+                        ? " Recording..."
+                        : isFinalizingRecording
+                          ? "Finalizing recording..."
+                          : status === "stopped"
+                            ? "⏸ Paused"
+                            : recordedMedia
+                              ? "Ready to submit"
+                              : ""}
+
 
               <div
-  style={{
-    width: "100%",
-    height: "100%",
-    transform: status === "recording" ? "scaleX(-1)" : "none",
-  }}
->
-  <video
-    ref={previewVideoRef}
-    autoPlay={status === "recording"}
-    muted
-    playsInline
-    controls={status !== "recording"}
-    src={status !== "recording" ? recordedPreviewUrl ?? undefined : undefined}
-    style={{
-      width: "100%",
-      height: "100%",
-      objectFit: "cover",
-      borderRadius: "24px",
-      display: status === "recording" || recordedPreviewUrl ? "block" : "none",
-    }}
-  />
-</div>
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  transform: status === "recording" ? "scaleX(-1)" : "none",
+                }}
+              >
+                <video
+                  ref={previewVideoRef}
+                  autoPlay={status === "recording"}
+                  muted
+                  playsInline
+                  controls={status !== "recording"}
+                  src={status !== "recording" ? recordedPreviewUrl ?? undefined : undefined}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    borderRadius: "24px",
+                    display: status === "recording" || recordedPreviewUrl ? "block" : "none",
+                  }}
+                />
+              </div>
             </div>
           }
           controlsContent={controls}
@@ -558,7 +599,7 @@ export default function RecordingPage() {
                 disabled={false}
                 title={submitBlockedReason || undefined}
                 style={{
-                  background: "#d4ff47",
+                  background: "var(--primary-green)",
                   padding: "15px 100px",
                   borderRadius: "15px",
                   border: "none",
@@ -574,26 +615,18 @@ export default function RecordingPage() {
                 Back To Interview Home
               </button>
             ) : (
-              <button
+              <Button
                 onClick={handleSubmit}
                 disabled={isSubmitDisabled}
                 title={submitBlockedReason || undefined}
                 style={{
-                  background: "#d4ff47",
-                  padding: "15px 100px",
-                  borderRadius: "15px",
-                  border: "none",
-                  fontWeight: "bold",
-                  fontSize: "18px",
-                  fontFamily: "var(--font-nova-square)",
                   cursor: isSubmitDisabled ? "not-allowed" : "pointer",
                   opacity: isSubmitDisabled ? 0.5 : 1,
-                  transition: "0.3s",
-                  color: "#1a1a1a"
+                  paddingInline:"var(--space-2xl)",
                 }}
               >
                 {isSubmitting ? "Submitting..." : isFinalizingRecording ? "Preparing..." : "Submit"}
-              </button>
+              </Button>
             )
           }
         />

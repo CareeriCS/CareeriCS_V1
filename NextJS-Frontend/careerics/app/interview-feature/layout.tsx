@@ -2,6 +2,7 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { isActiveSessionStatus, runCloseStatusUpdate } from "@/lib/session-close";
+import { useResponsive } from "@/hooks/useResponsive";
 import { interviewService } from "@/services";
 
 export default function JourneyLayout({
@@ -13,6 +14,8 @@ export default function JourneyLayout({
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const [isClosing, setIsClosing] = useState(false);
+    const {isLarge, isMedium, isSmall} = useResponsive();
+
 
     const handleClose = async () => {
         if (isClosing) {
@@ -51,7 +54,7 @@ export default function JourneyLayout({
         <div
             style={{
                 width: "100%",
-                height: "100vh",
+                height: "100dvh",
                 padding: "10px",
                 boxSizing: "border-box",
                 overflow: "hidden",
@@ -60,7 +63,7 @@ export default function JourneyLayout({
             <div
                 style={{
                     background: "linear-gradient(180deg, var(--dark-blue) 0%, #000000 100%)",
-                    borderRadius: "5vh",
+                    borderRadius: "var(--radius-lg)",
                     width: "100%",
                     height: "100%",
                     margin: "0 auto",
@@ -75,8 +78,8 @@ export default function JourneyLayout({
                         position: "relative",
                         display: "flex",
                         flex: 1,
-                        overflowX:"hidden",
-                        overflowY:"auto",
+                        overflowX: "hidden",
+                        overflowY: "auto",
                         scrollbarWidth: "none",
                     }}
                 >
@@ -91,12 +94,13 @@ export default function JourneyLayout({
                     disabled={isClosing}
                     aria-label="Close interview"
                     style={{
-                        width: "5vh",
-                        height: "5vh",
-                        cursor: isClosing ? "not-allowed" : "pointer",
-                        margin: "20px",
-                        opacity: isClosing ? 0.6 : 1,
-
+                        position: "absolute",
+                        top: 0,
+                        right: 0,
+                        width: "var(--icon-lg)",
+                        padding: isLarge ? "var(--space-lg)" : "var(--space-xl)",
+                        boxSizing: "content-box",
+                        cursor: "pointer",
                     }}
                 >
                     <img
@@ -106,6 +110,7 @@ export default function JourneyLayout({
                             width: "100%",
                             height: "100%",
                             objectFit: "contain",
+                            filter: isLarge ? "none" : "brightness(0)",
                         }}
                     />
 

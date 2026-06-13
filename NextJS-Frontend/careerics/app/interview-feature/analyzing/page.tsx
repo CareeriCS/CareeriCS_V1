@@ -2,11 +2,13 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Animation from "@/components/ui/animation";
 import InterviewLayout from "@/components/ui/interview";
 import { interviewService } from "@/services/interview.service";
 import { buildInterviewAudioCandidates, normalizeInterviewAudioUrl } from "@/lib/interview-media";
 import type { APIFollowup } from "@/types";
 import { useInterviewFlow } from "@/hooks";
+import { Button } from "@/components/ui/button";
 
 const ANALYSIS_DELAY_MS = 2500;
 
@@ -264,7 +266,7 @@ export default function AnalyzingPage() {
           if (!answerLookupResponse.success || !answerLookupResponse.data?.id) {
             setErrorMessage(
               answerLookupResponse.message ||
-                "Follow-up is required but answer context is missing. Please submit your answer again.",
+              "Follow-up is required but answer context is missing. Please submit your answer again.",
             );
             return;
           }
@@ -280,7 +282,7 @@ export default function AnalyzingPage() {
         if (!followupResponse.success || !followupResponse.data) {
           setErrorMessage(
             followupResponse.message ||
-              "Could not load follow-up question audio. You can continue with text only.",
+            "Could not load follow-up question audio. You can continue with text only.",
           );
           return;
         }
@@ -391,137 +393,58 @@ export default function AnalyzingPage() {
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          justifyContent: "center",
+          justifyContent: "space-evenly",
           textAlign: "center",
           width: "100%",
-          paddingBottom: "40px",
+          height: "100%",
         }}
       >
-        <audio
-          ref={followupAudioElementRef}
-          preload="auto"
-          onError={handleFollowupAudioError}
-          style={{ display: "none" }}
-        />
-
-        <h2
-          style={{
-            color: "white",
-            fontSize: "24px",
-            fontFamily: "var(--font-nova-square)",
-            fontWeight: 400,
-            lineHeight: "1.6",
-            marginBottom: "24px",
-          }}
-        >
-          {missingContext ? (
-            <>Missing session or question context. Please restart interview flow.</>
-          ) : errorMessage ? (
-            <>{errorMessage}</>
-          ) : isEvaluating ? (
-            <>
-              Our Model is analyzing your answers,
-              <br />
-              Give us a moment
-            </>
-          ) : isFinished && followup ? (
-            <>
-              Optional follow-up question:
-              <br />
-              {followup.text}
-            </>
-          ) : isFinished ? (
-            <>
-              Our Model has finished the analysis,
-              <br />
-              Ready for the next question?
-            </>
-          ) : (
-            <>
-              Evaluation is not complete yet.
-              <br />
-              Please try again
-            </>
-          )}
-        </h2>
-
-        <div style={{ marginBottom: "60px" }}>
-          <img
-            src="/interview/analyzing.svg"
-            alt="AI Analysis"
-            style={{
-              width: "300px",
-              height: "auto",
-              filter: isFinished
-                ? "drop-shadow(0 0 20px rgba(212, 255, 71, 0.4))"
-                : "drop-shadow(0 0 20px rgba(168, 85, 247, 0.3))",
-              transition: "filter 0.5s ease",
-            }}
+        <div style={{ maxWidth: "var(--container-sm)" }}>
+          <Animation
+            message={
+              missingContext ? (
+                "Missing session or question context. Please restart interview flow."
+              ) : errorMessage ? (
+                errorMessage
+              ) : isEvaluating ? (
+                "Our Model is analyzing your answers,\nGive us a moment"
+              ) : isFinished && followup ? (
+                "Optional follow-up question"
+              ) : isFinished ? (
+                "Our Model has finished the analysis,\nReady for the next question?"
+              ) : (
+                "Evaluation is not complete yet.\nPlease try again"
+              )
+            }
           />
         </div>
 
-        <div style={{ display: "flex", gap: "12px", alignItems: "center", justifyContent: "center" }}>
-          <button
+        <div style={{ display: "flex", gap: "var(--space-xl)", alignItems: "center", justifyContent: "center" }}>
+          {isFinished && followup ? (
+            <Button
+              type="button"
+              onClick={handleSkipFollowup}
+              variant="outline"
+            >
+              Skip Follow-up
+            </Button>
+          ) : null}
+
+
+          <Button
             onClick={() => handleNext()}
             disabled={!isActionReady}
             style={{
-              backgroundColor: isActionReady ? "#d4ff47" : "var(--bg-grey)",
-              color: "#1a1a1a",
-              padding: "12px 60px",
-              borderRadius: "14px",
-              border: "none",
-              fontSize: "18px",
-              fontFamily: "var(--font-nova-square)",
-              fontWeight: 600,
               cursor: isActionReady ? "pointer" : "wait",
               transition: "all 0.5s ease",
               opacity: isActionReady ? 1 : 0.8,
             }}
           >
             {missingContext ? "Restart Interview" : followup ? "Answer Follow-up" : "Next Question"}
-          </button>
+          </Button>
 
-          {isFinished && followup ? (
-            <button
-              type="button"
-              onClick={handleSkipFollowup}
-              style={{
-                backgroundColor: "rgba(255, 255, 255, 0.14)",
-                color: "#ffffff",
-                border: "1px solid rgba(255, 255, 255, 0.25)",
-                borderRadius: "14px",
-                padding: "12px 20px",
-                fontSize: "15px",
-                fontFamily: "var(--font-nova-square)",
-                fontWeight: 600,
-                cursor: "pointer",
-              }}
-            >
-              Skip Follow-up
-            </button>
-          ) : null}
 
-          {isFinished && followup ? (
-            <button
-              type="button"
-              onClick={() => void handleReplayFollowupAudio()}
-              disabled={isReplayingFollowup}
-              style={{
-                backgroundColor: "#d4ff47",
-                color: "#111827",
-                border: "none",
-                borderRadius: "999px",
-                padding: "10px 16px",
-                fontSize: "13px",
-                fontFamily: "var(--font-nova-square)",
-                fontWeight: 700,
-                cursor: isReplayingFollowup ? "not-allowed" : "pointer",
-                opacity: isReplayingFollowup ? 0.65 : 1,
-              }}
-            >
-              {isReplayingFollowup ? "Replaying..." : "Replay"}
-            </button>
-          ) : null}
+
         </div>
       </div>
     </InterviewLayout>
