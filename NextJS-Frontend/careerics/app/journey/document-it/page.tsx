@@ -239,106 +239,111 @@ export default function JourneyDocumentItPage() {
     ? maxReached + 1
     : maxReached;
 
-    const CardType = isLarge ? ChoiceCard : ChoiceCardHorizontal;
+  const CardType = isLarge ? ChoiceCard : ChoiceCardHorizontal;
+
   return (
     <Orientation
       current={3}
       maxReached={nextPhase}
       resolvePhasePath={(phase) => buildJourneyPhaseHref(phase, selectedTrack?.id)}
       renderContent={() => (
-         <>
-      <div
-        style={{
-          width: "100%",
-          height: "100%",
-          padding: "var(--space-xl)",
-          display: "grid",
-          gridTemplateColumns: isLarge ? "repeat(2, 1fr) 1.2fr" : isMedium ? "1.5fr 1fr" : "1fr",
-          gridTemplateRows: isLarge ? "2fr 1fr" : "repeat(3, 1fr)",
-          gridColumnGap: "var(--space-lg)",
-          gridRowGap: "var(--space-lg)",
-          overflow: "hidden",
-          zIndex: 1,
-        }}
-      >
-        <CardType
-          key={1}
-          title="CV Builder"
-          description="Fill out our builder’s form and we will construct a tailored, professional, ATS-approved resume ready to download."
-          icon="/cv/cv-builder.svg"
-          buttonVariant="primary-inverted"
-          route="/cv-feature/builder"
-          style={{ gridArea: isLarge ? "1 / 1 / 2 / 2" : "1 / 1 / 2 / 2" }}
-        />
-
-        <CardType
-          key={2}
-          title="CV Enhancer"
-          description="Elevate your existing resume with AI-driven insights that refine your language and highlight your achievements."
-          icon="/cv/cv-enhancer.svg"
-          buttonVariant="primary-inverted"
-          route="/cv-feature/enhancer"
-          style={{ gridArea: isLarge ? "1 / 2 / 2 / 3" : "2 / 1 / 3 / 2" }}
-        />
-
-        {!isSmall && (
-          <StackContainer
-            Title="Old Versions"
-            style={{ gridArea: isLarge ? "1 / 3 / 3 / 4" : "1 / 2 / 4 / 3", 
-            backgroundColor: "var(--medium-blue)" 
-          }}
-            centerTitle
+        <>
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              padding: "var(--space-xl)",
+              display: "grid",
+              gridTemplateColumns: isLarge ? "repeat(2, 1fr) 1.2fr" : isMedium ? "1.5fr 1fr" : "1fr",
+              gridTemplateRows: isLarge ? "2fr 1fr" : "repeat(3, 1fr)",
+              gridColumnGap: "var(--space-lg)",
+              gridRowGap: "var(--space-lg)",
+              overflow: "hidden",
+              zIndex: 1,
+            }}
           >
-            {archiveItems.length ? (
-              archiveItems.map((item) => (
-                <ActivityCard
-                  key={item.id}
-                  title={item.label}
-                  date={item.date}
-                  onClick={() => handleDownloadReport(item)}
-                  variant="download"
-                />
-              ))
-            ) : (
-              <div
+            <CardType
+              key={1}
+              title="CV Builder"
+              description="Fill out our builder’s form and we will construct a tailored, professional, ATS-approved resume ready to download."
+              icon="/cv/cv-builder.svg"
+              buttonVariant="primary-inverted"
+              route="/cv-feature/builder"
+              style={{ gridArea: isLarge ? "1 / 1 / 2 / 2" : "1 / 1 / 2 / 2",backgroundColor: "var(--medium-blue)" }}
+            />
+
+            <CardType
+              key={2}
+              title="CV Enhancer"
+              description="Elevate your existing resume with AI-driven insights that refine your language and highlight your achievements."
+              icon="/cv/cv-enhancer.svg"
+              buttonVariant="primary-inverted"
+              route="/cv-feature/enhancer"
+              style={{ gridArea: isLarge ? "1 / 2 / 2 / 3" : "2 / 1 / 3 / 2",backgroundColor: "var(--medium-blue)" }}
+            />
+
+            {!isSmall && (
+              <StackContainer
+                Title="Old Versions"
                 style={{
-                  color: reportsError ? "#FFD3D3" : "#D7E3FF",
-                  fontFamily: "var(--font-jura)",
-                  textAlign: "center",
-                  paddingInline: "20px",
+                  gridArea: isLarge ? "1 / 3 / 3 / 4" : "1 / 2 / 4 / 3",
+                  backgroundColor: "var(--bg-grey)",
+                  color:"black",
                 }}
+                centerTitle
               >
-                {isLoadingReports
-                  ? "Loading your CV history..."
-                  : reportsError || "No saved CV versions yet."}
-              </div>
+                {archiveItems.length ? (
+                  archiveItems.map((item) => (
+                    <ActivityCard
+                      key={item.id}
+                      title={item.label}
+                      date={item.date}
+                      onClick={() => handleDownloadReport(item)}
+                      variant="download"
+                      theme="dark"
+                    />
+                  ))
+                ) : (
+                  <div
+                    style={{
+                      color: reportsError ? "#FFD3D3" : "#D7E3FF",
+                      fontFamily: "var(--font-jura)",
+                      textAlign: "center",
+                      paddingInline: "20px",
+                    }}
+                  >
+                    {isLoadingReports
+                      ? "Loading your CV history..."
+                      : reportsError || "No saved CV versions yet."}
+                  </div>
+                )}
+              </StackContainer>
             )}
-          </StackContainer>
-        )}
 
-        <ChoiceCardHorizontal
-          icon="/cv/cv-extractor.svg"
-          title="CV Extractor"
-          description="Update your data on our system to automate job application later on"
-          buttonText="Upload CV"
-          buttonLoadingText="Uploading..."
-          isLoading={isExtracting}
-          onButtonClick={() => setIsPopOpen(true)}
-          style={{
-            gridArea: isLarge ? "2 / 1 / 3 / 3" :  "3 / 1 / 4 / 2",
-          }}
-        />
+            <ChoiceCardHorizontal
+              icon="/cv/cv-extractor.svg"
+              title="CV Extractor"
+              description="Update your data on our system to automate job application later on"
+              buttonText="Upload CV"
+              buttonLoadingText="Uploading..."
+              isLoading={isExtracting}
+              onButtonClick={() => setIsPopOpen(true)}
+              style={{
+                gridArea: isLarge ? "2 / 1 / 3 / 3" : "3 / 1 / 4 / 2",
+                backgroundColor: "var(--medium-blue)"
+              }}
+            />
 
-      </div>
+          </div>
 
-      {isPopOpen ? (
-        <CVPop
-          onClose={() => setIsPopOpen(false)}
-          lastVersion={lastVersionLabel}
-          onFileSelect={handleFileSelection}
-        />
-      ) : null}
-    </>
+          {isPopOpen ? (
+            <CVPop
+              onClose={() => setIsPopOpen(false)}
+              lastVersion={lastVersionLabel}
+              onFileSelect={handleFileSelection}
+            />
+          ) : null}
+        </>
       )}
     />
   );

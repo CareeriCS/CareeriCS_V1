@@ -1,74 +1,18 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { careerService } from "@/services";
 import type { APICareerCardRead, APICareerCardSelectionItem } from "@/types";
-import { cn } from "@/lib/utils";
+import { useResponsive } from "@/hooks/useResponsive";
 
 const MIN_CARDS_PER_STEP = 3;
 const MAX_CARDS_PER_STEP = 5;
 
-type SelectionNavButtonProps = {
-  direction: "previous" | "next";
-  disabled?: boolean;
-  isLoading?: boolean;
-  inactive?: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-};
-
-function SelectionNavButton({
-  direction,
-  disabled,
-  isLoading,
-  inactive = false,
-  onClick,
-  children,
-}: SelectionNavButtonProps) {
-  const isPrevious = direction === "previous";
-
-  const icon = (
-    <span
-      aria-hidden="true"
-      className="flex h-[2rem] w-[2rem] shrink-0 items-center justify-center rounded-full bg-[var(--white)] text-[length:var(--text-sm)] leading-none text-[var(--dark-blue)]"
-    >
-      {isPrevious ? "↩" : "↪"}
-    </span>
-  );
-
-  return (
-    <Button
-      variant={isPrevious ? "secondary-inverted" : "primary"}
-      type="button"
-      onClick={inactive ? undefined : onClick}
-      disabled={disabled || inactive}
-      isLoading={isLoading}
-      aria-hidden={inactive}
-      tabIndex={inactive ? -1 : undefined}
-      className={cn(
-        "w-full rounded-full px-[var(--space-md)] font-semibold sm:w-auto sm:min-w-[7.5rem]",
-        inactive ? "pointer-events-none opacity-0" : ""
-      )}
-    >
-      {isPrevious ? (
-        <>
-          {icon}
-          {children}
-        </>
-      ) : (
-        <>
-          {children}
-          {!isLoading ? icon : null}
-        </>
-      )}
-    </Button>
-  );
-}
-
 export default function HobbiesGrid() {
   const router = useRouter();
+  const { isLarge, isMedium, isSmall } = useResponsive();
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("sessionId") || "";
 
@@ -106,8 +50,8 @@ export default function HobbiesGrid() {
       if (!hobbyResponse.success || !technicalResponse.success) {
         setError(
           hobbyResponse.message ||
-            technicalResponse.message ||
-            "Unable to load card choices right now. Please try again.",
+          technicalResponse.message ||
+          "Unable to load card choices right now. Please try again.",
         );
         setIsLoadingCards(false);
         return;
@@ -126,17 +70,26 @@ export default function HobbiesGrid() {
   }, [sessionId]);
 
   const currentCards = step === 0 ? hobbyCards : technicalCards;
+
+  const currentTitle =
+    step === 0
+      ? "Choose Your Favorite interests"
+      : "Choose Your Favorite strengths";
+
+  const currentSubtitle =
+    step === 0
+      ? "Step 1 of 2: Select between 3 and 5 interests"
+      : "Step 2 of 2: Select between 3 and 5 strengths";
+
   const currentSelectionIds = step === 0 ? selectedHobbyIds : selectedTechnicalIds;
 
-  const currentTitle = step === 0 ? "Choose Your Interests" : "Choose Your Strengths";
+  const selectedSummary = useMemo(() => {
+    if (step === 0) {
+      return `${selectedHobbyIds.length} interests selected`;
+    }
 
-  const selectedSummary =
-    step === 0
-      ? `${selectedHobbyIds.length} interests selected`
-      : `${selectedTechnicalIds.length} strengths selected`;
-
-  const currentInstruction =
-    step === 0 ? "Choose between 3 to 5 interests to continue" : "Choose between 3 to 5 strengths to continue";
+    return `${selectedTechnicalIds.length} strengths selected`;
+  }, [selectedHobbyIds.length, selectedTechnicalIds.length, step]);
 
   const toggleCard = (cardId: string) => {
     if (step === 0) {
@@ -154,7 +107,6 @@ export default function HobbiesGrid() {
         setError(null);
         return [...prev, cardId];
       });
-
       return;
     }
 
@@ -177,7 +129,6 @@ export default function HobbiesGrid() {
   const handleBack = () => {
     if (step === 1) {
       setStep(0);
-      setError(null);
       return;
     }
 
@@ -234,116 +185,340 @@ export default function HobbiesGrid() {
     void submitSelections();
   };
 
+  const isCurrentStepValid = currentSelectionIds.length >= MIN_CARDS_PER_STEP;
+
+
+  const disabled =
+    isLoadingCards ||
+    !isCurrentStepValid ||
+    isSubmitting ||
+    step !== 0;
+
   return (
-    <section className="flex h-full min-h-0 w-full flex-col overflow-hidden px-[var(--space-lg)] pb-[var(--space-xl)] pt-[var(--space-xl)] sm:px-[var(--space-2xl)]">
-      <main className="mx-auto grid min-h-0 w-full max-w-[66rem] flex-1 grid-rows-[minmax(5.5rem,8rem)_auto_auto] gap-[var(--space-md)]">
-        <header className="grid w-full self-center grid-cols-1 items-start gap-[var(--space-sm)] text-center md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] md:text-left">
-          <div className="min-w-0">
-            <h1
-              className="m-0 text-[length:var(--text-xl)] font-semibold leading-[var(--line-tight)] text-[var(--text-primary)]"
-              style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
-            >
-              {currentTitle}
-            </h1>
+    <div
+      style={{
+        width: isLarge ? "65vw" : "85vw",
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "space-evenly",
+        justifyContent: "space-evenly",
+        overflow: "hidden",
+        gap: isSmall ? "var(--space-sm)" : "var(--space-sm)",
+        paddingInline: isSmall
+          ? "var(--space-sm)"
+          : isMedium
+            ? "var(--space-sm)"
+            : "var(--space-xl)",
+        boxSizing: "border-box",
+        alignSelf: "center",
+        justifySelf: "center",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: isSmall ? "center" : "space-between",
+          alignItems: "center",
+          gap: isSmall ? "var(--space-md)" : "var(--space-xl)",
+          flexWrap: "wrap",
+          position: "relative",
+          width: "100%",
+          textAlign: isSmall ? "center" : "center",
+          flexShrink: 0,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: isSmall ? "center" : "flex-start",
+            justifyContent: "center",
+            gap: "var(--space-xxs)",
+          }}
+        >
+          <h1
+            style={{
+              margin: 0,
+              color: "white",
+              fontSize: isSmall ? "var(--text-lg)" : "var(--text-xl)",
+              fontFamily: "var(--font-nova-square)",
+              lineHeight: "var(--line-tight)",
+            }}
+          >
+            {currentTitle}
+          </h1>
 
-            <p className="m-0 mt-[var(--space-xs)] text-[length:var(--text-sm)] leading-[var(--line-normal)] text-[var(--text-secondary)]">
-              {currentInstruction}
-            </p>
-          </div>
-
-          <div className="flex min-h-[2rem] items-center justify-center px-[var(--space-md)]">
-            {error ? (
-              <p className="m-0 text-center text-[length:var(--text-sm)] leading-[var(--line-normal)] text-[var(--text-danger)]">
-                {error}
-              </p>
-            ) : null}
-          </div>
-
-          <div className="flex justify-center md:justify-end">
-            <span
-              className="inline-flex items-center rounded-full border border-[var(--primary-green)] bg-[rgba(40,41,43,0.85)] px-[var(--space-md)] py-[var(--space-xs)] text-[length:var(--text-sm)] font-medium leading-[var(--line-normal)] text-[var(--light-green)]"
-              style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
-            >
-              {selectedSummary}
-            </span>
-          </div>
-        </header>
-
-        <div className="flex min-h-[clamp(18rem,38vh,27rem)] w-full items-center justify-center overflow-y-auto rounded-[var(--radius-2xl)] bg-[var(--bg-grey)] px-[var(--space-xl)] py-[var(--space-2xl)] sm:px-[var(--space-2xl)]">
-          {isLoadingCards ? (
-            <div className="flex min-h-[12rem] items-center justify-center text-center text-[length:var(--text-base)] text-[var(--dark-blue)]">
-              Loading available cards...
-            </div>
-          ) : currentCards.length === 0 ? (
-            <div className="flex min-h-[12rem] items-center justify-center text-center text-[length:var(--text-base)] text-[var(--dark-blue)]">
-              No cards available for this step yet.
-            </div>
-          ) : (
-            <div className="flex w-full max-w-[58rem] flex-wrap items-center justify-center gap-x-[var(--space-lg)] gap-y-[var(--space-lg)]">
-              {currentCards.map((card) => {
-                const isSelected = currentSelectionIds.includes(card.id);
-
-                return (
-                  <button
-                    key={card.id}
-                    type="button"
-                    aria-pressed={isSelected}
-                    title={card.description || card.name}
-                    onClick={() => toggleCard(card.id)}
-                    className={cn(
-                      "min-h-[2.35rem] rounded-[var(--radius-md)] px-[var(--space-lg)] py-[var(--space-xs)] text-center text-[length:var(--text-sm)] font-medium leading-[var(--line-normal)] transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-grey)]",
-                      "w-full sm:w-auto sm:min-w-[8.75rem]",
-                      isSelected
-                        ? "bg-[var(--light-green)] text-[var(--bg-color)]"
-                        : "bg-[var(--medium-blue)] text-[var(--text-primary)] hover:bg-[var(--dark-blue)]"
-                    )}
-                    style={{ fontFamily: "var(--font-jura), sans-serif" }}
-                  >
-                    {card.name}
-                  </button>
-                );
-              })}
-            </div>
-          )}
+          <p
+            style={{
+              margin: 0,
+              color: "var(--text-grey)",
+              fontSize: isSmall ? "var(--text-sm)" : "var(--text-base)",
+              fontFamily: "var(--font-jura)",
+              lineHeight: "var(--line-normal)",
+            }}
+          >
+            {currentSubtitle}
+          </p>
         </div>
 
-        <footer className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-[var(--space-md)]">
-          <div />
+        <div
+          style={{
+            backgroundColor: "var(--dark-grey)",
+            border: "1px solid var(--primary-green)",
+            color: "var(--light-green)",
+            borderRadius: "var(--radius-2xl)",
+            padding: "var(--space-sm) var(--space-sm)",
+            fontSize: "var(--text-sm)",
+            fontWeight: 700,
+            whiteSpace: "nowrap",
+            position: "relative",
+            fontFamily: "var(--font-jura)",
+          }}
+        >
+          {selectedSummary}
+        </div>
+      </div>
 
-          <div className="flex items-center justify-center gap-[var(--space-md)]">
-            <SelectionNavButton
-              direction="previous"
+      {error ? (
+        <p
+          style={{
+            margin: 0,
+            color: "var(--light-red)",
+            fontSize: isSmall ? "var(--text-sm)" : "var(--text-base)",
+            fontFamily: "var(--font-jura)",
+            lineHeight: "var(--line-normal)",
+            textAlign: isSmall ? "center" : "left",
+            flexShrink: 0,
+          }}
+        >
+          {error}
+        </p>
+      ) : null}
+
+      <div
+        style={{
+          background: "var(--bg-grey)",
+          borderRadius: "var(--radius-xl)",
+          width: "100%",
+          height: "fit-content",
+          maxHeight: isSmall ? "100%" : "60%",
+          padding: "var(--space-lg)",
+          boxSizing: "border-box",
+          overflowY: "auto",
+          scrollbarWidth: "none",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "flex-start",
+          alignSelf: "center",
+          flexShrink: 1,
+        }}
+      >
+        {isLoadingCards ? (
+          <div
+            style={{
+              color: "var(--dark-grey)",
+              textAlign: "center",
+              paddingTop: isSmall ? "var(--space-xl)" : "var(--space-2xl)",
+              paddingBottom: isSmall ? "var(--space-xl)" : "var(--space-2xl)",
+              fontSize: isSmall ? "var(--text-sm)" : "var(--text-base)",
+              fontFamily: "var(--font-jura)",
+              lineHeight: "var(--line-normal)",
+              width: "100%",
+            }}
+          >
+            Loading available cards...
+          </div>
+        ) : currentCards.length === 0 ? (
+          <div
+            style={{
+              color: "var(--dark-grey)",
+              textAlign: "center",
+              paddingTop: isSmall ? "var(--space-xl)" : "var(--space-2xl)",
+              paddingBottom: isSmall ? "var(--space-xl)" : "var(--space-2xl)",
+              fontSize: isSmall ? "var(--text-sm)" : "var(--text-base)",
+              fontFamily: "var(--font-jura)",
+              lineHeight: "var(--line-normal)",
+              width: "100%",
+            }}
+          >
+            No cards available for this step yet.
+          </div>
+        ) : (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "row",
+              flexWrap: "wrap",
+              gap: isSmall
+                ? "var(--space-sm)"
+                : isMedium
+                  ? "var(--space-md)"
+                  : "var(--space-sm)",
+              justifyContent: "center",
+              alignItems: "flex-start",
+              alignContent: "flex-start",
+              width: "100%",
+            }}
+          >
+            {currentCards.map((card) => {
+              const isSelected = currentSelectionIds.includes(card.id);
+
+              return (
+                <button
+                  key={card.id}
+                  type="button"
+                  onClick={() => toggleCard(card.id)}
+                  style={{
+                    minWidth: "fit-content",
+                    flex: 1,
+
+                    backgroundColor: isSelected
+                      ? "var(--light-green)"
+                      : "var(--medium-blue)",
+
+                    color: isSelected
+                      ? "var(--bg-color)"
+                      : "var(--light-blue)",
+
+                    borderRadius: "var(--radius-lg)",
+
+                    padding: "",
+
+                    textAlign: "center",
+                    cursor: "pointer",
+
+                    height: "fit-content",
+
+                    fontSize: "var(--text-base)",
+                    fontFamily: "var(--font-jura)",
+                    fontWeight: "800",
+                    paddingInline: "var(--space-sm)",
+                    paddingBlock: "var(--space-xs)",
+
+
+
+                  }}>
+                  {card.name}
+
+
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-start",
+          alignItems: "center",
+          width: "100%",
+          gap: isSmall ? "var(--space-md)" : "var(--space-lg)",
+          flexDirection: "column",
+          flexShrink: 0,
+          alignSelf: "center",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            width: "100%",
+            gap: isSmall ? "var(--space-md)" : "var(--space-lg)",
+            flexDirection: "row",
+            flexShrink: 0,
+            alignSelf: "center",
+          }}
+        >
+          {step !== 0 && (
+            <Button
+              variant="secondary-inverted"
+              type="button"
               onClick={handleBack}
-              disabled={isLoadingCards || isSubmitting}
-              inactive={step === 0}
+              style={{
+                paddingInline: "var(--space-2xl)",
+                paddingBlock: "0",
+                paddingLeft: "0",
+                gap: "var(--space-xl)",
+                height: "fit-content",
+                width: "fit-content",
+                maxWidth: isSmall ? "100%" : "fit-content",
+                flex: isSmall ? 1 : "none",
+                justifyContent: "space-between",
+                borderRadius: "999px",
+              }}
             >
+              <img
+                src={"/global/next.svg"}
+                style={{
+                  height: "var(--icon-md)",
+                  transform: "rotate(180deg)",
+                  backgroundColor: "white",
+                  padding: "var(--space-xxs)",
+                  boxSizing: "content-box",
+                  borderRadius: "999px",
+                }}
+              />
               Previous
-            </SelectionNavButton>
+            </Button>
+          )}
 
-            <SelectionNavButton
-              direction="next"
-              onClick={handleNext}
-              disabled={isLoadingCards || isSubmitting}
-              inactive={step === 1}
-            >
-              Next
-            </SelectionNavButton>
-          </div>
-
-          <div className="flex justify-end">
-            {step === 1 ? (
-              <SelectionNavButton
-                direction="next"
-                onClick={handleNext}
-                disabled={isLoadingCards || isSubmitting}
-                isLoading={isSubmitting}
-              >
-                {isSubmitting ? "Saving..." : "Start Questions"}
-              </SelectionNavButton>
-            ) : null}
-          </div>
-        </footer>
-      </main>
-    </section>
+          <Button
+            variant={"primary-inverted"}
+            type="button"
+            onClick={handleNext}
+            disabled={disabled}
+            style={{
+              paddingInline: "var(--space-2xl)",
+              paddingBlock: "0",
+              paddingRight: "0",
+              gap: "var(--space-xl)",
+              height: "fit-content",
+              width: "fit-content",
+              maxWidth: isSmall ? "100%" : "fit-content",
+              flex: isSmall ? 1 : "none",
+              justifyContent: "space-between",
+              borderRadius: "999px",
+              opacity: disabled ? 0.55 : 1,
+            }}
+          >
+            Next
+            <img
+              src={"/global/next.svg"}
+              style={{
+                height: "var(--icon-md)",
+                backgroundColor: "white",
+                padding: "var(--space-xxs)",
+                boxSizing: "content-box",
+                borderRadius: "999px",
+              }}
+            />
+          </Button>
+        </div>
+        {step !== 0 &&
+          <Button
+            variant="primary"
+            type="button"
+            onClick={handleNext}
+            disabled={isLoadingCards || !isCurrentStepValid || isSubmitting}
+            style={{
+              paddingInline: "var(--space-2xl)",
+              paddingBlock: "var(--space-xxs)",
+              height: "fit-content",
+              width: isSmall ? "100%" : "fit-content",
+              marginLeft: isSmall ? 0 : "auto",
+              flex: "none",
+              opacity: isLoadingCards || !isCurrentStepValid || isSubmitting ? 0.55 : 1,
+            }}
+          >
+            Start Questions
+          </Button>
+        }
+      </div>
+    </div>
   );
 }

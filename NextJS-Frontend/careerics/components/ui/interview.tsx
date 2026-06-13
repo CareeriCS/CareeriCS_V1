@@ -1,7 +1,7 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { cn } from "@/lib/utils";
+import React, { useState, type ReactNode } from "react";
+import { useResponsive } from "@/hooks/useResponsive";
 
 interface Question {
   id: number;
@@ -17,9 +17,7 @@ interface SidebarLogicProps {
   label?: string;
   title?: string;
   children?: ReactNode;
-  showOnlyCurrentQuestion?: boolean;
-  singleLineItems?: boolean;
-  disableNavigation?: boolean;
+  onClose?: () => void;
 }
 
 export default function SidebarLogicOnly({
@@ -30,43 +28,102 @@ export default function SidebarLogicOnly({
   label = "Question",
   title = "Skill Assessment",
   children,
-  showOnlyCurrentQuestion = false,
-  singleLineItems = false,
-  disableNavigation = false,
+  onClose,
 }: SidebarLogicProps) {
-  const activeQuestion = questions.find((question) => question.id === currentActiveId);
-  const visibleQuestions = showOnlyCurrentQuestion && activeQuestion ? [activeQuestion] : questions;
+  // Using your custom responsive hook
+  const { isLarge, isMedium, isSmall } = useResponsive();
+
+  // State to emulate :hover interactions dynamically
+  const [hoveredButtonId, setHoveredButtonId] = useState<number | null>(null);
 
   return (
-    <div className="interview-layout-shell grid h-full min-h-0 w-full min-w-0 max-w-full grid-rows-[auto_minmax(0,1fr)] bg-transparent max-lg:overflow-x-hidden lg:grid-cols-[minmax(17rem,20rem)_minmax(0,1fr)] lg:grid-rows-1 lg:overflow-hidden">
-      <aside className="no-scrollbar min-h-0 max-h-[7.5rem] w-full min-w-0 shrink-0 overflow-hidden border-b border-[var(--border-subtle)] bg-[var(--bg-grey)] px-[var(--space-md)] py-[var(--space-sm)] text-[var(--dark-blue)] lg:max-h-none lg:h-full lg:border-b-0 lg:border-r lg:px-[var(--space-xl)] lg:py-[var(--space-2xl)]">
-        <div className="flex h-full min-h-0 flex-col gap-[var(--space-sm)] lg:gap-[var(--space-lg)]">
+    <div
+      style={{
+        display: "grid",
+        height: "100%",
+        minHeight: 0,
+        width: "100%",
+        minWidth: 0,
+        maxWidth: "100%",
+        backgroundColor: "transparent",
+        gridTemplateRows: isLarge ? "1fr" : "auto minmax(0, 1fr)",
+        gridTemplateColumns: isLarge ? "minmax(17rem, 20rem) minmax(0, 1fr)" : "none",
+        overflow: "hidden",
+      }}
+    >
+      <aside
+        style={{
+          minHeight: 0,
+          maxHeight: isLarge ? "none" : "7.5rem",
+          height: isLarge ? "100%" : "auto",
+          width: "100%",
+          minWidth: 0,
+          flexShrink: 0,
+          borderBottom: isLarge ? "0" : "1px solid var(--border-subtle)",
+          borderRight: isLarge ? "1px solid var(--border-subtle)" : "0",
+          backgroundColor: "var(--bg-grey)",
+          padding: isLarge ? "var(--space-xl)" : "var(--space-md)",
+          color: "var(--dark-blue)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            height: "100%",
+            minHeight: 0,
+            flexDirection: "column",
+            gap: isLarge ? "var(--space-lg)" : "var(--space-sm)",
+          }}
+        >
           <h1
-            className="m-0 shrink-0 truncate text-[length:var(--text-lg)] font-normal leading-[var(--line-tight)] text-[var(--dark-blue)]"
             style={{
-              fontFamily: "var(--font-nova-square), sans-serif",
-              fontWeight: 400,
+              fontFamily: "var(--font-nova-square)",
+              fontSize: "var(--text-lg)",
+              color: "black",
+              margin: 0,
             }}
-            title={title}
           >
             {title}
           </h1>
 
-          <div className="h-px shrink-0 bg-[var(--dark-blue)]/35" />
+          <div
+            style={{
+              height: "1px",
+              flexShrink: 0,
+              backgroundColor: "rgba(var(--dark-blue-rgb, 0, 0, 0), 0.35)",
+            }}
+          />
 
           <nav
             aria-label={`${title} navigation`}
-            className="no-scrollbar -mx-[var(--space-xs)] flex min-h-0 min-w-0 flex-1 gap-[var(--space-sm)] overflow-x-auto overflow-y-hidden px-[var(--space-xs)] pb-[var(--space-xxs)] lg:mx-0 lg:flex-col lg:overflow-x-hidden lg:overflow-y-auto lg:px-0 lg:pb-0"
+            style={{
+              display: "flex",
+              minHeight: 0,
+              minWidth: 0,
+              flex: 1,
+              gap: "var(--space-sm)",
+              overflowX: isLarge ? "hidden" : "auto",
+              overflowY: isLarge ? "auto" : "hidden",
+              marginLeft: isLarge ? 0 : "-var(--space-xs)",
+              marginRight: isLarge ? 0 : "-var(--space-xs)",
+              paddingLeft: isLarge ? 0 : "var(--space-xs)",
+              paddingRight: isLarge ? 0 : "var(--space-xs)",
+              paddingBottom: isLarge ? 0 : "var(--space-xxs)",
+              flexDirection: isLarge ? "column" : "row",
+              scrollbarWidth: "none",
+            }}
           >
-            {visibleQuestions.map((question) => {
+            {questions.map((question) => {
               const isSelected = currentActiveId === question.id;
-              const isFutureLocked =
-                unlockedStepId !== undefined ? question.id > unlockedStepId : false;
-              const isNavigationLocked = disableNavigation && question.id !== currentActiveId;
-              const isLocked = isFutureLocked || isNavigationLocked;
-
-              const questionText = question.text?.trim() || question.title?.trim() || "";
-              const questionLabel = label ? `${label} ${question.id}` : `Item ${question.id}`;
+              const isLocked = unlockedStepId !== undefined ? question.id > unlockedStepId : false;
+              const normalizedTitle = question.title?.trim() || "";
+              const defaultTitle = label ? `${label} ${question.id}` : normalizedTitle || `Item ${question.id}`;
+              const shouldShowTitle =
+                Boolean(label) &&
+                normalizedTitle.length > 0 &&
+                normalizedTitle.toLowerCase() !== defaultTitle.toLowerCase();
+              const normalizedText = question.text?.trim() || "";
+              const isHovered = hoveredButtonId === question.id;
 
               return (
                 <button
@@ -74,49 +131,69 @@ export default function SidebarLogicOnly({
                   type="button"
                   disabled={isLocked}
                   aria-current={isSelected ? "step" : undefined}
-                  aria-label={`${questionLabel}${questionText ? `: ${questionText}` : ""}${
-                    isLocked ? " locked" : ""
-                  }`}
+                  aria-label={`${defaultTitle}${shouldShowTitle ? `: ${normalizedTitle}` : ""}${isLocked ? " locked" : ""}`}
                   onClick={() => {
                     if (!isLocked) {
                       onQuestionClick(question.id);
                     }
                   }}
-                  className={cn(
-                    "shrink-0 rounded-[var(--radius-lg)] border border-transparent px-[var(--space-md)] py-[var(--space-sm)] text-left transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-grey)] disabled:cursor-not-allowed disabled:opacity-45 max-lg:min-w-[7rem] lg:min-w-0 lg:px-[var(--space-md)] lg:py-[var(--space-md)]",
-                    singleLineItems
-                      ? "flex items-center gap-[var(--space-sm)] overflow-hidden whitespace-nowrap"
-                      : "flex flex-col gap-[var(--space-xxs)]",
-                    isSelected
-                      ? "bg-[var(--primary-green)] text-[var(--dark-blue)] shadow-sm"
-                      : "bg-[rgba(10,10,10,0.06)] text-[var(--dark-blue)] hover:bg-[rgba(10,10,10,0.1)]"
-                  )}
+                  onMouseEnter={() => setHoveredButtonId(question.id)}
+                  onMouseLeave={() => setHoveredButtonId(null)}
                   style={{
+                    flexShrink: 0,
+                    borderRadius: "var(--radius-lg)",
+                    border: "1px solid transparent",
+                    paddingLeft: "var(--space-md)",
+                    paddingRight: "var(--space-md)",
+                    paddingTop: isLarge ? "var(--space-md)" : "var(--space-sm)",
+                    paddingBottom: isLarge ? "var(--space-md)" : "var(--space-sm)",
+                    textAlign: "left",
+                    transition: "background-color 0.2s, color 0.2s",
+                    outline: "none",
+                    cursor: isLocked ? "not-allowed" : "pointer",
+                    opacity: isLocked ? 0.45 : 1,
+                    minWidth: isLarge ? "0" : "7rem",
                     fontFamily: "var(--font-nova-square), sans-serif",
-                    fontWeight: 400,
+                    backgroundColor: isSelected
+                      ? "var(--primary-green)"
+                      : isHovered
+                        ? "rgba(10,10,10,0.1)"
+                        : "rgba(10,10,10,0.06)",
+                    color: "var(--dark-blue)",
+                    boxShadow: isSelected ? "0 1px 2px 0 rgba(0, 0, 0, 0.05)" : "none",
                   }}
                 >
                   <span
-                    className={cn(
-                      "shrink-0 text-[length:var(--text-sm)] font-normal leading-[var(--line-tight)]",
-                      isLocked ? "opacity-70" : ""
-                    )}
-                    style={{ fontWeight: 400 }}
+                    style={{
+                      display: "block",
+                      fontSize: "var(--text-base)",
+                      color: "var(--dark-blue)",
+                    }}
                   >
-                    {questionLabel}
+                    {defaultTitle}
                   </span>
 
-                  {questionText ? (
+                  {shouldShowTitle && isLarge ? (
                     <span
-                      className={cn(
-                        "min-w-0 text-[length:var(--text-xs)] font-normal leading-[var(--line-normal)] opacity-90",
-                        singleLineItems ? "flex-1 truncate" : "line-clamp-2"
-                      )}
-                      style={{ fontWeight: 400 }}
+                      style={{
+                        marginTop: "var(--space-xxs)",
+                        display: "block",
+                        fontWeight: 600,
+                        lineHeight: "var(--line-normal)",
+                        opacity: 0.9,
+                        fontSize: "var(--text-xs)",
+                        whiteSpace: "normal",
+                        overflow: "visible",
+                        textOverflow: "clip",
+                      }}
                     >
-                      {questionText}
+                      {normalizedTitle}
                     </span>
+                  ) : shouldShowTitle ? (
+                    <span style={{ display: "none" }}>{normalizedTitle}</span>
                   ) : null}
+
+                 
                 </button>
               );
             })}
@@ -124,28 +201,34 @@ export default function SidebarLogicOnly({
         </div>
       </aside>
 
-      <main className="no-scrollbar min-h-0 min-w-0 max-w-full overflow-y-auto overflow-x-hidden bg-transparent px-[var(--space-md)] py-[var(--space-lg)] sm:px-[var(--space-lg)] sm:py-[var(--space-xl)] lg:px-[var(--space-2xl)] lg:py-[var(--space-2xl)]">
-        <div className="mx-auto flex min-h-full w-full min-w-0 max-w-full items-start justify-center lg:items-center">
+      <main
+        style={{
+          minHeight: 0,
+          minWidth: 0,
+          maxWidth: "100%",
+          overflow: "hidden",
+          backgroundColor: "transparent",
+          padding: isLarge ? "var(--space-2xl)" : isMedium ? "var(--space-lg)" : "var(--space-md)",
+        }}
+      >
+        <div
+          style={{
+            marginLeft: "auto",
+            marginRight: "auto",
+            display: "flex",
+            minHeight: "100%",
+            width: "100%",
+            height: "100%",
+            minWidth: 0,
+            maxWidth: "100%",
+            alignItems: isLarge ? "center" : "flex-start",
+            justifyContent: "center",
+          }}
+        >
           {children}
         </div>
       </main>
-
-      <style jsx global>{`
-        .no-scrollbar,
-        .interview-layout-shell,
-        .interview-layout-shell * {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-
-        .no-scrollbar::-webkit-scrollbar,
-        .interview-layout-shell::-webkit-scrollbar,
-        .interview-layout-shell *::-webkit-scrollbar {
-          display: none;
-          width: 0;
-          height: 0;
-        }
-      `}</style>
+      
     </div>
   );
 }

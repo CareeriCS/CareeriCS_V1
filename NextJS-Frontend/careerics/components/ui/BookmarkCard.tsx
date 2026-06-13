@@ -5,10 +5,12 @@ import { useRouter } from 'next/navigation';
 
 interface BookmarkCardProps {
   description?: string;
+  style?: React.CSSProperties;
 }
 
 const BookmarkCard: React.FC<BookmarkCardProps> = ({
   description = "All of your saved jobs are here",
+  style,
 }) => {
   const router = useRouter();
   return (
@@ -21,6 +23,7 @@ const BookmarkCard: React.FC<BookmarkCardProps> = ({
       justifyContent: "flex-start",
       alignItems: "center",
       gap: "var(--space-md)",
+      ...style,
     }}>
 
       <img

@@ -2,7 +2,11 @@ import React from "react";
 import Spline from '@splinetool/react-spline';
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 
-export default function Animation() {
+interface AnimationProps {
+  message?: string;
+}
+
+export default function Animation({ message = "Loading..." }: AnimationProps) {
     return (
         <div
             style={{
@@ -55,10 +59,11 @@ export default function Animation() {
                 <h1
                     style={{
                         width: "fit-content",
-                        fontSize: "var(--text-xl)",
+                        fontSize: "var(--text-lg)",
+                        color:"white",
                     }}
                 >
-                    Our Model is Generating its Results, Please Wait...
+                    {message}
                 </h1>
                 <div
 
@@ -72,7 +77,7 @@ export default function Animation() {
                 >
                     <Spline scene="https://prod.spline.design/0uDj7etQW1FyFf4L/scene.splinecode"
                         style={{
-                            height: "120%",
+                            height: "140%",
                         }}
                     />
                 </div>

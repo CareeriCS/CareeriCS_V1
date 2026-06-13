@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Bookmark } from "lucide-react";
@@ -33,8 +34,8 @@ import type {
   UnifiedBookmarkDraft,
   UnifiedBookmarkEntry,
 } from "@/types";
-import { normalizeBackendAssetUrl } from "@/lib/asset-url";
 import { cn } from "@/lib/utils";
+import { useResponsive } from "@/hooks/useResponsive";
 
 interface QuestionGroup {
   groupId: string;
@@ -46,32 +47,6 @@ interface QuestionGroup {
 type RatingValue = 1 | 2 | 3 | 4 | 5;
 
 const ratingValues = [1, 2, 3, 4, 5] as const;
-
-function getTrackIconSrc(track: APICareerEvaluationRead["track_scores"][number]) {
-  const trackWithIcon = track as typeof track & {
-    icon_url?: string | null;
-    icon?: string | null;
-    image_url?: string | null;
-    image?: string | null;
-    track_icon?: string | null;
-    track_icon_url?: string | null;
-    career_icon?: string | null;
-    career_icon_url?: string | null;
-  };
-
-  return normalizeBackendAssetUrl(
-    trackWithIcon.icon_url ||
-      trackWithIcon.icon ||
-      trackWithIcon.image_url ||
-      trackWithIcon.image ||
-      trackWithIcon.track_icon ||
-      trackWithIcon.track_icon_url ||
-      trackWithIcon.career_icon ||
-      trackWithIcon.career_icon_url ||
-      (track.track_id ? `/tracks/${track.track_id}.svg` : "") ||
-      "/landing/Rectangle.svg",
-  );
-}
 
 function getQuestionCardId(question: APICareerQuestionResponse): string {
   if (question.type === "hobby") {
@@ -136,37 +111,37 @@ function getRatingButtonClass(value: RatingValue, isSelected: boolean) {
     value === 1 || value === 5
       ? "h-9 w-9 sm:h-10 sm:w-10"
       : value === 2 || value === 4
-        ? "h-8 w-8 sm:h-9 sm:w-9"
-        : "h-7 w-7 sm:h-8 sm:w-8";
+      ? "h-8 w-8 sm:h-9 sm:w-9"
+      : "h-7 w-7 sm:h-8 sm:w-8";
 
-  const colorClass =
+  const selectedColorClass =
     value === 1
       ? "bg-[var(--light-red)]"
       : value === 2
-        ? "bg-[#FFD0D0]"
-        : value === 3
-          ? "bg-[var(--light-blue)]"
-          : value === 4
-            ? "bg-[var(--light-green)]"
-            : "bg-[var(--primary-green)]";
+      ? "bg-[#FFD0D0]"
+      : value === 3
+      ? "bg-[var(--light-blue)]"
+      : value === 4
+      ? "bg-[var(--light-green)]"
+      : "bg-[var(--primary-green)]";
 
   const hoverColorClass =
     value === 1
       ? "hover:bg-[var(--light-red)]"
       : value === 2
-        ? "hover:bg-[#FFD0D0]"
-        : value === 3
-          ? "hover:bg-[var(--light-blue)]"
-          : value === 4
-            ? "hover:bg-[var(--light-green)]"
-            : "hover:bg-[var(--primary-green)]";
+      ? "hover:bg-[#FFD0D0]"
+      : value === 3
+      ? "hover:bg-[var(--light-blue)]"
+      : value === 4
+      ? "hover:bg-[var(--light-green)]"
+      : "hover:bg-[var(--primary-green)]";
 
   return cn(
     sizeClass,
     "shrink-0 rounded-full border border-transparent transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-card-soft)]",
     isSelected
-      ? `${colorClass} scale-110 shadow-sm`
-      : `bg-[var(--bg-grey)] hover:scale-105 ${hoverColorClass}`,
+      ? `${selectedColorClass} scale-110 shadow-sm`
+      : `bg-[var(--bg-grey)] hover:scale-105 ${hoverColorClass}`
   );
 }
 
@@ -174,54 +149,11 @@ type QuizNavButtonProps = {
   direction: "previous" | "next";
   disabled?: boolean;
   isLoading?: boolean;
-  inactive?: boolean;
   onClick: () => void;
   children: React.ReactNode;
 };
 
-function QuizNavButton({
-  direction,
-  disabled,
-  isLoading,
-  inactive = false,
-  onClick,
-  children,
-}: QuizNavButtonProps) {
-  const isPrevious = direction === "previous";
 
-  return (
-<Button
-  variant={isPrevious ? "secondary-inverted" : "primary-inverted"}
-  type="button"
-  onClick={inactive ? undefined : onClick}
-  disabled={disabled || inactive}
-  isLoading={isLoading}
-  aria-hidden={inactive}
-  tabIndex={inactive ? -1 : undefined}
-  className={cn(
-    "relative min-h-[var(--button-height-md)] overflow-hidden rounded-full px-[var(--space-md)] font-normal sm:w-auto sm:min-w-[7.5rem]",
-    isPrevious
-      ? "pl-[2.55rem] pr-[var(--space-md)] hover:!bg-[var(--white)]"
-      : "pl-[var(--space-md)] pr-[2.55rem] !bg-[var(--light-green)] hover:!bg-[var(--primary-green)]",
-    inactive ? "pointer-events-none opacity-0" : ""
-  )}
->
-      {!isLoading ? (
-        <span
-          aria-hidden="true"
-          className={cn(
-            "absolute top-1/2 flex h-[2rem] w-[2rem] -translate-y-1/2 items-center justify-center rounded-full bg-[var(--white)] text-[length:var(--text-sm)] leading-none text-[var(--dark-blue)]",
-            isPrevious ? "left-[0.25rem]" : "right-[0.25rem]"
-          )}
-        >
-          {isPrevious ? "↩" : "↪"}
-        </span>
-      ) : null}
-
-      <span>{children}</span>
-    </Button>
-  );
-}
 
 export default function CareerQuestionsPage() {
   const router = useRouter();
@@ -406,7 +338,6 @@ export default function CareerQuestionsPage() {
   }, [questionGroups]);
 
   const currentGroup = questionGroups[currentStepId - 1] || null;
-  const isFinalStep = currentStepId === questionGroups.length;
   const allAnswered =
     allQuestions.length > 0 && allQuestions.every((question) => Boolean(ratings[question.id]));
 
@@ -697,6 +628,8 @@ export default function CareerQuestionsPage() {
     [applyUnifiedBookmarks, pendingCareerBookmark, userId],
   );
 
+  const { isSmall, isLarge, isMedium } = useResponsive();
+
   if (!isFinished) {
     return (
       <Interview
@@ -723,10 +656,10 @@ export default function CareerQuestionsPage() {
                 {currentGroup.questions.map((question) => (
                   <article
                     key={question.id}
-                  className="flex w-full min-w-0 flex-col items-center gap-[var(--space-lg)] rounded-[var(--radius-2xl)] border border-[rgba(255,255,255,0.12)] bg-[rgba(61,67,84,0.68)] px-[var(--space-lg)] py-[var(--space-xl)] shadow-sm backdrop-blur-sm sm:px-[var(--space-xl)]"
+                    className="flex w-full min-w-0 flex-col items-center gap-[var(--space-lg)] rounded-[var(--radius-2xl)] border border-[rgba(255,255,255,0.12)] bg-[rgba(61,67,84,0.68)] px-[var(--space-lg)] py-[var(--space-xl)] shadow-sm backdrop-blur-sm sm:px-[var(--space-xl)]"
                   >
                     <p
-                      className="m-0 w-full break-words text-center text-[length:var(--text-base)] font-normal leading-[var(--line-normal)] text-[var(--text-primary)]"
+                      className="m-0 w-full break-words text-center text-[length:var(--text-base)] font-medium leading-[var(--line-normal)] text-[var(--text-primary)]"
                       style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
                     >
                       {question.text}
@@ -734,7 +667,7 @@ export default function CareerQuestionsPage() {
 
                     <div className="flex w-full flex-col items-center justify-center gap-[var(--space-md)] md:flex-row md:gap-[var(--space-lg)]">
                       <span
-                        className="text-center text-[length:var(--text-sm)] font-normal text-[var(--light-red)]"
+                        className="text-center text-[length:var(--text-sm)] font-medium text-[var(--light-red)]"
                         style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
                       >
                         Strongly Disagree
@@ -758,7 +691,7 @@ export default function CareerQuestionsPage() {
                       </div>
 
                       <span
-                        className="text-center text-[length:var(--text-sm)] font-normal text-[var(--light-green)]"
+                        className="text-center text-[length:var(--text-sm)] font-medium text-[var(--light-green)]"
                         style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
                       >
                         Strongly Agree
@@ -774,44 +707,123 @@ export default function CareerQuestionsPage() {
                 </p>
               ) : null}
 
-              <footer className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-[var(--space-md)]">
-                <div />
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-start",
+                  alignItems: "center",
+                  width: "100%",
+                  gap: isSmall ? "var(--space-md)" : "var(--space-lg)",
+                  flexDirection: "column",
+                  flexShrink: 0,
+                  alignSelf: "center",
+                }}
+              >
 
-                <div className="flex items-center justify-center gap-[var(--space-md)]">
-                  <QuizNavButton
-                    direction="previous"
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    width: "100%",
+                    gap: isSmall ? "var(--space-md)" : "var(--space-lg)",
+                    flexDirection: "row",
+                    flexShrink: 0,
+                    alignSelf: "center",
+                  }}
+                >
+
+                  <Button
+                    variant="secondary-inverted"
+                    type="button"
                     onClick={() => {
                       setCurrentStepId((prev) => Math.max(1, prev - 1));
                       setError(null);
                     }}
                     disabled={currentStepId === 1 || isLoadingQuestions || isSubmitting}
+                    style={{
+                      paddingInline: "var(--space-2xl)",
+                      paddingBlock: "0",
+                      paddingLeft: "0",
+                      gap: "var(--space-xl)",
+                      height: "fit-content",
+                      width: "fit-content",
+                      maxWidth: isSmall ? "100%" : "fit-content",
+                      flex: isSmall ? 1 : "none",
+                      justifyContent: "space-between",
+                      borderRadius: "999px",
+                    }}
                   >
+                    <img
+                      src={"/global/next.svg"}
+                      style={{
+                        height: "var(--icon-md)",
+                        transform: "rotate(180deg)",
+                        backgroundColor: "white",
+                        padding: "var(--space-xxs)",
+                        boxSizing: "content-box",
+                        borderRadius: "999px",
+                      }}
+                    />
                     Previous
-                  </QuizNavButton>
+                  </Button>
 
-                  <QuizNavButton
-                    direction="next"
+                  <Button
+                    variant={"primary-inverted"}
+                    type="button"
                     onClick={handleNext}
-                    disabled={isLoadingQuestions || isSubmitting || !currentGroup}
-                    inactive={isFinalStep}
+                    disabled={isLoadingQuestions || isSubmitting || !currentGroup || (currentStepId === questionGroups.length)}
+                    
+                    style={{
+                      paddingInline: "var(--space-2xl)",
+                      paddingBlock: "0",
+                      paddingRight: "0",
+                      gap: "var(--space-xl)",
+                      height: "fit-content",
+                      width: "fit-content",
+                      maxWidth: isSmall ? "100%" : "fit-content",
+                      flex: isSmall ? 1 : "none",
+                      justifyContent: "space-between",
+                      borderRadius: "999px",
+                    }}
                   >
                     Next
-                  </QuizNavButton>
+                    <img
+                      src={"/global/next.svg"}
+                      style={{
+                        height: "var(--icon-md)",
+                        backgroundColor: "white",
+                        padding: "var(--space-xxs)",
+                        boxSizing: "content-box",
+                        borderRadius: "999px",
+                      }}
+                    />
+                  </Button>
                 </div>
-
-                <div className="flex justify-end">
-                  {isFinalStep ? (
-                    <QuizNavButton
-                      direction="next"
-                      onClick={handleNext}
-                      disabled={isLoadingQuestions || isSubmitting || !currentGroup}
-                      isLoading={isSubmitting}
-                    >
-                      {isSubmitting ? "Submitting..." : "Finish"}
-                    </QuizNavButton>
-                  ) : null}
-                </div>
-              </footer>
+                {(currentStepId === questionGroups.length) &&
+                  <Button
+                    variant="primary"
+                    type="button"
+                    onClick={handleNext}
+                    disabled={isSubmitting || !currentGroup}
+                    isLoading={isSubmitting}
+                    style={{
+                      paddingInline: "var(--space-2xl)",
+                      paddingBlock: "var(--space-xxs)",
+                      height: "fit-content",
+                      width: isSmall ? "100%" : "fit-content",
+                      marginLeft: isSmall ? 0 : "auto",
+                      flex: "none",
+                      opacity: !currentGroup || isSubmitting ? 0.55 : 1,
+                    }}
+                  >
+                    {isSubmitting
+                      ? "Submitting..."
+                      : "Finish"
+                    }
+                  </Button>
+                }
+              </div>
             </>
           ) : (
             <div className="text-center text-[length:var(--text-md)] text-[var(--text-danger)]">
@@ -827,19 +839,19 @@ export default function CareerQuestionsPage() {
     <section className="grid h-full min-h-0 w-full grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden px-[var(--space-xl)] pb-[var(--space-xl)] pt-[calc(var(--icon-lg)+var(--space-2xl))] sm:px-[var(--space-2xl)]">
       <header className="mx-auto flex w-full max-w-[72rem] shrink-0 flex-col items-center text-center">
         <h1
-          className="m-0 text-center text-[length:var(--text-xl)] font-normal leading-[var(--line-tight)] text-[var(--text-primary)]"
+          className="m-0 text-center text-[length:var(--text-2xl)] font-semibold leading-[var(--line-tight)] text-[var(--text-primary)]"
           style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
         >
           Your Best Matches Are
         </h1>
-  
+
         {bookmarkError ? (
           <p className="m-0 mt-[var(--space-sm)] max-w-[42rem] text-center text-[length:var(--text-sm)] leading-[var(--line-normal)] text-[var(--text-danger)]">
             {bookmarkError}
           </p>
         ) : null}
       </header>
-  
+
       <main className="flex min-h-0 w-full items-start justify-center overflow-y-auto px-[var(--space-xs)] py-[var(--space-lg)] sm:items-center sm:px-0 sm:py-[var(--space-2xl)]">
         {displayedTrackScores.length ? (
           <div className="grid w-full max-w-[72rem] grid-cols-1 justify-items-center gap-[var(--space-xl)] sm:grid-cols-2 lg:grid-cols-3">
@@ -847,11 +859,11 @@ export default function CareerQuestionsPage() {
               const isBookmarked =
                 bookmarkedTrackIds.includes(track.track_id) ||
                 (track.roadmap_id ? bookmarkedTrackIds.includes(track.roadmap_id) : false);
-  
+
               return (
                 <article
                   key={track.track_id}
-                 className="relative flex min-h-[20rem] w-full max-w-[19.5rem] flex-col rounded-[var(--radius-2xl)] bg-[var(--medium-blue)] px-[var(--space-lg)] py-[var(--space-lg)] shadow-sm sm:min-h-[23rem] sm:max-w-[20rem] sm:px-[var(--space-xl)] sm:py-[var(--space-xl)]"
+                  className="relative flex min-h-[20rem] w-full max-w-[19.5rem] flex-col rounded-[var(--radius-2xl)] bg-[var(--medium-blue)] px-[var(--space-lg)] py-[var(--space-lg)] shadow-sm sm:min-h-[23rem] sm:max-w-[20rem] sm:px-[var(--space-xl)] sm:py-[var(--space-xl)]"
                 >
                   <button
                     type="button"
@@ -860,42 +872,44 @@ export default function CareerQuestionsPage() {
                     }}
                     disabled={isReplacingBookmark || isAuthLoading || !userId}
                     aria-label={isBookmarked ? "Remove bookmark" : "Bookmark track"}
-                    className="absolute right-[var(--space-lg)] top-[var(--space-lg)] flex h-[3rem] w-[3rem] items-center justify-center rounded-full bg-transparent text-[var(--text-primary)] transition hover:bg-[rgba(255,255,255,0.12)] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="absolute right-[var(--space-lg)] top-[var(--space-lg)] flex h-[var(--min-touch-target)] w-[var(--min-touch-target)] items-center justify-center rounded-full bg-transparent text-[var(--text-primary)] transition hover:bg-[rgba(255,255,255,0.12)] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <Bookmark
-                      size={28}
+                      size={22}
                       strokeWidth={2.1}
                       className={isBookmarked ? "fill-current text-[var(--light-green)]" : undefined}
                     />
                   </button>
-  
-                  <img
-                    src={getTrackIconSrc(track)}
+
+                  <Image
+                    src="/landing/Rectangle.svg"
                     alt=""
-                    className="h-auto w-[4.75rem] shrink-0 sm:w-[5.25rem]"
+                    width={118}
+                    height={118}
+                    className="h-auto w-[7.4rem] shrink-0"
                   />
-  
+
                   <h2
-                    className="m-0 mt-[var(--space-md)] pr-[var(--space-xl)] text-[length:var(--text-lg)] font-normal leading-[var(--line-tight)] text-[var(--text-primary)]"
+                    className="m-0 mt-[var(--space-md)] pr-[var(--space-xl)] text-[length:var(--text-lg)] font-semibold leading-[var(--line-tight)] text-[var(--text-primary)]"
                     style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
                   >
                     {track.track_name}
                   </h2>
-  
-                  <p className="m-0 mt-[var(--space-md)] text-[length:var(--text-sm)] font-normal text-[var(--light-green)]">
+
+                  <p className="m-0 mt-[var(--space-md)] text-[length:var(--text-sm)] font-bold text-[var(--light-green)]">
                     Match Score: {track.score}%
                   </p>
-  
+
                   <p className="m-0 mt-[var(--space-md)] line-clamp-3 flex-1 text-[length:var(--text-sm)] leading-[var(--line-relaxed)] text-[var(--text-secondary)]">
                     {track.track_description ||
                       "This track aligns strongly with your selected cards and responses."}
                   </p>
-  
+
                   <Link
                     href={buildCareerTrackDetailsHref(track.track_name, track.track_id)}
                     className="mt-[var(--space-lg)] block"
                   >
-                    <Button variant="secondary-inverted" size="md" className="w-full rounded-[var(--radius-lg)] font-normal">
+                    <Button variant="secondary" size="md" className="w-full rounded-[var(--radius-lg)]">
                       Learn More
                     </Button>
                   </Link>
@@ -909,12 +923,10 @@ export default function CareerQuestionsPage() {
           </div>
         )}
       </main>
-  
-      <footer className="mx-auto grid w-full max-w-[72rem] shrink-0 grid-cols-1 gap-[var(--space-md)] sm:grid-cols-[1fr_auto_0.55fr_auto_1fr] sm:items-center">
-        <div className="hidden sm:block" />
 
+      <footer className="mx-auto flex w-full max-w-[32rem] shrink-0 flex-col items-stretch justify-center gap-[var(--space-md)] sm:flex-row sm:items-center">
         <Button
-          variant="secondary-inverted"
+          variant="secondary"
           size="md"
           onClick={() => {
             if (sessionId) {
@@ -923,26 +935,22 @@ export default function CareerQuestionsPage() {
               router.push("/features/career");
             }
           }}
-          className="w-full rounded-[var(--radius-lg)] font-normal sm:w-auto sm:min-w-[10rem] sm:justify-self-center"
+          className="w-full rounded-[var(--radius-lg)] sm:w-auto sm:min-w-[10rem]"
         >
           Retake Quiz
         </Button>
 
-        <div className="hidden sm:block" />
-
-        <Link href="/features/home" className="w-full sm:w-auto sm:justify-self-center">
+        <Link href="/features/home" className="w-full sm:w-auto">
           <Button
             variant="primary"
             size="md"
-            className="w-full rounded-[var(--radius-lg)] font-normal sm:min-w-[10rem]"
+            className="w-full rounded-[var(--radius-lg)] sm:min-w-[10rem]"
           >
             Back to Home
           </Button>
         </Link>
-
-        <div className="hidden sm:block" />
       </footer>
-  
+
       {pendingCareerBookmark ? (
         <BookmarkReplacePopup
           incomingTitle={pendingCareerBookmark.title}

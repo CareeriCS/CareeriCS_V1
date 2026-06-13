@@ -15,6 +15,7 @@ type Props = {
   variant: Variant;
   onClick?: () => void;
   style?: React.CSSProperties;
+  theme?: "light" | "dark";
 };
 
 export const ActivityCard = ({
@@ -27,6 +28,7 @@ export const ActivityCard = ({
   variant,
   onClick,
   style,
+  theme = "light"
 }: Props) => {
   const isDownload = variant === "download";
   const isRetake = variant === "retake";
@@ -37,7 +39,7 @@ export const ActivityCard = ({
   return (
     <div
       style={{
-        backgroundColor: "#C1CBE6",
+        backgroundColor: theme == "light" ? "var(--light-blue)" : "var(--form-grey)",
         borderRadius: "var(--radius-lg)",
         paddingInline: "var(--space-sm)",
         paddingBlock: "var(--space-xs)",
@@ -46,7 +48,7 @@ export const ActivityCard = ({
         justifyContent: "space-between",
         alignItems: "center",
 
-        color: "black",
+        color: theme == "light" ? "black" : "white",
         fontFamily: "var(--font-nova-square)",
 
         width: "100%",
@@ -56,59 +58,59 @@ export const ActivityCard = ({
       }}
     >
       {/* TEXT SECTION */}
-<div
-  style={{
-    flex: 1,
-    minWidth: 0,
+      <div
+        style={{
+          flex: 1,
+          minWidth: 0,
 
-    display: "flex",
-    flexDirection: "column",
-    gap: "2px",
-  }}
->
-  {/* TITLE */}
-  <div
-    title={title ?? id}
-    style={{
-      fontSize: "var(--text-sm)",
+          display: "flex",
+          flexDirection: "column",
+          gap: "2px",
+        }}
+      >
+        {/* TITLE */}
+        <div
+          title={title ?? id}
+          style={{
+            fontSize: "var(--text-sm)",
 
-      overflow: "hidden",
-      textOverflow: "ellipsis",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
 
-      whiteSpace: isSmall ? "nowrap" : "normal",
+            whiteSpace: isSmall ? "nowrap" : "normal",
 
-      display: "-webkit-box",
-      WebkitBoxOrient: "vertical",
+            display: "-webkit-box",
+            WebkitBoxOrient: "vertical",
 
-      ...(isSmall
-        ? {
-            WebkitLineClamp: 1,
-          }
-        : {
-            WebkitLineClamp: 2,
-          }),
-    }}
-  >
-    {title ?? id}
-  </div>
+            ...(isSmall
+              ? {
+                WebkitLineClamp: 1,
+              }
+              : {
+                WebkitLineClamp: 2,
+              }),
+          }}
+        >
+          {title ?? id}
+        </div>
 
-  {/* SUBTITLE */}
-  <div
-    style={{
-      fontSize: "var(--text-xs)",
+        {/* SUBTITLE */}
+        <div
+          style={{
+            fontSize: "var(--text-xs)",
 
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap",
-    }}
-  >
-    {isProgress
-      ? `on ${skill ?? "unknown skill"}`
-      : isRetake
-        ? `By ${provider ?? "unknown provider"}`
-        : `Created on ${date}`}
-  </div>
-</div>
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {isProgress
+            ? `on ${skill ?? "unknown skill"}`
+            : isRetake
+              ? `By ${provider ?? "unknown provider"}`
+              : `Created on ${date}`}
+        </div>
+      </div>
 
       {/* RIGHT SECTION */}
       <div
@@ -151,6 +153,7 @@ export const ActivityCard = ({
               style={{
                 width: "100%",
                 height: "100%",
+                filter: "invert(1)",
                 objectFit: "contain",
               }}
             />
@@ -186,7 +189,7 @@ export const ActivityCard = ({
                 width: "100%",
                 height: "100%",
                 objectFit: "contain",
-                filter: "brightness(0)",
+                filter: "brightness(1)",
               }}
             />
           </button>

@@ -1,8 +1,6 @@
 "use client";
-
 import { useRouter } from "next/navigation";
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { Pause, Play, RotateCcw, Video, Volume2 } from "lucide-react";
 import InterviewLayout from "@/components/ui/interview";
 import InterviewContainer from "@/components/ui/interview-card";
 import { interviewService } from "@/services/interview.service";
@@ -12,13 +10,12 @@ import {
   buildInterviewAudioCandidates,
   type InterviewAudioKind,
 } from "@/lib/interview-media";
-
-const MIN_RECORDING_SECONDS = 5;
+import { Button } from "@/components/ui/button";
+import { useResponsive } from "@/hooks/useResponsive";
 
 export default function RecordingPage() {
   const router = useRouter();
   const { user } = useAuth();
-
   const {
     sessionId,
     followupText,
@@ -45,7 +42,6 @@ export default function RecordingPage() {
   const [actionError, setActionError] = useState("");
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const secondsRef = useRef(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
@@ -56,10 +52,6 @@ export default function RecordingPage() {
 
   const currentQuestion = questions.find((q) => q.id === activeId) || null;
   const currentQuestionText = followupText || currentQuestion?.text || "";
-
-  const hasMinimumRecordingLength = seconds >= MIN_RECORDING_SECONDS;
-  const minimumSecondsLeft = Math.max(0, MIN_RECORDING_SECONDS - seconds);
-
   const promptAudioUrl = useMemo(() => {
     if (followupText) {
       return followupAudio;
@@ -67,14 +59,11 @@ export default function RecordingPage() {
 
     return currentQuestion?.audioUrl || "";
   }, [currentQuestion, followupAudio, followupText]);
-
   const promptAudioKind: InterviewAudioKind = followupText ? "followups" : "questions";
-
   const promptAudioCandidates = useMemo(
     () => buildInterviewAudioCandidates(promptAudioUrl, promptAudioKind),
     [promptAudioKind, promptAudioUrl],
   );
-
   const canReplayQuestionAudio = Boolean(promptAudioUrl || currentQuestionText);
 
   const layoutQuestions = useMemo(
@@ -91,27 +80,15 @@ export default function RecordingPage() {
       ? "Please sign in first so an interview session can be created."
       : !sessionId
         ? actionError || "Start your interview from the interview home first."
-        : questionsError
-          ? questionsError
-          : actionError
-            ? actionError
-            : isQuestionsLoading
-              ? "Questions are still loading."
-              : isSubmitting
-                ? "Submission is already in progress."
-                : !questions.length
-                  ? "No questions are available for this interview type."
-                  : !currentQuestion?.questionId
-                    ? "Current question is not ready yet."
-                    : status === "recording" && !hasMinimumRecordingLength
-                      ? `Record at least ${minimumSecondsLeft} more second${
-                          minimumSecondsLeft === 1 ? "" : "s"
-                        }.`
-                      : status !== "recording" && !recordedMedia
-                        ? "Record your answer first."
-                        : recordedMedia && !hasMinimumRecordingLength
-                          ? `Your answer must be at least ${MIN_RECORDING_SECONDS} seconds.`
-                          : "";
+        : isQuestionsLoading
+          ? "Questions are still loading."
+          : isSubmitting
+            ? "Submission is already in progress."
+            : !questions.length
+              ? "No questions are available for this interview type."
+              : !currentQuestion?.questionId
+                ? "Current question is not ready yet."
+                : "";
 
   const isSubmitDisabled = Boolean(submitBlockedReason);
 
@@ -119,26 +96,14 @@ export default function RecordingPage() {
     setActiveId(currentQ);
   }, [currentQ]);
 
+  // 3. Timer Logic
   useEffect(() => {
     if (status === "recording") {
-      timerRef.current = setInterval(() => {
-        setSeconds((prev) => {
-          const next = prev + 1;
-          secondsRef.current = next;
-          return next;
-        });
-      }, 1000);
-    } else if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
+      timerRef.current = setInterval(() => setSeconds((prev) => prev + 1), 1000);
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current);
     }
-
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-    };
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [status]);
 
   const formatTime = (s: number) => {
@@ -158,15 +123,12 @@ export default function RecordingPage() {
     }
 
     if (previewVideoRef.current) {
-      previewVideoRef.current.pause();
       previewVideoRef.current.srcObject = null;
     }
   };
 
   const getRecorderOptions = (): MediaRecorderOptions | undefined => {
-    if (typeof MediaRecorder === "undefined") {
-      return undefined;
-    }
+    if (typeof MediaRecorder === "undefined") return undefined;
 
     const preferredTypes = [
       "video/webm;codecs=vp9,opus",
@@ -175,10 +137,10 @@ export default function RecordingPage() {
     ];
 
     const supportedType = preferredTypes.find((type) => MediaRecorder.isTypeSupported(type));
-
     return supportedType ? { mimeType: supportedType } : undefined;
   };
 
+  // 4. Action Handlers
   const handleCameraToggle = async () => {
     if (status === "recording") {
       setIsFinalizingRecording(true);
@@ -189,21 +151,14 @@ export default function RecordingPage() {
 
     try {
       setActionError("");
-
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: true,
-      });
-
-      streamRef.current = mediaStream;
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+      streamRef.current = stream;
 
       if (previewVideoRef.current) {
-        previewVideoRef.current.srcObject = mediaStream;
-        previewVideoRef.current.muted = true;
-        previewVideoRef.current.playsInline = true;
+        previewVideoRef.current.srcObject = stream;
       }
 
-      const recorder = new MediaRecorder(mediaStream, getRecorderOptions());
+      const recorder = new MediaRecorder(stream, getRecorderOptions());
       chunksRef.current = [];
 
       recorder.ondataavailable = (event) => {
@@ -218,7 +173,6 @@ export default function RecordingPage() {
         const blob = new Blob(chunksRef.current, {
           type: recorder.mimeType || "video/webm",
         });
-
         if (blob.size > 0) {
           if (recordedPreviewUrl) {
             URL.revokeObjectURL(recordedPreviewUrl);
@@ -229,12 +183,7 @@ export default function RecordingPage() {
 
           if (pendingSubmitRef.current) {
             pendingSubmitRef.current = false;
-
-            if (secondsRef.current >= MIN_RECORDING_SECONDS) {
-              void submitRecordedAnswer(blob);
-            } else {
-              setActionError(`Your answer must be at least ${MIN_RECORDING_SECONDS} seconds.`);
-            }
+            void submitRecordedAnswer(blob);
           }
         } else if (pendingSubmitRef.current) {
           pendingSubmitRef.current = false;
@@ -244,34 +193,21 @@ export default function RecordingPage() {
 
       mediaRecorderRef.current = recorder;
       recorder.start();
-
       setRecordedMedia(null);
-
       if (recordedPreviewUrl) {
         URL.revokeObjectURL(recordedPreviewUrl);
         setRecordedPreviewUrl(null);
       }
-
-      secondsRef.current = 0;
       setSeconds(0);
       setStatus("recording");
-
-      requestAnimationFrame(() => {
-        void previewVideoRef.current?.play().catch(() => {
-          // Browser may delay playback until the video is visible.
-        });
-      });
     } catch (error) {
       if (error instanceof DOMException && error.name === "NotAllowedError") {
-        setActionError(
-          "Camera and microphone access are required to record an answer. Please allow permissions in your browser settings.",
-        );
+        setActionError("Camera and microphone access are required to record an answer. Please allow permissions in your browser settings.");
       } else if (error instanceof DOMException && error.name === "NotFoundError") {
         setActionError("No camera or microphone device was found.");
       } else {
         setActionError("Unable to start recording. Please refresh and try again.");
       }
-
       setStatus("idle");
     }
   };
@@ -281,22 +217,18 @@ export default function RecordingPage() {
     stopAndCleanupMedia();
     setStatus("idle");
     setIsFinalizingRecording(false);
-    secondsRef.current = 0;
     setSeconds(0);
     setRecordedMedia(null);
-
     if (recordedPreviewUrl) {
       URL.revokeObjectURL(recordedPreviewUrl);
       setRecordedPreviewUrl(null);
     }
-
     setActionError("");
   };
 
   useEffect(() => {
     return () => {
       stopAndCleanupMedia();
-
       if (recordedPreviewUrl) {
         URL.revokeObjectURL(recordedPreviewUrl);
       }
@@ -306,7 +238,6 @@ export default function RecordingPage() {
   const playPromptAudio = useCallback(
     async (startIndex = 0): Promise<boolean> => {
       const player = promptAudioElementRef.current;
-
       if (!player || !promptAudioCandidates.length) {
         return false;
       }
@@ -332,7 +263,6 @@ export default function RecordingPage() {
           return true;
         } catch (error) {
           const blocked = error instanceof DOMException && error.name === "NotAllowedError";
-
           if (blocked) {
             setIsPromptAutoplayBlocked(true);
             return false;
@@ -393,7 +323,10 @@ export default function RecordingPage() {
     let disposed = false;
 
     const retryPlayback = () => {
-      if (disposed) return;
+      if (disposed) {
+        return;
+      }
+
       void playPromptAudio(promptCandidateIndexRef.current);
     };
 
@@ -409,7 +342,6 @@ export default function RecordingPage() {
 
   const handlePromptAudioError = () => {
     const nextIndex = promptCandidateIndexRef.current + 1;
-
     if (nextIndex < promptAudioCandidates.length) {
       void playPromptAudio(nextIndex);
       return;
@@ -419,12 +351,7 @@ export default function RecordingPage() {
   };
 
   const submitRecordedAnswer = async (media: Blob) => {
-    if (
-      !sessionId ||
-      !currentQuestion?.questionId ||
-      isSubmitting ||
-      secondsRef.current < MIN_RECORDING_SECONDS
-    ) {
+    if (!sessionId || !currentQuestion?.questionId || isSubmitting) {
       return;
     }
 
@@ -459,11 +386,6 @@ export default function RecordingPage() {
       return;
     }
 
-    if (secondsRef.current < MIN_RECORDING_SECONDS) {
-      setActionError(`Your answer must be at least ${MIN_RECORDING_SECONDS} seconds.`);
-      return;
-    }
-
     if (status === "recording") {
       pendingSubmitRef.current = true;
       setIsFinalizingRecording(true);
@@ -488,7 +410,6 @@ export default function RecordingPage() {
   const onQuestionClick = (id: number) => {
     pendingSubmitRef.current = false;
     setActiveId(id);
-
     router.replace(
       buildRecordingUrl({
         q: String(id),
@@ -498,7 +419,6 @@ export default function RecordingPage() {
         questionId: null,
       }),
     );
-
     handleReset();
   };
 
@@ -512,7 +432,6 @@ export default function RecordingPage() {
 
     try {
       const started = await playPromptAudio(promptCandidateIndexRef.current);
-
       if (!started && !speakPromptFallback()) {
         setActionError("Prompt audio is unavailable right now.");
       }
@@ -521,119 +440,34 @@ export default function RecordingPage() {
     }
   };
 
+  // 5. UI Controls
   const isPeeking = activeId !== unlockedId;
-
-  const controlButtonBase: React.CSSProperties = {
-    width: "58px",
-    height: "58px",
-    borderRadius: "999px",
-    border: "1px solid rgba(255,255,255,0.16)",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    transition: "all 0.2s ease",
-    fontWeight: 400,
-  };
+  const { isLarge, isMedium, isSmall } = useResponsive();
 
   const controls = (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: "28px",
-        opacity: isPeeking ? 0.35 : 1,
-        pointerEvents: isPeeking ? "none" : "auto",
-        flexWrap: "wrap",
-      }}
-    >
-      <button
-        type="button"
+    <div style={{
+      display: "flex",
+      alignItems: "center",
+      gap: "var(--space-2xl)",
+      opacity: isPeeking ? 0.3 : 1, // Dim controls if looking at a future question
+      pointerEvents: isPeeking ? "none" : "auto"
+    }}>
+      <img
+        src={status === "idle" ? "/interview/record.svg" : status === "recording" ? "/interview/Pause.svg" : "/interview/Play.svg"}
+        alt="Control"
+        style={{ height: "var(--icon-2xl)", cursor: isQuestionsLoading ? "not-allowed" : "pointer", opacity: isQuestionsLoading ? 0.5 : 1 }}
         onClick={handleCameraToggle}
-        disabled={isQuestionsLoading || isSubmitting || isFinalizingRecording}
-        aria-label={status === "recording" ? "Stop recording" : "Start video recording"}
-        title={status === "recording" ? "Stop recording" : "Start video recording"}
-        style={{
-          ...controlButtonBase,
-          width: "72px",
-          height: "72px",
-          background:
-            status === "recording"
-              ? "rgba(255, 78, 78, 0.16)"
-              : "linear-gradient(180deg, #d4ff47 0%, #b9f128 100%)",
-          color: status === "recording" ? "#ff6b6b" : "#111827",
-          cursor:
-            isQuestionsLoading || isSubmitting || isFinalizingRecording ? "not-allowed" : "pointer",
-          opacity: isQuestionsLoading || isSubmitting || isFinalizingRecording ? 0.55 : 1,
-          boxShadow:
-            status === "recording"
-              ? "0 0 0 8px rgba(255, 78, 78, 0.08)"
-              : "0 10px 30px rgba(212, 255, 71, 0.24)",
-        }}
-      >
-        {status === "recording" ? (
-          <Pause size={32} fill="currentColor" strokeWidth={0} />
-        ) : status === "stopped" ? (
-          <Play size={32} fill="currentColor" strokeWidth={0} />
-        ) : (
-          <Video size={32} strokeWidth={2.2} />
-        )}
-      </button>
-
-      <span
-        style={{
-          fontSize: "40px",
-          color: "white",
-          fontFamily: "var(--font-nova-square)",
-          minWidth: "120px",
-          textAlign: "center",
-          letterSpacing: "0.04em",
-          fontWeight: 400,
-        }}
-      >
+      />
+      <span style={{ fontSize: "var(--text-lg)", color: "white", fontFamily: "var(--font-nova-square)", minWidth: "120px", textAlign: "center" }}>
         {formatTime(seconds)}
       </span>
-
-      <button
-        type="button"
+      <img
+        src="/interview/retake.svg"
+        alt="Reset"
+        style={{ height: "var(--icon-2xl)", cursor: "pointer" }}
         onClick={handleReset}
-        aria-label="Retake answer"
-        title="Retake answer"
-        style={{
-          ...controlButtonBase,
-          background: "rgba(255,255,255,0.08)",
-          color: "#ffffff",
-          cursor: "pointer",
-        }}
-      >
-        <RotateCcw size={26} />
-      </button>
+      />
 
-      <button
-        type="button"
-        onClick={() => void handleReplayQuestionAudio()}
-        disabled={!canReplayQuestionAudio || isReplayingQuestion}
-        aria-label="Replay question audio"
-        title="Replay question audio"
-        style={{
-          ...controlButtonBase,
-          width: "auto",
-          height: "46px",
-          gap: "8px",
-          padding: "0 18px",
-          backgroundColor: "#d4ff47",
-          color: "#111827",
-          border: "none",
-          fontSize: "13px",
-          fontFamily: "var(--font-nova-square)",
-          fontWeight: 400,
-          cursor: !canReplayQuestionAudio || isReplayingQuestion ? "not-allowed" : "pointer",
-          opacity: !canReplayQuestionAudio || isReplayingQuestion ? 0.65 : 1,
-        }}
-      >
-        <Volume2 size={18} />
-        {isReplayingQuestion ? "Replaying..." : "Replay"}
-      </button>
     </div>
   );
 
@@ -644,16 +478,17 @@ export default function RecordingPage() {
       currentActiveId={activeId}
       unlockedStepId={unlockedId}
       onQuestionClick={onQuestionClick}
-      singleLineItems
-      disableNavigation
     >
       <div
         style={{
-          width: "100%",
+          width: isLarge ? "55vw" : "85vw",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
           position: "relative",
+          gap:"var(--space-lg)",
+          justifyContent:"space-evenly",
+          height:"100%"
         }}
       >
         <audio
@@ -661,41 +496,89 @@ export default function RecordingPage() {
           preload="auto"
           onError={handlePromptAudioError}
           style={{ display: "none" }}
-        />
+          />
+        <div
+          style={{
+            display: "flex",
+            width: "100%",
+            justifyContent: "space-between",
+            alignItems:"flex-start",
+            height:"fit-content",
+          gap:"var(--space-lg)",
+          }}
+        >
+
+          <h2
+            style={{
+              margin: 0,
+              textAlign: "center",
+              fontSize: followupText?"var(--text-xs)":"var(--text-lg)",
+              lineHeight: "var(--line-normal)",
+              color: "var(--text-primary)",
+              fontFamily: "var(--font-nova-square), sans-serif",
+            }}
+          >
+            {`${followupText?"": `${unlockedId} .`} ${currentQuestionText}`}
+          </h2>
+          <Button
+            type="button"
+            variant="primary-inverted"
+            onClick={() => void handleReplayQuestionAudio()}
+            disabled={!canReplayQuestionAudio || isReplayingQuestion}
+            style={{
+              border: "none",
+              borderRadius: "999px",
+              height: "fit-content",
+              paddingBlock: "var(--space-xs)",
+              paddingInline: "var(--space-lg)",
+              fontSize: "var(--text-sm)",
+              fontFamily: "var(--font-nova-square)",
+              fontWeight: 700,
+              cursor: !canReplayQuestionAudio || isReplayingQuestion ? "not-allowed" : "pointer",
+              opacity: !canReplayQuestionAudio || isReplayingQuestion ? 0.65 : 1,
+            }}
+          >
+            {isReplayingQuestion ? "Replaying..." : "Replay"}
+          </Button>
+        </div>
 
         <InterviewContainer
+          // STICKY TITLE: Always shows the unlocked question
           questionTitle={`${unlockedId}. ${currentQuestionText}`}
           videoContent={
-            <div
-              style={{
-                width: "100%",
-                height: "100%",
-                position: "relative",
-              }}
-            >
+            <div style={{ color: "white", fontSize: "18px", textAlign: "center" }}>
+              {isQuestionsLoading
+                ? "Loading questions..."
+                : questionsError || actionError
+                  ? questionsError || actionError
+                  : !user?.id
+                    ? "Please sign in to start interview session."
+                    : !sessionId
+                      ? "This interview session is missing. Start from the interview home first."
+                      : status === "recording"
+                        ? " Recording..."
+                        : isFinalizingRecording
+                          ? "Finalizing recording..."
+                          : status === "stopped"
+                            ? "⏸ Paused"
+                            : recordedMedia
+                              ? "Ready to submit"
+                              : ""}
+
+
               <div
                 style={{
                   width: "100%",
                   height: "100%",
-                  minHeight: "320px",
-                  borderRadius: "24px",
-                  overflow: "hidden",
-                  background:
-                    status === "recording" || recordedPreviewUrl
-                      ? "#050505"
-                      : "radial-gradient(circle at center, rgba(212,255,71,0.08), rgba(0,0,0,0.2) 45%, rgba(0,0,0,0.45))",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
                   transform: status === "recording" ? "scaleX(-1)" : "none",
                 }}
               >
                 <video
                   ref={previewVideoRef}
-                  autoPlay
+                  autoPlay={status === "recording"}
                   muted
                   playsInline
-                  controls={status !== "recording" && Boolean(recordedPreviewUrl)}
+                  controls={status !== "recording"}
                   src={status !== "recording" ? recordedPreviewUrl ?? undefined : undefined}
                   style={{
                     width: "100%",
@@ -705,10 +588,6 @@ export default function RecordingPage() {
                     display: status === "recording" || recordedPreviewUrl ? "block" : "none",
                   }}
                 />
-
-                {status === "idle" && !recordedPreviewUrl ? (
-                  <Video size={54} color="#d4ff47" />
-                ) : null}
               </div>
             </div>
           }
@@ -716,47 +595,38 @@ export default function RecordingPage() {
           actionButton={
             !sessionId ? (
               <button
-                type="button"
                 onClick={() => router.push("/features/interview")}
+                disabled={false}
                 title={submitBlockedReason || undefined}
                 style={{
-                  background: "#d4ff47",
+                  background: "var(--primary-green)",
                   padding: "15px 100px",
                   borderRadius: "15px",
                   border: "none",
-                  fontWeight: 400,
+                  fontWeight: "bold",
                   fontSize: "18px",
                   fontFamily: "var(--font-nova-square)",
                   cursor: "pointer",
                   opacity: 1,
                   transition: "0.3s",
-                  color: "#1a1a1a",
+                  color: "#1a1a1a"
                 }}
               >
                 Back To Interview Home
               </button>
             ) : (
-              <button
-                type="button"
+              <Button
                 onClick={handleSubmit}
                 disabled={isSubmitDisabled}
                 title={submitBlockedReason || undefined}
                 style={{
-                  background: "#d4ff47",
-                  padding: "15px 100px",
-                  borderRadius: "15px",
-                  border: "none",
-                  fontWeight: 400,
-                  fontSize: "18px",
-                  fontFamily: "var(--font-nova-square)",
                   cursor: isSubmitDisabled ? "not-allowed" : "pointer",
                   opacity: isSubmitDisabled ? 0.5 : 1,
-                  transition: "0.3s",
-                  color: "#1a1a1a",
+                  paddingInline:"var(--space-2xl)",
                 }}
               >
                 {isSubmitting ? "Submitting..." : isFinalizingRecording ? "Preparing..." : "Submit"}
-              </button>
+              </Button>
             )
           }
         />

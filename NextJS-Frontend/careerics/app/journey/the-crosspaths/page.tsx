@@ -9,6 +9,8 @@ import { fetchCareerBlogDetails, type CareerBlogDetails, type LevelDetail } from
 import { buildJourneyPhaseHref } from "@/lib/journey";
 import { useJourneyPhase } from "@/hooks/use-journey-phase";
 import { careerService } from "@/services";
+import JourneyTreeVertical from "@/components/ui/journey-tree-vertical";
+import { useResponsive } from "@/hooks/useResponsive";
 
 type Level = "Entry" | "Junior" | "Senior";
 
@@ -254,9 +256,12 @@ export default function JourneyCrosspathsPage() {
     ).slice(0, MAX_FIT_REASONS);
   }, [currentLevelData.fitReason, selectedTrack?.description, selectedTrack?.title]);
 
+  const { isLarge, isMedium, isSmall } = useResponsive();
+  const Orientation = isLarge ? JourneyTree : JourneyTreeVertical;
+
   if (isLoadingTracks || (isLoadingData && !careerDetails && Boolean(selectedTrack))) {
     return (
-      <JourneyTree
+      <Orientation
         current={1}
         maxReached={1}
         renderContent={renderLoadingState}
@@ -266,7 +271,7 @@ export default function JourneyCrosspathsPage() {
 
   if (!selectedTrack) {
     return (
-      <JourneyTree
+      <Orientation
         current={1}
         maxReached={1}
         renderContent={() => (
@@ -313,7 +318,7 @@ export default function JourneyCrosspathsPage() {
   const activeError = dataError || trackError;
 
   return (
-    <JourneyTree
+    <Orientation
       current={1}
       maxReached={nextPhase}
       resolvePhasePath={(phase) => buildJourneyPhaseHref(phase, selectedTrack.id)}
@@ -324,8 +329,8 @@ export default function JourneyCrosspathsPage() {
             height: "100%",
             display: "grid",
             padding: "var(--space-xl)",
-            gridTemplateColumns: "1.2fr 1fr",
-            gridTemplateRows: "1fr",
+            gridTemplateColumns: "repeat(2, 1fr)",
+            gridTemplateRows: "1fr 1.5fr",
             gridColumnGap: "var(--space-lg)",
             color: "white",
             textAlign: "left",
@@ -334,25 +339,22 @@ export default function JourneyCrosspathsPage() {
         >
           <div
             style={{
-              width: "100%",
-              height: "100%",
               display: "flex",
               flexDirection: "column",
               justifyContent: "flex-start",
               alignItems: "flex-start",
-              gap: "2rem",
               gridArea: "1 / 1 / 2 / 2",
-              maxWidth: "100%",
+              alignSelf: "stretch",
+              gap: "var(--space-sm)"
             }}
           >
-            <div>
-              <h1 style={{ fontSize: "var(--text-lg)", marginBottom: "var(--space-sm)" }}>
-                {selectedTrack.title || "Career Track"}
-              </h1>
-              <p style={{ fontSize: "var(--text-base)", color: "lightgrey", margin: 0 }}>
-                {selectedTrack.description || "Track details are loading..."}
-              </p>
-            </div>
+            <h1 style={{ fontSize: "var(--text-lg)", }}>
+              {selectedTrack.title || "Career Track"}
+            </h1>
+
+            <p style={{ fontSize: "var(--text-base)", color: "lightgrey", }}>
+              {selectedTrack.description || "Track details are loading..."}
+            </p>
 
             <div
               style={{
@@ -368,44 +370,55 @@ export default function JourneyCrosspathsPage() {
                   theme="dark"
                   Title={skill}
                   style={{
-                    flex:1,
+                    flex: 1,
                     minWidth: "fit-content",
                     flexGrow: 1,
                   }}
                 />
               ))}
             </div>
+          </div>
 
-            <div>
-              <h1 style={{ fontSize: "var(--text-lg)", marginBottom: "var(--space-sm)" }}>
-                Key Responsibilities
-              </h1>
+          <div
+            style={{
+              display: "flex",
+              alignSelf: "stretch",
+              flexDirection: "column",
+              justifyContent: "flex-start",
+              alignItems: "flex-start",
+              gridArea: "2 / 1 / 3 / 2",
+              paddingBlock: "var(--space-xl)",
+              gap: "var(--space-sm)"
+            }}
+          >
+            <h1 style={{ fontSize: "var(--text-lg)", }}>
+              Key Responsibilities
+            </h1>
 
-              {isLoadingData && !careerDetails ? (
-                <p style={{ color: "lightgrey" }}>Loading track responsibilities...</p>
-              ) : (
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(1, 1fr)",
-                    width: "fit-content",
-                    gap: "var(--space-md)",
-                  }}
-                >
-                  {displayResponsibilities.length ? (
-                    displayResponsibilities.map((responsibility, index) => (
-                      <p key={`${responsibility}-${index}`} style={{ fontSize: "var(--text-base)", color: "lightgrey", margin: 0 }}>
-                        {"\u2022"} {responsibility}
-                      </p>
-                    ))
-                  ) : (
-                    <p style={{ fontSize: "var(--text-base)", color: "lightgrey", margin: 0 }}>
-                      No detailed responsibilities are available for this track yet.
+            {isLoadingData && !careerDetails ? (
+              <p style={{ color: "lightgrey" }}>Loading track responsibilities...</p>
+            ) : (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(1, 1fr)",
+                  width: "fit-content",
+                  gap: "var(--space-md)",
+                }}
+              >
+                {displayResponsibilities.length ? (
+                  displayResponsibilities.map((responsibility, index) => (
+                    <p key={`${responsibility}-${index}`} style={{ fontSize: "var(--text-base)", color: "lightgrey", margin: 0 }}>
+                      {"\u2022"} {responsibility}
                     </p>
-                  )}
-                </div>
-              )}
-            </div>
+                  ))
+                ) : (
+                  <p style={{ fontSize: "var(--text-base)", color: "lightgrey", margin: 0 }}>
+                    No detailed responsibilities are available for this track yet.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           <div
@@ -416,7 +429,7 @@ export default function JourneyCrosspathsPage() {
               flexDirection: "column",
               justifyContent: "flex-start",
               alignItems: "flex-start",
-              gap: "2rem",
+              gap: "var(--space-lg)",
               gridArea: "1 / 2 / 2 / 3",
             }}
           >
@@ -425,6 +438,7 @@ export default function JourneyCrosspathsPage() {
                 display: "flex",
                 width: "100%",
                 gap: "var(--space-sm)",
+                flexWrap: "wrap",
               }}
             >
               {LEVELS.map((level) => (
@@ -437,7 +451,7 @@ export default function JourneyCrosspathsPage() {
                   selectable
                   onSelect={() => setSelectedLevel(level)}
                   style={{
-                    flex:1,
+                    flex: 1,
                     minWidth: "fit-content",
                     flexGrow: 1,
                   }}
@@ -451,7 +465,7 @@ export default function JourneyCrosspathsPage() {
                 height: "fit-content",
                 display: "flex",
                 justifyContent: "flex-start",
-                alignItems: "center",
+                alignItems: "flex-start",
                 gap: "var(--space-xl)",
               }}
             >
@@ -470,44 +484,45 @@ export default function JourneyCrosspathsPage() {
               </div>
             </div>
 
-            <div
-              style={{
-                width: "100%",
-                height: "100%",
-                backgroundColor: "var(--medium-blue)",
-                borderRadius: "var(--radius-xl)",
-                padding: "var(--space-xl)",
-              }}
-            >
-              <h1 style={{ fontSize: "var(--text-lg)", marginBottom: "var(--space-md)" }}>
-                This Would Fit You If
-              </h1>
-
-              {isLoadingData && !careerDetails ? (
-                <p style={{ color: "lightgrey" }}>Loading fit profile...</p>
-              ) : (
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(1, 1fr)",
-                    width: "fit-content",
-                    gap: "var(--space-md)",
-                  }}
-                >
-                  {displayFitReasons.map((fitReason, index) => (
-                    <p key={`${fitReason}-${index}`} style={{fontSize: "var(--text-base)", color: "lightgrey", margin: 0 }}>
-                      {"\u2022"} {fitReason}
-                    </p>
-                  ))}
-                </div>
-              )}
-            </div>
 
             {activeError ? (
               <p style={{ margin: 0, color: "#FFD3D3" }}>
                 {activeError}
               </p>
             ) : null}
+          </div>
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              backgroundColor: "var(--medium-blue)",
+              borderRadius: "var(--radius-xl)",
+              padding: "var(--space-xl)",
+              gridArea: "2 / 2 / 3 / 3",
+            }}
+          >
+            <h1 style={{ fontSize: "var(--text-lg)", marginBottom: "var(--space-md)" }}>
+              This Would Fit You If
+            </h1>
+
+            {isLoadingData && !careerDetails ? (
+              <p style={{ color: "lightgrey" }}>Loading fit profile...</p>
+            ) : (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(1, 1fr)",
+                  width: "fit-content",
+                  gap: "var(--space-md)",
+                }}
+              >
+                {displayFitReasons.map((fitReason, index) => (
+                  <p key={`${fitReason}-${index}`} style={{ fontSize: "var(--text-base)", color: "lightgrey", margin: 0 }}>
+                    {"\u2022"} {fitReason}
+                  </p>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

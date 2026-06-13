@@ -5,11 +5,13 @@ import { useRouter } from 'next/navigation';
 interface ContinueCardProps {
   description?: string;
   style?: React.CSSProperties;
+  theme?: "light" | "dark";
 }
 
 const ContinueCard: React.FC<ContinueCardProps> = ({
   description = "Your next opportunity awaits",
   style = {},
+  theme = "dark",
 }) => {
   const router = useRouter();
 
@@ -17,7 +19,7 @@ const ContinueCard: React.FC<ContinueCardProps> = ({
     <div
       onClick={() => router.push('/job-features/application')}
       style={{
-        backgroundColor: "var(--dark-blue)",
+        backgroundColor: theme === "dark" ? "var(--dark-blue)" : "var(--bg-grey)",
         borderRadius: "var(--radius-xl)",
         padding: "var(--space-xl)",
         height: "100%",
@@ -26,6 +28,7 @@ const ContinueCard: React.FC<ContinueCardProps> = ({
         alignItems: "center",
         gap: "var(--space-md)",
         cursor: "pointer",
+        color: theme === "dark" ? "white" : "black",
         ...style,
       }}
     >
@@ -33,7 +36,6 @@ const ContinueCard: React.FC<ContinueCardProps> = ({
       <div>
 
         <h3 style={{
-          color: "white",
           fontSize: "var(--text-md)",
           fontFamily: 'Nova Square',
           fontWeight: "400",
@@ -42,7 +44,7 @@ const ContinueCard: React.FC<ContinueCardProps> = ({
         </h3>
 
         <p style={{
-          color: "rgba(255,255,255,0.6)",
+          color: theme === "dark" ? "rgba(255, 255, 255, 0.6)" : "rgba(0, 0, 0, 0.8)",
           fontSize: "var(--text-base)",
         }}>
           {description}
@@ -52,7 +54,6 @@ const ContinueCard: React.FC<ContinueCardProps> = ({
 
       <div
         style={{
-          color: "white",
           fontSize: "var(--text-md)",
           marginLeft: "auto",
         }}

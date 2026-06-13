@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import JobCard from "@/components/ui/jobCard";
 import JobDetailsCard from "@/components/ui/JobDetailsCard";
+import { useRouter } from "next/navigation";
 import {
   clearPersistedSelectedJobId,
   mapApiJobToUiModel,
@@ -14,6 +15,7 @@ import { useAuth } from "@/providers/auth-provider";
 import { jobService } from "@/services";
 import type { JobApplicationStatus, JobUiModel } from "@/types";
 import { useResponsive } from "@/hooks/useResponsive";
+import { SearchBar } from "@/components/ui/searchbar";
 
 export default function BookmarkedJobs() {
   const { isLarge, isMedium, isSmall } = useResponsive();
@@ -197,6 +199,7 @@ export default function BookmarkedJobs() {
           isBookmarked={job.isSaved}
           isBookmarkLoading={bookmarkingJobId === job.id}
           onBookmarkToggle={() => handleBookmarkToggle(job)}
+          isSelected={job.id===selectedJobId}
         />
       </div>
     ));
@@ -219,8 +222,19 @@ export default function BookmarkedJobs() {
   );
 
   const renderSelectedLayout = () => (
-    <div style={{ display: isLarge ? "flex" : "grid", gridTemplateColumns:"1fr", gridTemplateRows:"1fr", gap: "var(--space-lg)", height: "100%", overflow: "hidden", justifyContent:"space-around", position: "relative" }}>
-      
+    <div
+      style={{
+        display: isLarge ? "flex" : "grid",
+        gridTemplateColumns: "1fr",
+        gridTemplateRows: "1fr",
+        gap: "calc(var(--space-xl) *2 )",
+        height: "100%",
+        overflow: "hidden",
+        justifyContent: "flex-start",
+        position: "relative"
+      }}
+    >
+
       {/* Cards List Panel */}
       <div style={{
         width: "fit-content",
@@ -234,10 +248,14 @@ export default function BookmarkedJobs() {
         gridArea: "1 / 1 / 2 / 2",
         zIndex: 0,
       }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)", }}>
-          <h2 style={{ color: "var(--light-blue)", fontFamily: "Nova Square, sans-serif", fontSize: "var(--text-xl)" }}>
-            Bookmarked Jobs
-          </h2>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "var(--space-md)",
+          }}
+        >
+
 
           {renderBookmarkCards()}
         </div>
@@ -269,11 +287,22 @@ export default function BookmarkedJobs() {
         marginLeft: isLarge ? "0" : "auto",
         scrollbarWidth: "none",
       }}>
-        <div style={{ position: "relative", width: "fit-content", display: "flex", justifyContent: "center", alignItems: "flex-start", height: "100%",maxWidth:"70vw" }}>
+        <div
+          style={{
+            position: "relative",
+            width: "fit-content",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "flex-start",
+            height: "100%",
+            maxWidth: "70vw",
+          }}
+        >
           {selectedJob && (
             <JobDetailsCard
               jobData={selectedJob}
               onApply={handleApply}
+              onClose={() => setSelectedJobId(null)}
               isApplying={isApplying}
               actionLabel="Apply"
               isApplyDisabled={false}
@@ -284,34 +313,88 @@ export default function BookmarkedJobs() {
     </div>
   );
 
+  const router = useRouter();
   return (
+
     <div style={{
-      padding: "var(--space-lg)",
+      padding: "var(--space-xl)",
       height: "100dvh",
       width: "100%",
-      overflowY: "auto",
-      overflowX: "hidden",
-      boxSizing: "border-box",
-      scrollbarWidth: "none",
+      overflow: "hidden",
       display: "flex",
       flexDirection: "column",
       gap: "var(--space-lg)",
     }}>
 
-      {/* Dimming Backdrop Overlay (Triggers when card is active on smaller screens over the whole viewport) */}
+
       {selectedJob && !isLarge && (
-        <div style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          width: "100vw",
-          height: "100vh",
-          backgroundColor: "var(--bg-color)",
-          opacity: 0.65,
-          zIndex: 5,
-          pointerEvents: "auto",
-        }} />
+        <div
+          onClick={() => setSelectedJobId(null)}
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            backgroundColor: "var(--bg-color)",
+            opacity: 0.65,
+            zIndex: 5,
+            pointerEvents: "auto",
+          }}
+        />
       )}
+
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+        }}
+      >
+        <h2
+          style={{
+            color: "white",
+            fontFamily: "Nova Square, sans-serif",
+            fontSize: "var(--text-xl)"
+          }}
+        >
+          Bookmarked Jobs
+        </h2>
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "flex-end",
+            gap: "var(--space-md)"
+          }}
+        >
+          <SearchBar
+            value={searchTerm}
+            onChange={setSearchTerm}
+            placeholder="Search jobs..."
+          />
+          <button
+            type="button"
+            onClick={() => router.back()}
+            style={{
+              width: "var(--icon-lg)",
+              height: "var(--icon-lg)",
+              cursor: "pointer",
+            }}
+          >
+            <img
+              src="/global/close.svg"
+              alt="Close"
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "contain",
+              }}
+            />
+          </button>
+        </div>
+      </div>
 
       <div style={{
         display: "flex",
@@ -321,47 +404,6 @@ export default function BookmarkedJobs() {
         zIndex: 1,
       }}>
 
-        {!selectedJob && (
-          <h2 style={{ color: "var(--light-blue)", fontFamily: "Nova Square, sans-serif", fontSize: "var(--text-xl)" }}>
-            Bookmarked Jobs
-          </h2>
-        )}
-
-        {!selectedJob && (
-          <div style={{ position: "relative" }}>
-            <input
-              type="text"
-              placeholder="Search By Job Title"
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              style={{
-                backgroundColor: "transparent",
-                border: "1px solid var(--light-blue)",
-                borderRadius: "var(--radius-xl)",
-                color: "var(--light-blue)",
-                width: "var(--container-xxs)",
-                maxWidth: "200px",
-                height: "var(--min-touch-target)",
-                outline: "none",
-                padding: " var(--space-lg)",
-                fontFamily: "Nova Square, sans-serif",
-                fontSize: "var(--text-base)",
-              }}
-            />
-            <img
-              src="/global/search.svg"
-              alt="search"
-              style={{
-                position: "absolute",
-                right: "0",
-                top: "50%",
-                transform: "translateY(-50%)",
-                width: "var(--icon-lg)",
-                pointerEvents: "none",
-              }}
-            />
-          </div>
-        )}
       </div>
 
       {error && (

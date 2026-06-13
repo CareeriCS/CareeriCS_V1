@@ -25,7 +25,7 @@ export const RectangularCard = ({
   subtext?: string;
   isSubtextVisible?: boolean;
   variant?: Variant;
-  theme?: Theme;
+  theme?: "light" | "dark" | "grey";
   selectable?: boolean;
   selected?: boolean;
   onSelect?: () => void;
@@ -36,13 +36,12 @@ export const RectangularCard = ({
   const [showTooltip, setShowTooltip] = useState(false);
 
   const pressTimer = useRef<NodeJS.Timeout | null>(null);
+  const hideTimer = useRef<NodeJS.Timeout | null>(null);
 
-  const isTouchDevice =
-    typeof window !== "undefined" &&
-    window.matchMedia("(pointer: coarse)").matches;
+  const isTouchDevice = true
 
   const baseBg =
-    theme === "dark" ? "var(--medium-blue)" : "#C1CBE6";
+    theme === "dark" ? "var(--medium-blue)" : theme === "grey" ? "var(--form-grey)" : "var(--light-blue)";
 
   const hoverBg = "var(--light-green)";
 
@@ -51,19 +50,28 @@ export const RectangularCard = ({
   const backgroundColor = active ? hoverBg : baseBg;
 
   const textColor =
-    theme === "dark" && !active ? "white" : "black";
+    theme === "dark" && !active || theme === "grey" ? "white" : "black";
 
   const handlePressStart = () => {
     if (!isTouchDevice) return;
 
+    if (pressTimer.current) clearTimeout(pressTimer.current);
+
     pressTimer.current = setTimeout(() => {
       setShowTooltip(true);
+
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+
+      hideTimer.current = setTimeout(() => {
+        setShowTooltip(false);
+      }, 2500);
     }, 500);
   };
 
   const handlePressEnd = () => {
     if (pressTimer.current) {
       clearTimeout(pressTimer.current);
+      pressTimer.current = null;
     }
   };
 
@@ -71,14 +79,19 @@ export const RectangularCard = ({
 
   return (
     <div
-      onMouseEnter={() => setIsHovered(true)}
+      onMouseEnter={() => onSelect? setIsHovered(true):()=>{}}
       onMouseLeave={() => setIsHovered(false)}
       onMouseDown={handlePressStart}
       onMouseUp={handlePressEnd}
       onTouchStart={handlePressStart}
       onTouchEnd={handlePressEnd}
+      onTouchCancel={handlePressEnd}
       onClick={() => {
-        setShowTooltip(false);
+        if (showTooltip) {
+          setShowTooltip(false);
+          return;
+        }
+
         if (selectable) onSelect?.();
       }}
       title={!isTouchDevice ? Title : undefined}
@@ -94,15 +107,17 @@ export const RectangularCard = ({
         gap: "1rem",
         padding: "var(--space-sm)",
         width: "fit-content",
+        userSelect: "none",
+        WebkitUserSelect: "none",
+        WebkitTouchCallout: "none",
         ...style,
       }}
     >
-      {/* Tooltip (mobile only) */}
       {showTooltip && isTouchDevice && (
         <div
           style={{
             position: "absolute",
-            top: "-2.5rem",
+            top: "50%",
             left: "50%",
             transform: "translateX(-50%)",
             background: "black",
@@ -111,21 +126,22 @@ export const RectangularCard = ({
             borderRadius: "0.5rem",
             fontSize: "0.75rem",
             whiteSpace: "nowrap",
-            zIndex: 10,
+            zIndex: 999,
+            pointerEvents: "none",
+            maxWidth: "80vw",
           }}
         >
           {Title}
         </div>
       )}
 
-      {/* Text */}
       <div
         style={{
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          width:"fit-content",
+          width: "fit-content",
         }}
       >
         <p
@@ -138,7 +154,7 @@ export const RectangularCard = ({
             whiteSpace: shouldClipTitle ? "nowrap" : "normal",
             textAlign: "center",
             marginRight: "auto",
-            fontWeight: "800",
+            fontWeight: font === "jura" ? "800" : "400",
             fontFamily:
               font === "jura"
                 ? "var(--font-jura)"
