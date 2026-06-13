@@ -1,12 +1,12 @@
 "use client";
-import { useRouter } from "next/navigation";
+
 
 export default function JourneyLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
-    const router = useRouter();
+    
     return (
         <div
             style={{
@@ -31,36 +31,12 @@ export default function JourneyLayout({
                     flexDirection: "column",
                 }}
             >
-
-            <button
-                type="button"
-                onClick={() => router.back()}
-                style={{
-                    width: "var(--icon-lg)",
-                    height: "var(--icon-lg)",
-                    cursor: "pointer",
-                    marginLeft: "auto",
-                    marginBottom: "auto",
-                    marginTop: "var(--space-md)",
-                    marginRight: "var(--space-md)",
-                    gridArea: "1 / 1 / 2 / 2",
-                }}
-            >
-                <img
-                    src="/global/close.svg"
-                    alt="Close"
-                    style={{
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "contain",
-                    }}
-                />
-            </button>
+                
 
                 {children}
             </div>
 
-           
+
         </div>
     );
 }
