@@ -59,7 +59,7 @@ const variantClasses: Record<ButtonVariant, string> = {
   popup:
     "bg-[var(--button-popup-bg)] text-[var(--button-popup-text)] hover:bg-[var(--button-popup-bg-hover)] hover:text-[var(--button-popup-text-hover)]",
   "popup-inverted":
-    "bg-[var(--white)] text-[var(--dark-blue)] hover:bg-[var(--medium-blue)] hover:text-[var(--white)]",
+    "bg-[var(--white)] text-[var(--dark-blue)] hover:bg-[var(--light-blue)] hover:text-[var(--black)]",
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(

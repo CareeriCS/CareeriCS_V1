@@ -207,6 +207,20 @@ export default function CourseActionPopup({
               gap: "var(--space-md)",
             }}
           >
+
+             <Button
+              onClick={onContinue ?? onCancel}
+              variant="popup-inverted"
+              disabled={isLoading}
+              style={{
+                minWidth: 0,
+                flex: 1,
+                whiteSpace: "nowrap",
+              }}
+            >
+              View
+            </Button>
+            
             <Button
               onClick={onConfirm}
               variant="popup"
@@ -221,18 +235,7 @@ export default function CourseActionPopup({
               Enroll
             </Button>
 
-            <Button
-              onClick={onContinue ?? onCancel}
-              variant="popup-inverted"
-              disabled={isLoading}
-              style={{
-                minWidth: 0,
-                flex: 1,
-                whiteSpace: "nowrap",
-              }}
-            >
-              View
-            </Button>
+           
           </div>
         ) : null}
 
@@ -247,6 +250,19 @@ export default function CourseActionPopup({
             }}
           >
             <Button
+              onClick={onCancel}
+              variant="popup-inverted"
+              disabled={isLoading}
+              style={{
+                minWidth: 0,
+                flex: 1,
+                whiteSpace: "nowrap",
+              }}
+            >
+              Cancel
+            </Button>
+
+            <Button
               onClick={onConfirm}
               variant="popup"
               isLoading={isLoading}
@@ -260,18 +276,7 @@ export default function CourseActionPopup({
               Retake
             </Button>
 
-            <Button
-              onClick={onCancel}
-              variant="popup-inverted"
-              disabled={isLoading}
-              style={{
-                minWidth: 0,
-                flex: 1,
-                whiteSpace: "nowrap",
-              }}
-            >
-              Cancel
-            </Button>
+            
           </div>
         ) : null}
       </div>

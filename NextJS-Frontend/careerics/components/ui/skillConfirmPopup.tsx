@@ -249,37 +249,26 @@ export default function SkillConfirmPopup({
           }}
         >
           <Button
-            onClick={onCancel}
-            variant="popup-inverted"
-            style={{
-              flex: "1 1 0",
-              minWidth: 0,
-              height: "auto",
-              paddingBlock: "0.95rem",
-              paddingInline: "0.9rem",
-              fontSize: "0.95rem",
-              lineHeight: 1.2,
-              textAlign: "center",
-              whiteSpace: "nowrap",
-            }}
-          >
-            Cancel
-          </Button>
+              onClick={onCancel}
+              variant="popup-inverted"
+              disabled={isLoading}
+              style={{
+                minWidth: 0,
+                flex: 1,
+                whiteSpace: "nowrap",
+              }}
+            >
+              Cancel
+            </Button>
 
           <Button
             onClick={() => onConfirm(numericValue)}
             disabled={!isValid || isLoading}
             variant="popup"
-            style={{
-              flex: "1 1 0",
-              minWidth: 0,
-              height: "auto",
-              paddingBlock: "0.95rem",
-              paddingInline: "0.9rem",
-              fontSize: "0.95rem",
-              lineHeight: 1.2,
-              textAlign: "center",
-              whiteSpace: "nowrap",
+             style={{
+                minWidth: 0,
+                flex: 1,
+                whiteSpace: "nowrap",
             }}
           >
             {isLoading ? "Starting..." : "Start Assessment"}
