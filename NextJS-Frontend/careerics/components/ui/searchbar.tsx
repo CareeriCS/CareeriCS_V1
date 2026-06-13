@@ -30,7 +30,7 @@ export const SearchBar = ({
                     display: "flex",
                     alignItems: "center",
                     gap: "var(--space-md)",
-                    ...inputStyle,
+                    ...style,
                 }}
             >
                 <input

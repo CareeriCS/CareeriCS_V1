@@ -139,7 +139,7 @@
      depend on min-height instead of tiny padding. This gives consistent
      touch targets across the app.
    */
-   --button-padding-y: clamp(0.45rem, 0.5vw, 0.7rem);
+   --button-padding-y: clamp(0.2rem, 0.3vw, 0.5rem);
    --button-padding-x: clamp(0.8rem, 2vw, 1.5rem);
  
    --min-touch-target: 2.75rem;

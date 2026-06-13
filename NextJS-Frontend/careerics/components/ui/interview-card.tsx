@@ -1,7 +1,6 @@
 "use client";
 
 import type { CSSProperties, ReactNode } from "react";
-import { cn } from "@/lib/utils";
 
 interface InterviewContainerProps {
   questionTitle: string;
@@ -22,36 +21,59 @@ export default function InterviewContainer({
 }: InterviewContainerProps) {
   return (
     <section
-      className="flex w-full max-w-[min(100%,56rem)] flex-col items-center gap-[var(--space-xl)]"
-      style={style}
+      style={{
+        display: "flex",
+        width: "100%",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: "var(--space-lg)",
+      }}
     >
-      {questionTitle ? (
-        <h2
-          className="m-0 max-w-[52rem] text-center text-[length:var(--text-lg)] font-semibold leading-[var(--line-normal)] text-[var(--text-primary)]"
-          style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
-        >
-          {questionTitle}
-        </h2>
-      ) : null}
+      
 
       <div
-        className={cn(
-          "relative flex aspect-video w-full max-w-[min(100%,44rem)] items-center justify-center overflow-hidden rounded-[var(--radius-2xl)] bg-[var(--bg-grey)]",
-          "min-h-[14rem] max-h-[min(56vh,32rem)]"
-        )}
-        style={videoBoxStyle}
+        style={{
+          position: "relative",
+          display: "flex",
+          aspectRatio: "16 / 9", // Tailwinds' 'aspect-video'
+          width: "100%",
+          alignItems: "center",
+          justifyContent: "center",
+          overflow: "hidden",
+          borderRadius: "var(--radius-2xl)",
+          backgroundColor: "var(--bg-grey)",
+          minHeight: "14rem",
+          maxHeight: "min(56vh, 32rem)",
+          ...videoBoxStyle,
+        }}
       >
         {videoContent}
       </div>
 
       {controlsContent ? (
-        <div className="flex w-full max-w-[34rem] flex-wrap items-center justify-center gap-[var(--space-lg)]">
+        <div
+          style={{
+            display: "flex",
+            width: "100%",
+            maxWidth: "34rem",
+            flexWrap: "wrap",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "var(--space-lg)",
+          }}
+        >
           {controlsContent}
         </div>
       ) : null}
 
       {actionButton ? (
-        <div className="flex w-full justify-center px-[var(--space-sm)]">
+        <div
+          style={{
+            display: "flex",
+            width: "100%",
+            justifyContent: "center",
+          }}
+        >
           {actionButton}
         </div>
       ) : null}
