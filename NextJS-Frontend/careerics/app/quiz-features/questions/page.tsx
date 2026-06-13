@@ -35,6 +35,7 @@ import type {
   UnifiedBookmarkEntry,
 } from "@/types";
 import { cn } from "@/lib/utils";
+import { useResponsive } from "@/hooks/useResponsive";
 
 interface QuestionGroup {
   groupId: string;
@@ -110,26 +111,37 @@ function getRatingButtonClass(value: RatingValue, isSelected: boolean) {
     value === 1 || value === 5
       ? "h-9 w-9 sm:h-10 sm:w-10"
       : value === 2 || value === 4
-        ? "h-8 w-8 sm:h-9 sm:w-9"
-        : "h-7 w-7 sm:h-8 sm:w-8";
+      ? "h-8 w-8 sm:h-9 sm:w-9"
+      : "h-7 w-7 sm:h-8 sm:w-8";
 
   const selectedColorClass =
     value === 1
       ? "bg-[var(--light-red)]"
       : value === 2
-        ? "bg-[#FFD0D0]"
-        : value === 3
-          ? "bg-[var(--light-blue)]"
-          : value === 4
-            ? "bg-[var(--light-green)]"
-            : "bg-[var(--primary-green)]";
+      ? "bg-[#FFD0D0]"
+      : value === 3
+      ? "bg-[var(--light-blue)]"
+      : value === 4
+      ? "bg-[var(--light-green)]"
+      : "bg-[var(--primary-green)]";
+
+  const hoverColorClass =
+    value === 1
+      ? "hover:bg-[var(--light-red)]"
+      : value === 2
+      ? "hover:bg-[#FFD0D0]"
+      : value === 3
+      ? "hover:bg-[var(--light-blue)]"
+      : value === 4
+      ? "hover:bg-[var(--light-green)]"
+      : "hover:bg-[var(--primary-green)]";
 
   return cn(
     sizeClass,
     "shrink-0 rounded-full border border-transparent transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-card-soft)]",
     isSelected
       ? `${selectedColorClass} scale-110 shadow-sm`
-      : "bg-[var(--bg-grey)] hover:scale-105 hover:bg-[var(--light-blue)]",
+      : `bg-[var(--bg-grey)] hover:scale-105 ${hoverColorClass}`
   );
 }
 
@@ -141,47 +153,7 @@ type QuizNavButtonProps = {
   children: React.ReactNode;
 };
 
-function QuizNavButton({
-  direction,
-  disabled,
-  isLoading,
-  onClick,
-  children,
-}: QuizNavButtonProps) {
-  const isPrevious = direction === "previous";
 
-  const icon = (
-    <span
-      aria-hidden="true"
-      className="flex h-[1.65rem] w-[1.65rem] shrink-0 items-center justify-center rounded-full bg-[var(--white)] text-[length:var(--text-xs)] leading-none text-[var(--dark-blue)]"
-    >
-      {isPrevious ? "↩" : "↪"}
-    </span>
-  );
-
-  return (
-    <Button
-      variant={isPrevious ? "secondary-inverted" : "primary"}
-      size="md"
-      disabled={disabled}
-      isLoading={isLoading}
-      onClick={onClick}
-      className="w-full rounded-full px-[var(--space-lg)] sm:w-auto"
-    >
-      {isPrevious ? (
-        <>
-          {icon}
-          {children}
-        </>
-      ) : (
-        <>
-          {children}
-          {!isLoading ? icon : null}
-        </>
-      )}
-    </Button>
-  );
-}
 
 export default function CareerQuestionsPage() {
   const router = useRouter();
@@ -656,6 +628,8 @@ export default function CareerQuestionsPage() {
     [applyUnifiedBookmarks, pendingCareerBookmark, userId],
   );
 
+  const { isSmall, isLarge, isMedium } = useResponsive();
+
   if (!isFinished) {
     return (
       <Interview
@@ -682,7 +656,7 @@ export default function CareerQuestionsPage() {
                 {currentGroup.questions.map((question) => (
                   <article
                     key={question.id}
-                  className="flex w-full min-w-0 flex-col items-center gap-[var(--space-lg)] rounded-[var(--radius-2xl)] border border-[rgba(255,255,255,0.12)] bg-[rgba(61,67,84,0.68)] px-[var(--space-lg)] py-[var(--space-xl)] shadow-sm backdrop-blur-sm sm:px-[var(--space-xl)]"
+                    className="flex w-full min-w-0 flex-col items-center gap-[var(--space-lg)] rounded-[var(--radius-2xl)] border border-[rgba(255,255,255,0.12)] bg-[rgba(61,67,84,0.68)] px-[var(--space-lg)] py-[var(--space-xl)] shadow-sm backdrop-blur-sm sm:px-[var(--space-xl)]"
                   >
                     <p
                       className="m-0 w-full break-words text-center text-[length:var(--text-base)] font-medium leading-[var(--line-normal)] text-[var(--text-primary)]"
@@ -693,7 +667,7 @@ export default function CareerQuestionsPage() {
 
                     <div className="flex w-full flex-col items-center justify-center gap-[var(--space-md)] md:flex-row md:gap-[var(--space-lg)]">
                       <span
-                       className="text-center text-[length:var(--text-sm)] font-medium text-[var(--light-red)]"
+                        className="text-center text-[length:var(--text-sm)] font-medium text-[var(--light-red)]"
                         style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
                       >
                         Strongly Disagree
@@ -733,30 +707,122 @@ export default function CareerQuestionsPage() {
                 </p>
               ) : null}
 
-              <div className="flex w-full flex-col-reverse items-stretch justify-center gap-[var(--space-md)] sm:w-auto sm:flex-row sm:items-center">
-                <QuizNavButton
-                  direction="previous"
-                  onClick={() => {
-                    setCurrentStepId((prev) => Math.max(1, prev - 1));
-                    setError(null);
-                  }}
-                  disabled={currentStepId === 1 || isLoadingQuestions || isSubmitting}
-                >
-                  Previous
-                </QuizNavButton>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-start",
+                  alignItems: "center",
+                  width: "100%",
+                  gap: isSmall ? "var(--space-md)" : "var(--space-lg)",
+                  flexDirection: "column",
+                  flexShrink: 0,
+                  alignSelf: "center",
+                }}
+              >
 
-                <QuizNavButton
-                  direction="next"
-                  onClick={handleNext}
-                  disabled={isLoadingQuestions || isSubmitting || !currentGroup}
-                  isLoading={isSubmitting}
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    width: "100%",
+                    gap: isSmall ? "var(--space-md)" : "var(--space-lg)",
+                    flexDirection: "row",
+                    flexShrink: 0,
+                    alignSelf: "center",
+                  }}
                 >
-                  {isSubmitting
-                    ? "Submitting..."
-                    : currentStepId === questionGroups.length
-                      ? "Finish"
-                      : "Next"}
-                </QuizNavButton>
+
+                  <Button
+                    variant="secondary-inverted"
+                    type="button"
+                    onClick={() => {
+                      setCurrentStepId((prev) => Math.max(1, prev - 1));
+                      setError(null);
+                    }}
+                    disabled={currentStepId === 1 || isLoadingQuestions || isSubmitting}
+                    style={{
+                      paddingInline: "var(--space-2xl)",
+                      paddingBlock: "0",
+                      paddingLeft: "0",
+                      gap: "var(--space-xl)",
+                      height: "fit-content",
+                      width: "fit-content",
+                      maxWidth: isSmall ? "100%" : "fit-content",
+                      flex: isSmall ? 1 : "none",
+                      justifyContent: "space-between",
+                      borderRadius: "999px",
+                    }}
+                  >
+                    <img
+                      src={"/global/next.svg"}
+                      style={{
+                        height: "var(--icon-md)",
+                        transform: "rotate(180deg)",
+                        backgroundColor: "white",
+                        padding: "var(--space-xxs)",
+                        boxSizing: "content-box",
+                        borderRadius: "999px",
+                      }}
+                    />
+                    Previous
+                  </Button>
+
+                  <Button
+                    variant={"primary-inverted"}
+                    type="button"
+                    onClick={handleNext}
+                    disabled={isLoadingQuestions || isSubmitting || !currentGroup || (currentStepId === questionGroups.length)}
+                    
+                    style={{
+                      paddingInline: "var(--space-2xl)",
+                      paddingBlock: "0",
+                      paddingRight: "0",
+                      gap: "var(--space-xl)",
+                      height: "fit-content",
+                      width: "fit-content",
+                      maxWidth: isSmall ? "100%" : "fit-content",
+                      flex: isSmall ? 1 : "none",
+                      justifyContent: "space-between",
+                      borderRadius: "999px",
+                    }}
+                  >
+                    Next
+                    <img
+                      src={"/global/next.svg"}
+                      style={{
+                        height: "var(--icon-md)",
+                        backgroundColor: "white",
+                        padding: "var(--space-xxs)",
+                        boxSizing: "content-box",
+                        borderRadius: "999px",
+                      }}
+                    />
+                  </Button>
+                </div>
+                {(currentStepId === questionGroups.length) &&
+                  <Button
+                    variant="primary"
+                    type="button"
+                    onClick={handleNext}
+                    disabled={isSubmitting || !currentGroup}
+                    isLoading={isSubmitting}
+                    style={{
+                      paddingInline: "var(--space-2xl)",
+                      paddingBlock: "var(--space-xxs)",
+                      height: "fit-content",
+                      width: isSmall ? "100%" : "fit-content",
+                      marginLeft: isSmall ? 0 : "auto",
+                      flex: "none",
+                      opacity: !currentGroup || isSubmitting ? 0.55 : 1,
+                    }}
+                  >
+                    {isSubmitting
+                      ? "Submitting..."
+                      : "Finish"
+                    }
+                  </Button>
+                }
               </div>
             </>
           ) : (
@@ -778,14 +844,14 @@ export default function CareerQuestionsPage() {
         >
           Your Best Matches Are
         </h1>
-  
+
         {bookmarkError ? (
           <p className="m-0 mt-[var(--space-sm)] max-w-[42rem] text-center text-[length:var(--text-sm)] leading-[var(--line-normal)] text-[var(--text-danger)]">
             {bookmarkError}
           </p>
         ) : null}
       </header>
-  
+
       <main className="flex min-h-0 w-full items-start justify-center overflow-y-auto px-[var(--space-xs)] py-[var(--space-lg)] sm:items-center sm:px-0 sm:py-[var(--space-2xl)]">
         {displayedTrackScores.length ? (
           <div className="grid w-full max-w-[72rem] grid-cols-1 justify-items-center gap-[var(--space-xl)] sm:grid-cols-2 lg:grid-cols-3">
@@ -793,11 +859,11 @@ export default function CareerQuestionsPage() {
               const isBookmarked =
                 bookmarkedTrackIds.includes(track.track_id) ||
                 (track.roadmap_id ? bookmarkedTrackIds.includes(track.roadmap_id) : false);
-  
+
               return (
                 <article
                   key={track.track_id}
-                 className="relative flex min-h-[20rem] w-full max-w-[19.5rem] flex-col rounded-[var(--radius-2xl)] bg-[var(--medium-blue)] px-[var(--space-lg)] py-[var(--space-lg)] shadow-sm sm:min-h-[23rem] sm:max-w-[20rem] sm:px-[var(--space-xl)] sm:py-[var(--space-xl)]"
+                  className="relative flex min-h-[20rem] w-full max-w-[19.5rem] flex-col rounded-[var(--radius-2xl)] bg-[var(--medium-blue)] px-[var(--space-lg)] py-[var(--space-lg)] shadow-sm sm:min-h-[23rem] sm:max-w-[20rem] sm:px-[var(--space-xl)] sm:py-[var(--space-xl)]"
                 >
                   <button
                     type="button"
@@ -814,7 +880,7 @@ export default function CareerQuestionsPage() {
                       className={isBookmarked ? "fill-current text-[var(--light-green)]" : undefined}
                     />
                   </button>
-  
+
                   <Image
                     src="/landing/Rectangle.svg"
                     alt=""
@@ -822,23 +888,23 @@ export default function CareerQuestionsPage() {
                     height={118}
                     className="h-auto w-[7.4rem] shrink-0"
                   />
-  
+
                   <h2
                     className="m-0 mt-[var(--space-md)] pr-[var(--space-xl)] text-[length:var(--text-lg)] font-semibold leading-[var(--line-tight)] text-[var(--text-primary)]"
                     style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
                   >
                     {track.track_name}
                   </h2>
-  
+
                   <p className="m-0 mt-[var(--space-md)] text-[length:var(--text-sm)] font-bold text-[var(--light-green)]">
                     Match Score: {track.score}%
                   </p>
-  
+
                   <p className="m-0 mt-[var(--space-md)] line-clamp-3 flex-1 text-[length:var(--text-sm)] leading-[var(--line-relaxed)] text-[var(--text-secondary)]">
                     {track.track_description ||
                       "This track aligns strongly with your selected cards and responses."}
                   </p>
-  
+
                   <Link
                     href={buildCareerTrackDetailsHref(track.track_name, track.track_id)}
                     className="mt-[var(--space-lg)] block"
@@ -857,7 +923,7 @@ export default function CareerQuestionsPage() {
           </div>
         )}
       </main>
-  
+
       <footer className="mx-auto flex w-full max-w-[32rem] shrink-0 flex-col items-stretch justify-center gap-[var(--space-md)] sm:flex-row sm:items-center">
         <Button
           variant="secondary"
@@ -873,7 +939,7 @@ export default function CareerQuestionsPage() {
         >
           Retake Quiz
         </Button>
-  
+
         <Link href="/features/home" className="w-full sm:w-auto">
           <Button
             variant="primary"
@@ -884,7 +950,7 @@ export default function CareerQuestionsPage() {
           </Button>
         </Link>
       </footer>
-  
+
       {pendingCareerBookmark ? (
         <BookmarkReplacePopup
           incomingTitle={pendingCareerBookmark.title}

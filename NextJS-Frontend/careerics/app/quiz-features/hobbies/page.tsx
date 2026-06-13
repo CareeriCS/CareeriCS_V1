@@ -1,17 +1,18 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { careerService } from "@/services";
 import type { APICareerCardRead, APICareerCardSelectionItem } from "@/types";
-import { cn } from "@/lib/utils";
+import { useResponsive } from "@/hooks/useResponsive";
 
 const MIN_CARDS_PER_STEP = 3;
 const MAX_CARDS_PER_STEP = 5;
 
 export default function HobbiesGrid() {
   const router = useRouter();
+  const { isLarge, isMedium, isSmall } = useResponsive();
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("sessionId") || "";
 
@@ -49,8 +50,8 @@ export default function HobbiesGrid() {
       if (!hobbyResponse.success || !technicalResponse.success) {
         setError(
           hobbyResponse.message ||
-            technicalResponse.message ||
-            "Unable to load card choices right now. Please try again.",
+          technicalResponse.message ||
+          "Unable to load card choices right now. Please try again.",
         );
         setIsLoadingCards(false);
         return;
@@ -69,14 +70,26 @@ export default function HobbiesGrid() {
   }, [sessionId]);
 
   const currentCards = step === 0 ? hobbyCards : technicalCards;
+
+  const currentTitle =
+    step === 0
+      ? "Choose Your Favorite interests"
+      : "Choose Your Favorite strengths";
+
+  const currentSubtitle =
+    step === 0
+      ? "Step 1 of 2: Select between 3 and 5 interests"
+      : "Step 2 of 2: Select between 3 and 5 strengths";
+
   const currentSelectionIds = step === 0 ? selectedHobbyIds : selectedTechnicalIds;
 
-  const currentTitle = step === 0 ? "Choose Your Interests" : "Choose Your Strengths";
+  const selectedSummary = useMemo(() => {
+    if (step === 0) {
+      return `${selectedHobbyIds.length} interests selected`;
+    }
 
-  const selectedSummary =
-    step === 0
-      ? `${selectedHobbyIds.length} interests selected`
-      : `${selectedTechnicalIds.length} strengths selected`;
+    return `${selectedTechnicalIds.length} strengths selected`;
+  }, [selectedHobbyIds.length, selectedTechnicalIds.length, step]);
 
   const toggleCard = (cardId: string) => {
     if (step === 0) {
@@ -94,7 +107,6 @@ export default function HobbiesGrid() {
         setError(null);
         return [...prev, cardId];
       });
-
       return;
     }
 
@@ -117,7 +129,6 @@ export default function HobbiesGrid() {
   const handleBack = () => {
     if (step === 1) {
       setStep(0);
-      setError(null);
       return;
     }
 
@@ -176,84 +187,338 @@ export default function HobbiesGrid() {
 
   const isCurrentStepValid = currentSelectionIds.length >= MIN_CARDS_PER_STEP;
 
+
+  const disabled =
+    isLoadingCards ||
+    !isCurrentStepValid ||
+    isSubmitting ||
+    step !== 0;
+
   return (
-    <section className="flex h-full min-h-0 w-full flex-col overflow-hidden px-[var(--space-lg)] pb-[var(--space-xl)] pt-[calc(var(--icon-lg)+var(--space-2xl))] sm:px-[var(--space-2xl)]">
-      <header className="mx-auto flex w-full max-w-[64rem] shrink-0 flex-col items-center text-center">
-        <div className="flex flex-col items-center justify-center gap-[var(--space-sm)] sm:flex-row sm:gap-[var(--space-lg)]">
+    <div
+      style={{
+        width: isLarge ? "65vw" : "85vw",
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "space-evenly",
+        justifyContent: "space-evenly",
+        overflow: "hidden",
+        gap: isSmall ? "var(--space-sm)" : "var(--space-sm)",
+        paddingInline: isSmall
+          ? "var(--space-sm)"
+          : isMedium
+            ? "var(--space-sm)"
+            : "var(--space-xl)",
+        boxSizing: "border-box",
+        alignSelf: "center",
+        justifySelf: "center",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: isSmall ? "center" : "space-between",
+          alignItems: "center",
+          gap: isSmall ? "var(--space-md)" : "var(--space-xl)",
+          flexWrap: "wrap",
+          position: "relative",
+          width: "100%",
+          textAlign: isSmall ? "center" : "center",
+          flexShrink: 0,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: isSmall ? "center" : "flex-start",
+            justifyContent: "center",
+            gap: "var(--space-xxs)",
+          }}
+        >
           <h1
-            className="m-0 text-[length:var(--text-xl)] font-semibold leading-[var(--line-tight)] text-[var(--text-primary)]"
-            style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
+            style={{
+              margin: 0,
+              color: "white",
+              fontSize: isSmall ? "var(--text-lg)" : "var(--text-xl)",
+              fontFamily: "var(--font-nova-square)",
+              lineHeight: "var(--line-tight)",
+            }}
           >
             {currentTitle}
           </h1>
-  
-          <span
-            className="inline-flex items-center rounded-full border border-[var(--primary-green)] bg-[rgba(40,41,43,0.85)] px-[var(--space-md)] py-[var(--space-xs)] text-[length:var(--text-sm)] font-bold leading-[var(--line-normal)] text-[var(--light-green)]"
-            style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
+
+          <p
+            style={{
+              margin: 0,
+              color: "var(--text-grey)",
+              fontSize: isSmall ? "var(--text-sm)" : "var(--text-base)",
+              fontFamily: "var(--font-jura)",
+              lineHeight: "var(--line-normal)",
+            }}
           >
-            {selectedSummary}
-          </span>
-        </div>
-  
-        {error ? (
-          <p className="m-0 mt-[var(--space-sm)] text-center text-[length:var(--text-sm)] leading-[var(--line-normal)] text-[var(--text-danger)]">
-            {error}
+            {currentSubtitle}
           </p>
-        ) : null}
-      </header>
-  
-      <main className="flex min-h-0 flex-1 items-center justify-center py-[var(--space-xl)]">
-        <div className="flex min-h-[clamp(18rem,40vh,27rem)] w-full max-w-[76rem] items-center justify-center overflow-y-auto rounded-[var(--radius-2xl)] bg-[var(--bg-grey)] px-[var(--space-xl)] py-[var(--space-2xl)] sm:px-[var(--space-2xl)]">
-          {isLoadingCards ? (
-            <div className="flex min-h-[12rem] items-center justify-center text-center text-[length:var(--text-base)] text-[var(--dark-blue)]">
-              Loading available cards...
-            </div>
-          ) : currentCards.length === 0 ? (
-            <div className="flex min-h-[12rem] items-center justify-center text-center text-[length:var(--text-base)] text-[var(--dark-blue)]">
-              No cards available for this step yet.
-            </div>
-          ) : (
-            <div className="flex w-full max-w-[68rem] flex-wrap items-center justify-center gap-x-[var(--space-xl)] gap-y-[var(--space-lg)]">
-              {currentCards.map((card) => {
-                const isSelected = currentSelectionIds.includes(card.id);
-  
-                return (
-                  <button
-                    key={card.id}
-                    type="button"
-                    aria-pressed={isSelected}
-                    title={card.description || card.name}
-                    onClick={() => toggleCard(card.id)}
-                    className={cn(
-                      "min-h-[2.65rem] rounded-[var(--radius-md)] px-[var(--space-xl)] py-[var(--space-sm)] text-center text-[length:var(--text-sm)] font-semibold leading-[var(--line-normal)] transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-grey)]",
-                      "w-full sm:w-auto sm:min-w-[10.5rem]",
-                      isSelected
-                        ? "bg-[var(--light-green)] text-[var(--bg-color)]"
-                        : "bg-[var(--medium-blue)] text-[var(--text-primary)] hover:bg-[var(--dark-blue)]"
-                    )}
-                    style={{ fontFamily: "var(--font-jura), sans-serif" }}
-                  >
-                    {card.name}
-                  </button>
-                );
-              })}
-            </div>
-          )}
         </div>
-      </main>
-  
-      <footer className="flex w-full shrink-0 items-center justify-end">
-        <Button
-          variant="primary"
-          type="button"
-          onClick={handleNext}
-          disabled={isLoadingCards || !isCurrentStepValid || isSubmitting}
-          isLoading={isSubmitting}
-          className="w-full rounded-[var(--radius-lg)] font-extrabold sm:w-auto sm:min-w-[9rem]"
+
+        <div
+          style={{
+            backgroundColor: "var(--dark-grey)",
+            border: "1px solid var(--primary-green)",
+            color: "var(--light-green)",
+            borderRadius: "var(--radius-2xl)",
+            padding: "var(--space-sm) var(--space-sm)",
+            fontSize: "var(--text-sm)",
+            fontWeight: 700,
+            whiteSpace: "nowrap",
+            position: "relative",
+            fontFamily: "var(--font-jura)",
+          }}
         >
-          {step === 0 ? "Continue" : isSubmitting ? "Saving..." : "Start Questions"}
-        </Button>
-      </footer>
-    </section>
+          {selectedSummary}
+        </div>
+      </div>
+
+      {error ? (
+        <p
+          style={{
+            margin: 0,
+            color: "var(--light-red)",
+            fontSize: isSmall ? "var(--text-sm)" : "var(--text-base)",
+            fontFamily: "var(--font-jura)",
+            lineHeight: "var(--line-normal)",
+            textAlign: isSmall ? "center" : "left",
+            flexShrink: 0,
+          }}
+        >
+          {error}
+        </p>
+      ) : null}
+
+      <div
+        style={{
+          background: "var(--bg-grey)",
+          borderRadius: "var(--radius-xl)",
+          width: "100%",
+          height: "fit-content",
+          maxHeight: isSmall ? "100%" : "60%",
+          padding: "var(--space-lg)",
+          boxSizing: "border-box",
+          overflowY: "auto",
+          scrollbarWidth: "none",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "flex-start",
+          alignSelf: "center",
+          flexShrink: 1,
+        }}
+      >
+        {isLoadingCards ? (
+          <div
+            style={{
+              color: "var(--dark-grey)",
+              textAlign: "center",
+              paddingTop: isSmall ? "var(--space-xl)" : "var(--space-2xl)",
+              paddingBottom: isSmall ? "var(--space-xl)" : "var(--space-2xl)",
+              fontSize: isSmall ? "var(--text-sm)" : "var(--text-base)",
+              fontFamily: "var(--font-jura)",
+              lineHeight: "var(--line-normal)",
+              width: "100%",
+            }}
+          >
+            Loading available cards...
+          </div>
+        ) : currentCards.length === 0 ? (
+          <div
+            style={{
+              color: "var(--dark-grey)",
+              textAlign: "center",
+              paddingTop: isSmall ? "var(--space-xl)" : "var(--space-2xl)",
+              paddingBottom: isSmall ? "var(--space-xl)" : "var(--space-2xl)",
+              fontSize: isSmall ? "var(--text-sm)" : "var(--text-base)",
+              fontFamily: "var(--font-jura)",
+              lineHeight: "var(--line-normal)",
+              width: "100%",
+            }}
+          >
+            No cards available for this step yet.
+          </div>
+        ) : (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "row",
+              flexWrap: "wrap",
+              gap: isSmall
+                ? "var(--space-sm)"
+                : isMedium
+                  ? "var(--space-md)"
+                  : "var(--space-sm)",
+              justifyContent: "center",
+              alignItems: "flex-start",
+              alignContent: "flex-start",
+              width: "100%",
+            }}
+          >
+            {currentCards.map((card) => {
+              const isSelected = currentSelectionIds.includes(card.id);
+
+              return (
+                <button
+                  key={card.id}
+                  type="button"
+                  onClick={() => toggleCard(card.id)}
+                  style={{
+                    minWidth: "fit-content",
+                    flex: 1,
+
+                    backgroundColor: isSelected
+                      ? "var(--light-green)"
+                      : "var(--medium-blue)",
+
+                    color: isSelected
+                      ? "var(--bg-color)"
+                      : "var(--light-blue)",
+
+                    borderRadius: "var(--radius-lg)",
+
+                    padding: "",
+
+                    textAlign: "center",
+                    cursor: "pointer",
+
+                    height: "fit-content",
+
+                    fontSize: "var(--text-base)",
+                    fontFamily: "var(--font-jura)",
+                    fontWeight: "800",
+                    paddingInline: "var(--space-sm)",
+                    paddingBlock: "var(--space-xs)",
+
+
+
+                  }}>
+                  {card.name}
+
+
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-start",
+          alignItems: "center",
+          width: "100%",
+          gap: isSmall ? "var(--space-md)" : "var(--space-lg)",
+          flexDirection: "column",
+          flexShrink: 0,
+          alignSelf: "center",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            width: "100%",
+            gap: isSmall ? "var(--space-md)" : "var(--space-lg)",
+            flexDirection: "row",
+            flexShrink: 0,
+            alignSelf: "center",
+          }}
+        >
+          {step !== 0 && (
+            <Button
+              variant="secondary-inverted"
+              type="button"
+              onClick={handleBack}
+              style={{
+                paddingInline: "var(--space-2xl)",
+                paddingBlock: "0",
+                paddingLeft: "0",
+                gap: "var(--space-xl)",
+                height: "fit-content",
+                width: "fit-content",
+                maxWidth: isSmall ? "100%" : "fit-content",
+                flex: isSmall ? 1 : "none",
+                justifyContent: "space-between",
+                borderRadius: "999px",
+              }}
+            >
+              <img
+                src={"/global/next.svg"}
+                style={{
+                  height: "var(--icon-md)",
+                  transform: "rotate(180deg)",
+                  backgroundColor: "white",
+                  padding: "var(--space-xxs)",
+                  boxSizing: "content-box",
+                  borderRadius: "999px",
+                }}
+              />
+              Previous
+            </Button>
+          )}
+
+          <Button
+            variant={"primary-inverted"}
+            type="button"
+            onClick={handleNext}
+            disabled={disabled}
+            style={{
+              paddingInline: "var(--space-2xl)",
+              paddingBlock: "0",
+              paddingRight: "0",
+              gap: "var(--space-xl)",
+              height: "fit-content",
+              width: "fit-content",
+              maxWidth: isSmall ? "100%" : "fit-content",
+              flex: isSmall ? 1 : "none",
+              justifyContent: "space-between",
+              borderRadius: "999px",
+              opacity: disabled ? 0.55 : 1,
+            }}
+          >
+            Next
+            <img
+              src={"/global/next.svg"}
+              style={{
+                height: "var(--icon-md)",
+                backgroundColor: "white",
+                padding: "var(--space-xxs)",
+                boxSizing: "content-box",
+                borderRadius: "999px",
+              }}
+            />
+          </Button>
+        </div>
+        {step !== 0 &&
+          <Button
+            variant="primary"
+            type="button"
+            onClick={handleNext}
+            disabled={isLoadingCards || !isCurrentStepValid || isSubmitting}
+            style={{
+              paddingInline: "var(--space-2xl)",
+              paddingBlock: "var(--space-xxs)",
+              height: "fit-content",
+              width: isSmall ? "100%" : "fit-content",
+              marginLeft: isSmall ? 0 : "auto",
+              flex: "none",
+              opacity: isLoadingCards || !isCurrentStepValid || isSubmitting ? 0.55 : 1,
+            }}
+          >
+            Start Questions
+          </Button>
+        }
+      </div>
+    </div>
   );
-};
+}
