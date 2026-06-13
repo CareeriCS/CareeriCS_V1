@@ -37,6 +37,7 @@ import type {
   UserRoadmapBookmark,
 } from "@/types";
 import { useResponsive } from "@/hooks/useResponsive";
+import { isHiddenComputerScienceOption } from "@/lib/hidden-ui-items";
 
 type CachedApiRequest<T> = {
   expiresAt: number;
@@ -117,6 +118,11 @@ export default function RoadmapPage() {
   const options = useMemo(
     () => roadmaps.map((roadmap) => ({ id: roadmap.id, title: roadmap.title })),
     [roadmaps],
+  );
+
+  const dropdownOptions = useMemo(
+    () => options.filter((option) => !isHiddenComputerScienceOption(option)),
+    [options],
   );
 
   const roadmapTitleById = useMemo(() => {
@@ -537,7 +543,7 @@ export default function RoadmapPage() {
         <CustomDropdown
           maxwidth="250px"
           value={selectedRoadmapId}
-          options={options}
+          options={dropdownOptions}
           placeholder="select a path to view roadmap"
           onChange={onRoadmapChange}
         />

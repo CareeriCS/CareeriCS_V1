@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LoaderCircle } from "lucide-react";
 
@@ -22,6 +22,7 @@ import {
   type CourseProgressItem,
 } from "@/lib/course-progress";
 import { useResponsive } from "@/hooks/useResponsive";
+import { isHiddenComputerScienceCourse, isHiddenComputerScienceOption } from "@/lib/hidden-ui-items";
 
 function LoadingState({ label }: { label: string }) {
   return (
@@ -109,7 +110,17 @@ export default function CoursesPage() {
       }
 
       setRoadmaps(response.data);
-      setSelectedRoadmapId((previous) => previous || response.data[0]?.id || "");
+      setSelectedRoadmapId((previous) => {
+        const allRoadmaps = response.data;
+        if (previous) {
+          const prevRoadmap = allRoadmaps.find((r) => r.id === previous);
+          if (!prevRoadmap || isHiddenComputerScienceOption(prevRoadmap)) {
+            return allRoadmaps.find((r) => !isHiddenComputerScienceOption(r))?.id || "";
+          }
+          return previous;
+        }
+        return allRoadmaps.find((r) => !isHiddenComputerScienceOption(r))?.id || "";
+      });
       setRoadmapsError(null);
       setIsLoadingRoadmaps(false);
     };
@@ -229,6 +240,21 @@ export default function CoursesPage() {
     }
   };
 
+  const visibleRoadmaps = useMemo(
+    () => roadmaps.filter((roadmap) => !isHiddenComputerScienceOption(roadmap)),
+    [roadmaps],
+  );
+
+  const visibleCurrentCourses = useMemo(
+    () => currentCourses.filter((course) => !isHiddenComputerScienceCourse(course)),
+    [currentCourses],
+  );
+
+  const visibleCompletedCourses = useMemo(
+    () => completedCourses.filter((course) => !isHiddenComputerScienceCourse(course)),
+    [completedCourses],
+  );
+
   const { isLarge, isMedium, isSmall } = useResponsive();
 
   const CompletedCourses = isSmall ? InlineContainer : StackContainer;
@@ -262,7 +288,7 @@ export default function CoursesPage() {
         Title="Courses you are currently taking"
         style={{ gridArea: isSmall ? "1 / 1 / 2 / 2" : isMedium ? "1 / 1 / 2 / 3" : "1 /1 /3 /5", width: "100%" }}
       >
-        {currentCourses.map((course) => (
+        {visibleCurrentCourses.map((course) => (
           <RectangularCard
             key={course.id}
             Title={course.title}
@@ -298,7 +324,7 @@ export default function CoursesPage() {
           </div>
         ) : null}
 
-        {!isLoadingRoadmaps && !roadmapsError && !roadmaps.length ? (
+        {!isLoadingRoadmaps && !roadmapsError && !visibleRoadmaps.length ? (
           <div
             style={{
               gridColumn: "1 / -1",
@@ -308,12 +334,14 @@ export default function CoursesPage() {
               paddingInline: "20px",
             }}
           >
-            No roadmaps available yet.
+            {roadmaps.length
+              ? "No roadmaps available to display."
+              : "No roadmaps available yet."}
           </div>
         ) : null}
 
         {!isLoadingRoadmaps && !roadmapsError
-          ? roadmaps.map((roadmap) => (
+          ? visibleRoadmaps.map((roadmap) => (
             <RectangularCard
               key={roadmap.id}
               Title={roadmap.title}
@@ -339,8 +367,8 @@ export default function CoursesPage() {
         centerTitle
         style={{ gridArea: isSmall ? "2 / 1 / 3 / 2" :isMedium ? "2 / 2 / 3 / 3" : "3 / 4 / 7 / 5", width: "100%", backgroundColor: "var(--dark-blue)" }}
       >
-        {completedCourses.length ? (
-          completedCourses.map((course) => (
+        {visibleCompletedCourses.length ? (
+          visibleCompletedCourses.map((course) => (
             <ActivityCard
               variant="retake"
               key={course.id}

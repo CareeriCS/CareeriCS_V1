@@ -58,6 +58,7 @@ export default function CourseActionPopup({
         onClick={(event) => event.stopPropagation()}
         style={{
           width: "26rem",
+          maxWidth: "100%",
           height: "fit-content",
           borderRadius: "4vh",
           backgroundColor: "var(--light-green)",
@@ -207,19 +208,6 @@ export default function CourseActionPopup({
             }}
           >
             <Button
-              onClick={onContinue ?? onCancel}
-              variant="popup-inverted"
-              disabled={isLoading}
-              style={{
-                minWidth: 0,
-                flex: 1,
-                whiteSpace: "nowrap",
-              }}
-            >
-              View
-            </Button>
-
-            <Button
               onClick={onConfirm}
               variant="popup"
               isLoading={isLoading}
@@ -231,6 +219,19 @@ export default function CourseActionPopup({
               }}
             >
               Enroll
+            </Button>
+
+            <Button
+              onClick={onContinue ?? onCancel}
+              variant="popup-inverted"
+              disabled={isLoading}
+              style={{
+                minWidth: 0,
+                flex: 1,
+                whiteSpace: "nowrap",
+              }}
+            >
+              View
             </Button>
           </div>
         ) : null}

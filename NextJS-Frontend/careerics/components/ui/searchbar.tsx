@@ -45,19 +45,61 @@ export const SearchBar = ({
                         fontSize: "inherit",
                         outline: "none",
                         width: "100%",
+                        minWidth: 0,
                         fontFamily: "inherit",
                     }}
                 />
 
-                <img
-                    src="/global/search.svg"
-                    alt="search"
-                    style={{
-                        width: "var(--icon-lg)",
-                        pointerEvents: "none",
-                        flexShrink: 0,
-                    }}
-                />
+                {value ? (
+                    <button
+                        type="button"
+                        aria-label="Clear search"
+                        onClick={() => onChange("")}
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            width: "1.75rem",
+                            height: "1.75rem",
+                            border: "none",
+                            borderRadius: "999px",
+                            background: "transparent",
+                            color: "var(--text-muted)",
+                            cursor: "pointer",
+                            flexShrink: 0,
+                            padding: 0,
+                        }}
+                        onMouseEnter={(event) => {
+                            event.currentTarget.style.backgroundColor = "var(--light-red)";
+                            event.currentTarget.style.color = "var(--dark-blue)";
+                        }}
+                        onMouseLeave={(event) => {
+                            event.currentTarget.style.backgroundColor = "transparent";
+                            event.currentTarget.style.color = "var(--text-muted)";
+                        }}
+                    >
+                        <img
+                            src="/global/close.svg"
+                            alt=""
+                            aria-hidden="true"
+                            style={{
+                                width: "var(--icon-sm)",
+                                height: "var(--icon-sm)",
+                                objectFit: "contain",
+                            }}
+                        />
+                    </button>
+                ) : (
+                    <img
+                        src="/global/search.svg"
+                        alt="search"
+                        style={{
+                            width: "var(--icon-lg)",
+                            pointerEvents: "none",
+                            flexShrink: 0,
+                        }}
+                    />
+                )}
             </div>
     );
 };

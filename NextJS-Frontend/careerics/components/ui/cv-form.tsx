@@ -1,5 +1,6 @@
 "use client";
 import React from 'react';
+import { isHiddenComputerScienceOption } from "@/lib/hidden-ui-items";
 
 export type FormField = {
   id: string;
@@ -60,7 +61,7 @@ export default function DynamicCVForm({ fields, values, onChange }: DynamicCVFor
               onChange={(e) => onChange(field.id, e.target.value)}
             >
               <option value="" disabled>{field.placeholder}</option>
-              {field.options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+              {field.options?.filter(opt => !isHiddenComputerScienceOption(opt)).map(opt => <option key={opt} value={opt}>{opt}</option>)}
             </select>
             <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#070707', fontSize: '10px' }}>
               ▼
