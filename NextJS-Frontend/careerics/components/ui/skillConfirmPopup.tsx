@@ -70,35 +70,37 @@ export default function SkillConfirmPopup({
           fontFamily: "var(--font-nova-square)",
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            width: "100%",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <h2
-            style={{
-              fontSize: "22px",
-              fontWeight: 400,
-              lineHeight: 1.5,
-            }}
-          >
-            Customize Your Assessment
-          </h2>
-          <img
-            onClick={onCancel}
-            src="/global/close.svg"
-            alt="Close popup"
-            style={{
-              width: "2rem",
-              height: "2rem",
-              filter: "invert(1)",
-              cursor: "pointer",
-            }}
-          />
-        </div>
+<div
+  style={{
+    display: "flex",
+    width: "100%",
+    justifyContent: "space-between",
+    alignItems: "center",
+  }}
+>
+  <h2
+    style={{
+      fontSize: "22px",
+      fontWeight: 400,
+      lineHeight: 1.5,
+      margin: 0,
+    }}
+  >
+    Do You Want To Start Assessment?
+  </h2>
+
+  <img
+    onClick={onCancel}
+    src="/global/close.svg"
+    alt="Close popup"
+    style={{
+      width: "2rem",
+      height: "2rem",
+      filter: "invert(1)",
+      cursor: "pointer",
+    }}
+  />
+</div>
 
         <div
           style={{
