@@ -12,14 +12,13 @@ export function buildCareerQuizResultsHref(
 ): string {
   const params = new URLSearchParams({
     sessionId,
-    view: "results",
   });
 
   if (trackId) {
     params.set("trackId", trackId);
   }
 
-  return `/quiz-features/questions?${params.toString()}`;
+  return `/quiz-features/results?${params.toString()}`;
 }
 
 export function buildCareerTrackDetailsHref(
