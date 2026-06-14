@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import Animation from "@/components/ui/animation";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui";
@@ -16,22 +16,72 @@ export default function ResultsPage() {
 
     const { isMedium, isLarge } = useResponsive();
 
-    const sharedContext = useAssessment();
+    const {
+        userId,
+        sessionId,
+        questions,
+        userAnswers,
+        resultsData,
+        setResultsData,
+        startNewSession,
+    } = useAssessment();
 
     const [isCalculating, setIsCalculating] = useState(true);
+    const [isRetaking, setIsRetaking] = useState(false);
     const [error, setError] = useState<string>("");
-
-    const userId = sharedContext?.userId || "";
-    const sessionId = sharedContext?.sessionId || "";
-    const questions = sharedContext?.questions || [];
-    const userAnswers = sharedContext?.userAnswers || {};
-    const resultsData = sharedContext?.resultsData || null;
-    const setResultsData = sharedContext?.setResultsData;
-    const startNewSession = sharedContext?.startNewSession;
 
     useEffect(() => {
         const computeResults = async () => {
-            if (resultsData || !setResultsData) {
+            if (resultsData) {
+                setIsCalculating(false);
+                return;
+            }
+
+            const localSessionStatus = sessionStorage.getItem(
+                `${ASSESSMENT_STATUS_STORAGE_PREFIX}${sessionId}`,
+            );
+            const isAlreadySubmitted =
+                localSessionStatus === "submitted" || localSessionStatus === "completed";
+
+            if (isAlreadySubmitted) {
+                try {
+                    const existingResultsRes = await skillAssessmentService.getResults(userId, sessionId);
+                    if (!existingResultsRes.success || !existingResultsRes.data) {
+                        const existingError =
+                            typeof existingResultsRes.message === "object"
+                                ? JSON.stringify(existingResultsRes.message)
+                                : existingResultsRes.message || "Unable to load submitted results.";
+                        setError(existingError);
+                        setIsCalculating(false);
+                        return;
+                    }
+
+                    setResultsData(existingResultsRes.data);
+                } catch (err: unknown) {
+                    setError(
+                        err instanceof Error
+                            ? err.message
+                            : "An unexpected error occurred while loading submitted results.",
+                    );
+                } finally {
+                    setIsCalculating(false);
+                }
+                return;
+            }
+
+            if (!questions.length) {
+                try {
+                    const existingResultsRes = await skillAssessmentService.getResults(userId, sessionId);
+                    if (existingResultsRes.success && existingResultsRes.data) {
+                        setResultsData(existingResultsRes.data);
+                        setIsCalculating(false);
+                        return;
+                    }
+                } catch {
+                    // Ignore and show standard missing-questions error below.
+                }
+
+                setError("Questions are missing for this assessment session.");
                 setIsCalculating(false);
                 return;
             }
@@ -56,6 +106,15 @@ export default function ResultsPage() {
                             ? JSON.stringify(res.message)
                             : res.message || "Submission failed.";
 
+                    if (errorMsg.toLowerCase().includes("already submitted")) {
+                        const existingResultsRes = await skillAssessmentService.getResults(userId, sessionId);
+                        if (existingResultsRes.success && existingResultsRes.data) {
+                            setResultsData(existingResultsRes.data);
+                            setIsCalculating(false);
+                            return;
+                        }
+                    }
+
                     setError(errorMsg);
                     setIsCalculating(false);
                     return;
@@ -65,28 +124,26 @@ export default function ResultsPage() {
                     `${ASSESSMENT_STATUS_STORAGE_PREFIX}${sessionId}`,
                     "submitted"
                 );
-
-                const finalRes = await skillAssessmentService.getResults(
-                    userId,
-                    sessionId
-                );
-
-                setResultsData(
-                    finalRes.success ? finalRes.data : res.data
-                );
-            } catch (err: any) {
+                if (!res.data) {
+                    setError("Submission completed but no results were returned.");
+                    setIsCalculating(false);
+                    return;
+                }
+                setResultsData(res.data);
+            } catch (err: unknown) {
                 setError(
-                    err?.message ||
-                    "An unexpected error occurred processing your results."
+                    err instanceof Error
+                        ? err.message
+                        : "An unexpected error occurred processing your results."
                 );
             } finally {
                 setIsCalculating(false);
             }
         };
 
-        if (userId && sessionId && questions.length > 0) {
+        if (userId && sessionId) {
             void computeResults();
-        } else if (!sharedContext) {
+        } else {
             setIsCalculating(false);
         }
     }, [
@@ -96,7 +153,6 @@ export default function ResultsPage() {
         userAnswers,
         resultsData,
         setResultsData,
-        sharedContext,
     ]);
 
     const score = resultsData?.score || 0;
@@ -108,23 +164,6 @@ export default function ResultsPage() {
             : score >= 50
                 ? "Intermediate"
                 : "Beginner";
-
-    if (!sharedContext) {
-        return (
-            <section
-                style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    textAlign: "center",
-                }}
-            >
-                <div style={{ maxWidth: "var(--container-sm)" }}>
-                    <Animation message="Connecting to assessment stream..." />
-                </div>
-            </section>
-        );
-    }
 
     if (isCalculating) {
         return (
@@ -138,6 +177,23 @@ export default function ResultsPage() {
             >
                 <div style={{ maxWidth: "var(--container-sm)" }}>
                     <Animation message="Calculating your score..." />
+                </div>
+            </section>
+        );
+    }
+
+    if (isRetaking) {
+        return (
+            <section
+                style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    textAlign: "center",
+                }}
+            >
+                <div style={{ maxWidth: "var(--container-sm)" }}>
+                    <Animation message="Preparing your assessment questions..." />
                 </div>
             </section>
         );
@@ -310,31 +366,56 @@ export default function ResultsPage() {
                             : "center",
                 }}
             >
-                <h2
-                    style={{
-                        margin: 0,
-                        color: "white",
-                        fontSize: "var(--space-xl)",
-                    }}
-                >
-                    Your Proficiency Level
-                </h2>
+               <h2
+  style={{
+    margin: 0,
+    color: "white",
+    fontSize: "var(--space-xl)",
+  }}
+>
+  Your Proficiency Level
+</h2>
 
-                <p
-                    style={{
-                        color: "var(--primary-green)",
-                        fontSize: "var(--text-3xl)",
-                        fontWeight: 600,
-                    }}
-                >
-                    {lvl}
+<p
+  className="m-0 mt-[var(--space-md)] text-[length:var(--text-xl)] font-normal leading-[var(--line-tight)] text-[var(--primary-green)]"
+  style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
+>
+  {lvl}
+</p>
+
+<p style={{
+                        maxWidth: "30rem",
+                        color: "rgba(255,255,255,0.7)",
+                    }}>
+                    Assessment complete. You can review each question to see the correct answers, or
+                    retake the assessment to generate a fresh session.
                 </p>
-
                 {startNewSession && (
                     <Button
                         variant="secondary"
                         size="md"
-                        onClick={startNewSession}
+                        disabled={isRetaking}
+                        onClick={() => {
+                            if (!startNewSession || isRetaking) {
+                                return;
+                            }
+
+                            setError("");
+                            setIsRetaking(true);
+
+                            void startNewSession({ forceNew: true })
+                                .then(() => {
+                                    setIsRetaking(false);
+                                })
+                                .catch((err) => {
+                                    setError(
+                                        err instanceof Error
+                                            ? err.message
+                                            : "Unable to retake assessment right now.",
+                                    );
+                                    setIsRetaking(false);
+                                });
+                        }}
                     >
                         Retake Assessment
                     </Button>

@@ -73,13 +73,15 @@ evaluate_answer_schema = {
 # ============================================================
 # Skill Assessment
 # ============================================================
-skill_assessment_questions_schema = {
-    "question": "",
-    "options": ["", "", "", ""],
-    "correct_answer": "",
-    "explanation": "",
-    "difficulty": "easy || medium || hard"
-}
+skill_assessment_questions_schema = [
+    {
+        "question": "",
+        "options": ["", "", "", ""],
+        "correct_answer": "",
+        "explanation": "",
+        "difficulty": "easy || medium || hard"
+    }
+]
 
 
 # ============================================================

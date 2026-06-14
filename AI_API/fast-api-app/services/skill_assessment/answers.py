@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from uuid import uuid4
 from datetime import datetime
+from collections import Counter
 
 from db.models import (
     AssessmentAnswer,
@@ -31,16 +32,53 @@ def submit_answers(db: Session, session_id: str, user_id: str, user_answers: lis
 
     # Fetch questions
     questions = db.query(AssessmentQuestion).filter_by(session_id=session_id).all()
-    questions_map = {q.id: q for q in questions}
+    if not questions:
+        raise ValueError("Assessment questions were not found for this session")
+
+    questions_map = {str(q.id): q for q in questions}
+    expected_question_ids = {str(q.id) for q in questions}
+
+    if len(user_answers) != session.total_questions:
+        raise ValueError(
+            f"Incomplete submission: expected {session.total_questions} answers, "
+            f"received {len(user_answers)}."
+        )
+
+    submitted_question_ids = []
+    for ans in user_answers:
+        question_id = str(ans.get("question_id", "")).strip()
+        selected_answer = str(ans.get("selected_answer", "")).strip()
+
+        if not question_id:
+            raise ValueError("Invalid submission: each answer must include a question_id.")
+        if not selected_answer:
+            raise ValueError("Invalid submission: each answer must include a selected_answer.")
+        if question_id not in expected_question_ids:
+            raise ValueError("Invalid submission: one or more answers do not belong to this session.")
+
+        submitted_question_ids.append(question_id)
+
+    submitted_counts = Counter(submitted_question_ids)
+    duplicate_question_ids = [qid for qid, count in submitted_counts.items() if count != 1]
+    if duplicate_question_ids:
+        raise ValueError(
+            "Invalid submission: each session question must have exactly one submitted answer."
+        )
+
+    missing_question_ids = expected_question_ids - set(submitted_question_ids)
+    if missing_question_ids:
+        raise ValueError(
+            f"Incomplete submission: {len(missing_question_ids)} question(s) are missing answers."
+        )
 
     # Save answers and compute correctness
     answer_objects = []
     results = []
 
     for ans in user_answers:
-        q = questions_map.get(ans["question_id"])
+        q = questions_map.get(str(ans["question_id"]))
         if not q:
-            continue
+            raise ValueError("Invalid submission: one or more answers do not belong to this session.")
         is_correct = ans["selected_answer"] == q.correct_answer
         answer_objects.append(
             AssessmentAnswer(
@@ -127,7 +165,7 @@ def submit_answers(db: Session, session_id: str, user_id: str, user_answers: lis
     return SubmitAssessmentResponse(
         session_id=session_id,
         score=score,
-        total_questions=len(results),
+        total_questions=session.total_questions,
         results=results
     )
     

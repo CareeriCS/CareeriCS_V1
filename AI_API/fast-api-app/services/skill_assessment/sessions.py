@@ -103,21 +103,28 @@ def start_session(
     try:
         session = AssessmentSession(**session_data)
         db.add(session)
+        db.flush()
+
+        # Generate questions and keep creation atomic with session creation.
+        generate_and_save_questions(db, session_id, target_id_str, num_questions)
+        questions_response = get_questions_response(db, session_id)
+        if len(questions_response) != num_questions:
+            raise ValueError(
+                f"Assessment generation failed: expected {num_questions} questions, "
+                f"received {len(questions_response)}."
+            )
+
         db.commit()
-        db.refresh(session)
+        return StartAssessmentResponse(session_id=session_id, questions=questions_response)
     except IntegrityError as exc:
         db.rollback()
         raise ValueError(
             "Unable to create assessment session. Ensure assessment_sessions.skill_id allows null "
             "or that at least one skill exists in DB for legacy schema compatibility."
         ) from exc
-
-    # Generate questions via AI or DB
-    generate_and_save_questions(db, session_id, target_id_str, num_questions)
-
-    # Prepare frontend response
-    questions_response = get_questions_response(db, session_id)
-    return StartAssessmentResponse(session_id=session_id, questions=questions_response)
+    except Exception:
+        db.rollback()
+        raise
 
 
 def list_user_sessions(db: Session, user_id: str, limit: int = 20) -> List[AssessmentSessionSummary]:

@@ -1,6 +1,10 @@
 import React from "react";
 import type { APIAssessmentQuestion, APISubmitAssessmentResponse } from "@/types";
 
+export type StartNewSessionOptions = {
+  forceNew?: boolean;
+};
+
 export type AssessmentContextType = {
   userId: string;
   sessionId: string;
@@ -15,7 +19,7 @@ export type AssessmentContextType = {
   setUnlockedStepId: React.Dispatch<React.SetStateAction<number>>;
   resultsData: APISubmitAssessmentResponse | null;
   setResultsData: React.Dispatch<React.SetStateAction<APISubmitAssessmentResponse | null>>;
-  startNewSession: () => Promise<void>;
+  startNewSession: (options?: StartNewSessionOptions) => Promise<void>;
   targetName: string;
 };
 

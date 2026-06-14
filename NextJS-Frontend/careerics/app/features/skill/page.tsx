@@ -7,7 +7,6 @@ import SkillFilters, {
   type SkillFilterTrackOption,
   type SkillFilterType,
 } from "@/components/ui/SkillFilters";
-import { LearningSkillsCard, MoreSkillsCard, PastTestsCard } from "@/components/ui/cvArchive";
 import SkillConfirmPopup from "@/components/ui/skillConfirmPopup";
 import {
   getUnifiedBookmarks,
@@ -56,6 +55,7 @@ type SessionTitleLookup = {
 const LAST_ACTIVE_ROADMAP_STORAGE_KEY = "roadmap:last-active-id";
 const CURRENT_LEARNING_CACHE_TTL_MS = 15_000;
 const ROADMAP_DETAILS_CACHE_TTL_MS = 60_000;
+const GENERAL_SKILL_TRACK_ID = "__general_skill__";
 
 function normalizeEntityId(value: unknown): string {
   return String(value ?? "")
@@ -204,9 +204,9 @@ export default function SkillAssessment() {
   const [selectedRoadmap, setSelectedRoadmap] = useState<RoadmapRead | null>(null);
   const [, setCurrentLearning] = useState<CurrentRoadmapLearning | null>(null);
   const [bookmarkedCurrentTargets, setBookmarkedCurrentTargets] = useState<AssessmentTarget[]>([]);
-  const [bookmarkedTargetsHint, setBookmarkedTargetsHint] = useState("");
+  const [, setBookmarkedTargetsHint] = useState("");
   const [sessionRoadmapsById, setSessionRoadmapsById] = useState<Record<string, RoadmapRead>>({});
-  const [selectedSectionId, setSelectedSectionId] = useState("");
+  const [, setSelectedSectionId] = useState("");
   const [selectedLearningTargetId, setSelectedLearningTargetId] = useState("");
   const [selectedMoreSkillId, setSelectedMoreSkillId] = useState("");
 
@@ -221,7 +221,38 @@ export default function SkillAssessment() {
     useRef<Map<string, CachedApiRequest<CurrentRoadmapLearning>>>(new Map());
   const roadmapByIdRequestCacheRef = useRef<Map<string, CachedApiRequest<RoadmapRead>>>(new Map());
 
-  const isGeneralSkillsMode = !selectedTrackId;
+  const generalSkillRoadmap = useMemo(
+    () => roadmapTracks.find((track) => isHiddenComputerScienceOption(track)) || null,
+    [roadmapTracks],
+  );
+
+  const fallbackVisibleTrackId = useMemo(
+    () => roadmapTracks.find((track) => !isHiddenComputerScienceOption(track))?.id || "",
+    [roadmapTracks],
+  );
+
+  const effectiveSelectedTrackId = useMemo(() => {
+    if (selectedTrackId === GENERAL_SKILL_TRACK_ID) {
+      return GENERAL_SKILL_TRACK_ID;
+    }
+
+    const selectedTrack = roadmapTracks.find((track) => track.id === selectedTrackId);
+    if (selectedTrack && isHiddenComputerScienceOption(selectedTrack)) {
+      return fallbackVisibleTrackId || GENERAL_SKILL_TRACK_ID;
+    }
+
+    return selectedTrackId;
+  }, [fallbackVisibleTrackId, roadmapTracks, selectedTrackId]);
+
+  const resolvedSelectedRoadmapId = useMemo(
+    () =>
+      effectiveSelectedTrackId === GENERAL_SKILL_TRACK_ID
+        ? generalSkillRoadmap?.id || ""
+        : effectiveSelectedTrackId,
+    [effectiveSelectedTrackId, generalSkillRoadmap?.id],
+  );
+
+  const hasResolvedRoadmapContext = Boolean(resolvedSelectedRoadmapId);
   const getCurrentLearningCached = useCallback((roadmapId?: string) => {
     if (!user?.id) {
       return Promise.resolve({
@@ -398,7 +429,7 @@ export default function SkillAssessment() {
         setSkills(skillsRes.data);
         setSessions([]);
         setRoadmapTracks([]);
-        setSelectedTrackId("");
+        setSelectedTrackId(GENERAL_SKILL_TRACK_ID);
         setTrackHelperText("Roadmaps unavailable. Showing all skills from the database.");
         setIsLoading(false);
         return;
@@ -411,15 +442,13 @@ export default function SkillAssessment() {
       setSessions(resolvedSessions);
 
       if (!tracks.length) {
-        setSelectedTrackId("");
+        setSelectedTrackId(GENERAL_SKILL_TRACK_ID);
         setTrackHelperText("No roadmap tracks found. Showing all skills from the database.");
         setIsLoading(false);
         return;
       }
 
-      const defaultTrack =
-        tracks.find((track) => !isHiddenComputerScienceOption(track)) || null;
-      setSelectedTrackId(defaultTrack?.id || "");
+      setSelectedTrackId(GENERAL_SKILL_TRACK_ID);
       setTrackHelperText("");
 
       setIsLoading(false);
@@ -433,12 +462,12 @@ export default function SkillAssessment() {
   }, [isAuthLoading, user?.id]);
 
   useEffect(() => {
-    if (!selectedTrackId || typeof window === "undefined") {
+    if (!effectiveSelectedTrackId || typeof window === "undefined") {
       return;
     }
 
-    window.localStorage.setItem(LAST_ACTIVE_ROADMAP_STORAGE_KEY, selectedTrackId);
-  }, [selectedTrackId]);
+    window.localStorage.setItem(LAST_ACTIVE_ROADMAP_STORAGE_KEY, effectiveSelectedTrackId);
+  }, [effectiveSelectedTrackId]);
 
   const handleTrackChange = (trackId: string) => {
     setSelectedTrackId(trackId);
@@ -449,14 +478,14 @@ export default function SkillAssessment() {
     let alive = true;
 
     const loadTrackContext = async () => {
-      if (!selectedTrackId) {
+      if (!resolvedSelectedRoadmapId) {
         setSelectedRoadmap(null);
         setCurrentLearning(null);
         setSelectedSectionId("");
         return;
       }
 
-      const roadmapRes = await getRoadmapByIdCached(selectedTrackId);
+      const roadmapRes = await getRoadmapByIdCached(resolvedSelectedRoadmapId);
       if (!alive) {
         return;
       }
@@ -486,7 +515,7 @@ export default function SkillAssessment() {
         return;
       }
 
-      const currentRes = await getCurrentLearningCached(selectedTrackId);
+      const currentRes = await getCurrentLearningCached(resolvedSelectedRoadmapId);
       if (!alive) {
         return;
       }
@@ -518,7 +547,7 @@ export default function SkillAssessment() {
     return () => {
       alive = false;
     };
-  }, [getCurrentLearningCached, getRoadmapByIdCached, selectedTrackId, user?.id]);
+  }, [getCurrentLearningCached, getRoadmapByIdCached, resolvedSelectedRoadmapId, user?.id]);
 
   useEffect(() => {
     if (isAuthLoading) {
@@ -760,51 +789,28 @@ export default function SkillAssessment() {
   }, [selectedRoadmap, sessionRoadmapsById]);
 
   const trackOptions: SkillFilterTrackOption[] = useMemo(
-    () =>
-      roadmapTracks
+    () => [
+      { id: GENERAL_SKILL_TRACK_ID, title: "General Skill" },
+      ...roadmapTracks
         .filter((track) => !isHiddenComputerScienceOption(track))
         .map((track) => ({ id: track.id, title: track.title })),
+    ],
     [roadmapTracks],
   );
-
-  useEffect(() => {
-    if (!selectedTrackId || !roadmapTracks.length) {
-      return;
-    }
-
-    const selectedTrack = roadmapTracks.find((track) => track.id === selectedTrackId);
-    if (selectedTrack && isHiddenComputerScienceOption(selectedTrack)) {
-      const firstVisible = roadmapTracks.find((track) => !isHiddenComputerScienceOption(track));
-      setSelectedTrackId(firstVisible?.id || "");
-    }
-  }, [roadmapTracks, selectedTrackId]);
 
   const sortedSections = useMemo(
     () => selectedRoadmap?.sections.slice().sort((a, b) => a.order - b.order) || [],
     [selectedRoadmap],
   );
 
-  useEffect(() => {
-    if (!sortedSections.length) {
-      return;
-    }
-
-    if (!selectedSectionId || !sortedSections.some((section) => section.id === selectedSectionId)) {
-      setSelectedSectionId(sortedSections[0].id);
-    }
-  }, [selectedSectionId, sortedSections]);
-
   const learningTargets = useMemo<AssessmentTarget[]>(() => bookmarkedCurrentTargets, [bookmarkedCurrentTargets]);
-
-  useEffect(() => {
+  const activeLearningTargetId = useMemo(() => {
     if (!learningTargets.length) {
-      setSelectedLearningTargetId("");
-      return;
+      return "";
     }
-
-    if (!learningTargets.some((target) => target.id === selectedLearningTargetId)) {
-      setSelectedLearningTargetId(learningTargets[0].id);
-    }
+    return learningTargets.some((target) => target.id === selectedLearningTargetId)
+      ? selectedLearningTargetId
+      : learningTargets[0].id;
   }, [learningTargets, selectedLearningTargetId]);
 
   const learningItems = useMemo(
@@ -818,7 +824,7 @@ export default function SkillAssessment() {
   );
 
   const roadmapSectionContextTexts = useMemo(() => {
-    if (isGeneralSkillsMode || !sortedSections.length) {
+    if (!hasResolvedRoadmapContext || !sortedSections.length) {
       return [] as string[];
     }
 
@@ -831,10 +837,10 @@ export default function SkillAssessment() {
     }
 
     return contextParts;
-  }, [isGeneralSkillsMode, sortedSections]);
+  }, [hasResolvedRoadmapContext, sortedSections]);
 
   const roadmapStepContextTexts = useMemo(() => {
-    if (isGeneralSkillsMode || !sortedSections.length) {
+    if (!hasResolvedRoadmapContext || !sortedSections.length) {
       return [] as string[];
     }
 
@@ -858,10 +864,10 @@ export default function SkillAssessment() {
     }
 
     return contextParts;
-  }, [isGeneralSkillsMode, sortedSections]);
+  }, [hasResolvedRoadmapContext, sortedSections]);
 
   const filteredSkills = useMemo(() => {
-    if (isGeneralSkillsMode || !selectedRoadmap) {
+    if (!hasResolvedRoadmapContext || !selectedRoadmap) {
       return skills;
     }
 
@@ -874,7 +880,7 @@ export default function SkillAssessment() {
     const matched = skills.filter((skill) => doesSkillMatchContext(skill.skill_name, contextTexts));
     return matched.length ? matched : skills;
   }, [
-    isGeneralSkillsMode,
+    hasResolvedRoadmapContext,
     roadmapSectionContextTexts,
     roadmapStepContextTexts,
     selectedRoadmap,
@@ -884,17 +890,15 @@ export default function SkillAssessment() {
 
   const moreSkills = useMemo(() => filteredSkills.map((skill) => skill.skill_name), [filteredSkills]);
 
-  useEffect(() => {
+  const activeSelectedMoreSkillId = useMemo(() => {
     if (!selectedMoreSkillId) {
-      return;
+      return "";
     }
-
-    if (!filteredSkills.some((skill) => skill.id === selectedMoreSkillId)) {
-      setSelectedMoreSkillId("");
-    }
+    return filteredSkills.some((skill) => skill.id === selectedMoreSkillId)
+      ? selectedMoreSkillId
+      : "";
   }, [filteredSkills, selectedMoreSkillId]);
-
-  const selectedMoreName = skillById.get(selectedMoreSkillId)?.skill_name || "";
+  const selectedMoreName = skillById.get(activeSelectedMoreSkillId)?.skill_name || "";
   const pendingTargetName = pendingTarget?.label || "";
 
   const allPastTests = useMemo(
@@ -1019,12 +1023,12 @@ export default function SkillAssessment() {
       >
         <SkillFilters
           tracks={trackOptions}
-          selectedTrackId={selectedTrackId}
+          selectedTrackId={effectiveSelectedTrackId}
           onTrackChange={handleTrackChange}
           skillType={selectedSkillType}
           onSkillTypeChange={setSelectedSkillType}
           disabled={isLoading}
-          disableSkillTypeToggle={isGeneralSkillsMode}
+          disableSkillTypeToggle={!hasResolvedRoadmapContext}
           trackHelperText={trackHelperText}
           style={{
             gridArea: isLarge ? "1/ 1 / 3 / 3" : "1 / 1 / 2 / 2",
@@ -1051,7 +1055,7 @@ export default function SkillAssessment() {
                 subtext={item.label}
                 theme="light"
                 selectable
-                selected={selectedLearningTargetId === item.id}
+                selected={activeLearningTargetId === item.id}
                 onSelect={() => {
                   const target = learningTargets.find(
                     (t) => t.id === item.id
