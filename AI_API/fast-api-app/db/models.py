@@ -475,6 +475,7 @@ class RoadmapSection(Base):
 
     __table_args__ = (
         UniqueConstraint("roadmap_id", "order", name="uq_roadmap_sections_roadmap_order"),
+        Index("ix_roadmap_sections_roadmap_id", "roadmap_id"),
     )
 
 
@@ -496,6 +497,7 @@ class RoadmapStep(Base):
 
     __table_args__ = (
         UniqueConstraint("section_id", "order", name="uq_roadmap_steps_section_order"),
+        Index("ix_roadmap_steps_section_id", "section_id"),
     )
 
 
@@ -573,6 +575,24 @@ class RoadmapAssessmentResult(Base):
             "section_id",
             "step_id",
             unique=True,
+        ),
+        Index(
+            "ix_roadmap_assessment_results_user_roadmap_type",
+            "user_id",
+            "roadmap_id",
+            "type",
+        ),
+        Index(
+            "ix_roadmap_assessment_results_user_type_step",
+            "user_id",
+            "type",
+            "step_id",
+        ),
+        Index(
+            "ix_roadmap_assessment_results_user_type_section",
+            "user_id",
+            "type",
+            "section_id",
         ),
     )
 

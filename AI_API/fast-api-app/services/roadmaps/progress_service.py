@@ -74,40 +74,33 @@ def _upsert_progress_row(
 
 
 def _recompute_section_progress(db: Session, user_id: UUID, roadmap_id: UUID, section: RoadmapSection) -> None:
-    steps = (
-        db.query(RoadmapStep)
-        .filter(RoadmapStep.section_id == section.id)
-        .order_by(RoadmapStep.order.asc(), RoadmapStep.id.asc())
-        .all()
-    )
-
-    step_ids = [step.id for step in steps]
-    step_results = []
-    if step_ids:
-        step_results = (
-            db.query(RoadmapAssessmentResult)
-            .filter(
+    section_metrics = (
+        db.query(
+            func.count(RoadmapStep.id).label("total_steps"),
+            func.sum(
+                case(
+                    (RoadmapAssessmentResult.completion_status == "completed", 1),
+                    else_=0,
+                )
+            ).label("completed_steps"),
+            func.avg(RoadmapAssessmentResult.score).label("avg_score"),
+        )
+        .outerjoin(
+            RoadmapAssessmentResult,
+            and_(
+                RoadmapAssessmentResult.step_id == RoadmapStep.id,
                 RoadmapAssessmentResult.user_id == user_id,
                 RoadmapAssessmentResult.type == "step",
-                RoadmapAssessmentResult.step_id.in_(step_ids),
-            )
-            .all()
+            ),
         )
+        .filter(RoadmapStep.section_id == section.id)
+        .first()
+    )
 
-    by_step: Dict[UUID, RoadmapAssessmentResult] = {row.step_id: row for row in step_results if row.step_id}
-    completed_steps = 0
-    scores: List[int] = []
-
-    for step in steps:
-        step_row = by_step.get(step.id)
-        if step_row and step_row.completion_status == "completed":
-            completed_steps += 1
-        if step_row and step_row.score is not None:
-            scores.append(step_row.score)
-
-    total_steps = len(steps)
+    total_steps = int(section_metrics.total_steps or 0) if section_metrics else 0
+    completed_steps = int(section_metrics.completed_steps or 0) if section_metrics else 0
     status = _completion_status(completed_steps, total_steps)
-    avg_score = int(round(sum(scores) / len(scores))) if scores else None
+    avg_score = int(round(section_metrics.avg_score)) if section_metrics and section_metrics.avg_score is not None else None
 
     section_row = _upsert_progress_row(
         db,
@@ -123,41 +116,31 @@ def _recompute_section_progress(db: Session, user_id: UUID, roadmap_id: UUID, se
 
 
 def _recompute_roadmap_progress(db: Session, user_id: UUID, roadmap: Roadmap) -> None:
-    sections = (
-        db.query(RoadmapSection)
+    total_sections = (
+        db.query(func.count(RoadmapSection.id))
         .filter(RoadmapSection.roadmap_id == roadmap.id)
-        .order_by(RoadmapSection.order.asc(), RoadmapSection.id.asc())
+        .scalar()
+    )
+    total_sections = int(total_sections or 0)
+
+    section_results = (
+        db.query(RoadmapAssessmentResult.completion_status, RoadmapAssessmentResult.score)
+        .join(
+            RoadmapSection,
+            RoadmapSection.id == RoadmapAssessmentResult.section_id,
+        )
+        .filter(
+            RoadmapAssessmentResult.user_id == user_id,
+            RoadmapAssessmentResult.type == "section",
+            RoadmapAssessmentResult.roadmap_id == roadmap.id,
+            RoadmapSection.roadmap_id == roadmap.id,
+        )
         .all()
     )
 
-    section_ids = [section.id for section in sections]
-    section_results = []
-    if section_ids:
-        section_results = (
-            db.query(RoadmapAssessmentResult)
-            .filter(
-                RoadmapAssessmentResult.user_id == user_id,
-                RoadmapAssessmentResult.type == "section",
-                RoadmapAssessmentResult.section_id.in_(section_ids),
-            )
-            .all()
-        )
+    completed_sections = sum(1 for row in section_results if row.completion_status == "completed")
+    scores = [int(row.score) for row in section_results if row.score is not None]
 
-    by_section: Dict[UUID, RoadmapAssessmentResult] = {
-        row.section_id: row for row in section_results if row.section_id
-    }
-
-    completed_sections = 0
-    scores: List[int] = []
-
-    for section in sections:
-        section_row = by_section.get(section.id)
-        if section_row and section_row.completion_status == "completed":
-            completed_sections += 1
-        if section_row and section_row.score is not None:
-            scores.append(section_row.score)
-
-    total_sections = len(sections)
     status = _completion_status(completed_sections, total_sections)
     avg_score = int(round(sum(scores) / len(scores))) if scores else None
 
@@ -180,20 +163,6 @@ def _get_locked_section_message(
     roadmap_id: UUID,
     target_section: RoadmapSection,
 ) -> str | None:
-    sections = (
-        db.query(RoadmapSection)
-        .filter(RoadmapSection.roadmap_id == roadmap_id)
-        .order_by(RoadmapSection.order.asc(), RoadmapSection.id.asc())
-        .all()
-    )
-
-    target_index = next(
-        (index for index, section in enumerate(sections) if section.id == target_section.id),
-        None,
-    )
-    if target_index is None or target_index <= 0:
-        return None
-
     existing_target_progress = (
         db.query(RoadmapAssessmentResult.id)
         .filter(
@@ -207,11 +176,48 @@ def _get_locked_section_message(
     if existing_target_progress:
         return None
 
-    progress_summary = get_roadmap_progress_service(db, roadmap_id, user_id)
-    previous_sections = progress_summary.sections[:target_index]
+    previous_sections = (
+        db.query(
+            RoadmapSection.id.label("section_id"),
+            RoadmapSection.title.label("title"),
+            func.count(RoadmapStep.id).label("total_steps"),
+            func.sum(
+                case(
+                    (RoadmapAssessmentResult.completion_status == "completed", 1),
+                    else_=0,
+                )
+            ).label("completed_steps"),
+        )
+        .outerjoin(RoadmapStep, RoadmapStep.section_id == RoadmapSection.id)
+        .outerjoin(
+            RoadmapAssessmentResult,
+            and_(
+                RoadmapAssessmentResult.step_id == RoadmapStep.id,
+                RoadmapAssessmentResult.user_id == user_id,
+                RoadmapAssessmentResult.type == "step",
+            ),
+        )
+        .filter(
+            RoadmapSection.roadmap_id == roadmap_id,
+            RoadmapSection.order < target_section.order,
+        )
+        .group_by(RoadmapSection.id, RoadmapSection.title, RoadmapSection.order)
+        .order_by(RoadmapSection.order.asc(), RoadmapSection.id.asc())
+        .all()
+    )
+    if not previous_sections:
+        return None
 
     first_incomplete_previous = next(
-        (section for section in previous_sections if section.completion_status != "completed"),
+        (
+            section
+            for section in previous_sections
+            if _completion_status(
+                int(section.completed_steps or 0),
+                int(section.total_steps or 0),
+            )
+            != "completed"
+        ),
         None,
     )
     if not first_incomplete_previous:
@@ -289,18 +295,17 @@ def get_roadmap_progress_service(db: Session, roadmap_id: UUID, user_id: UUID) -
             .all()
         )
 
-    step_ids = [step.id for step in steps]
     progress_rows = (
         db.query(RoadmapAssessmentResult)
         .filter(
             RoadmapAssessmentResult.user_id == user_id,
             RoadmapAssessmentResult.roadmap_id == roadmap.id,
-            RoadmapAssessmentResult.type.in_(["step", "section", "roadmap"]),
+            RoadmapAssessmentResult.type == "step",
         )
         .all()
     )
 
-    step_progress = {row.step_id: row for row in progress_rows if row.type == "step" and row.step_id}
+    step_progress = {row.step_id: row for row in progress_rows if row.step_id}
 
     steps_by_section: Dict[UUID, List[RoadmapStep]] = {}
     for step in steps:

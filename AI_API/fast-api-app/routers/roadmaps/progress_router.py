@@ -22,7 +22,7 @@ router = APIRouter(prefix="/roadmaps", tags=["Roadmaps Progress"])
 
 
 @router.put("/{roadmap_id}/progress/{user_id}/steps/{step_id}", response_model=RoadmapProgressSummarySchema)
-async def upsert_step_progress_endpoint(
+def upsert_step_progress_endpoint(
     roadmap_id: UUID,
     user_id: UUID,
     step_id: UUID,
@@ -38,7 +38,7 @@ async def upsert_step_progress_endpoint(
 
 
 @router.get("/{roadmap_id}/progress/{user_id}", response_model=RoadmapProgressSummarySchema)
-async def get_roadmap_progress_endpoint(
+def get_roadmap_progress_endpoint(
     roadmap_id: UUID,
     user_id: UUID,
     db: Session = Depends(get_db),
@@ -52,7 +52,7 @@ async def get_roadmap_progress_endpoint(
 
 
 @router.get("/progress/{user_id}", response_model=UserRoadmapProgressListSchema)
-async def get_user_roadmaps_progress_endpoint(user_id: UUID, db: Session = Depends(get_db)):
+def get_user_roadmaps_progress_endpoint(user_id: UUID, db: Session = Depends(get_db)):
     try:
         return get_user_roadmaps_progress_service(db, user_id)
     except Exception as exc:
@@ -60,7 +60,7 @@ async def get_user_roadmaps_progress_endpoint(user_id: UUID, db: Session = Depen
 
 
 @router.get("/current/{user_id}", response_model=CurrentRoadmapLearningSchema)
-async def get_current_roadmap_learning_endpoint(
+def get_current_roadmap_learning_endpoint(
     user_id: UUID,
     roadmap_id: UUID | None = Query(default=None),
     db: Session = Depends(get_db),
