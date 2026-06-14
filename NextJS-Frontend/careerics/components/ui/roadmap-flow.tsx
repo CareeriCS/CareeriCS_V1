@@ -24,6 +24,7 @@ type StepFlowProps = {
   variant?: "light" | "dark";
   routeOnClick?: boolean;
   roadmapId?: string;
+  style?: React.CSSProperties;
 };
 
 
@@ -37,6 +38,7 @@ export const StepFlow: React.FC<StepFlowProps> = ({
   routeOnClick = true,
   roadmapId,
   variant = "light",
+  style,
 }) => {
 
   const { isLarge, isMedium, isSmall } = useResponsive();
@@ -101,12 +103,13 @@ export const StepFlow: React.FC<StepFlowProps> = ({
         columnGap: `${ROW_GAP}px`,
         rowGap: `${ROW_GAP}px`,
         width: "100%",
-        height: "100%",
+        height: "auto",
+        ...style,
       }}
-    >
+      >
       {flat.map((node, index) => {
         if (!node.label) return <div key={`empty-${index}`} />;
-
+        
         const rowIndex = Math.floor(index / COLUMNS);
         const colIndex = index % COLUMNS;
 
@@ -114,25 +117,25 @@ export const StepFlow: React.FC<StepFlowProps> = ({
 
         const isEndOfRow =
           rowIndex % 2 === 1
-            ? colIndex === 0
+          ? colIndex === 0
             : colIndex === COLUMNS - 1;
 
-        const isHovered = hoveredIndex === node.globalIndex;
-        const isSelected = selectedIndex === node.globalIndex;
+            const isHovered = hoveredIndex === node.globalIndex;
+            const isSelected = selectedIndex === node.globalIndex;
         const isLocked = lockedStepIndexSet.has(node.globalIndex);
 
         return (
           <div
-            key={node.globalIndex}
-            style={{
-              position: "relative",
-              width: "100%",
-              height: NODE_HEIGHT,
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              fontFamily: "var(--font-nova-square)",
-            }}
+          key={node.globalIndex}
+          style={{
+            position: "relative",
+            width: "100%",
+            height: NODE_HEIGHT,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            fontFamily: "var(--font-nova-square)",
+          }}
           >
             {/* NODE */}
             <div

@@ -38,6 +38,9 @@ import type {
   RoadmapProgressSummary,
   RoadmapRead,
 } from "@/types";
+import JourneyTreeVertical from "@/components/ui/journey-tree-vertical";
+import { useResponsive } from "@/hooks/useResponsive";
+import { JourneyProgressCard } from "@/components/ui/home/journey-progress-card";
 
 function formatCompletionStatus(status: RoadmapCompletionStatus): string {
   if (status === "completed") {
@@ -470,54 +473,57 @@ export default function JourneyPaveTheWayPage() {
     router.push(`/skill-feature/questions?${params.toString()}`);
   };
 
-  if (isLoadingTracks || isLoadingRoadmap) {
-    return (
-      <JourneyTree
-        current={2}
-        maxReached={2}
-        renderContent={() => (
-          <div
-            style={{
-              width: "100%",
-              height: "100%",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              color: "white",
-            }}
-          >
-            <div style={{ textAlign: "center" }}>
-              <div
-                style={{
-                  fontSize: "1rem",
-                  marginBottom: "1rem",
-                  opacity: 0.8,
-                }}
-              >
-                Loading your learning path...
-              </div>
-              <div
-                style={{
-                  width: "30px",
-                  height: "30px",
-                  border: "2px solid #4A5FC1",
-                  borderTop: "2px solid transparent",
-                  borderRadius: "50%",
-                  animation: "spin 0.8s linear infinite",
-                  margin: "0 auto",
-                }}
-              />
-              <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-            </div>
-          </div>
-        )}
-      />
-    );
-  }
+  const { isLarge, isMedium, isSmall } = useResponsive();
+  const Orientation = isLarge ? JourneyTree : JourneyTreeVertical;
+
+  // if (isLoadingTracks || isLoadingRoadmap) {
+  //   return (
+  //     <Orientation
+  //       current={2}
+  //       maxReached={2}
+  //       renderContent={() => (
+  //         <div
+  //           style={{
+  //             width: "100%",
+  //             height: "100%",
+  //             display: "flex",
+  //             justifyContent: "center",
+  //             alignItems: "center",
+  //             color: "white",
+  //           }}
+  //         >
+  //           <div style={{ textAlign: "center" }}>
+  //             <div
+  //               style={{
+  //                 fontSize: "1rem",
+  //                 marginBottom: "1rem",
+  //                 opacity: 0.8,
+  //               }}
+  //             >
+  //               Loading your learning path...
+  //             </div>
+  //             <div
+  //               style={{
+  //                 width: "30px",
+  //                 height: "30px",
+  //                 border: "2px solid #4A5FC1",
+  //                 borderTop: "2px solid transparent",
+  //                 borderRadius: "50%",
+  //                 animation: "spin 0.8s linear infinite",
+  //                 margin: "0 auto",
+  //               }}
+  //             />
+  //             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+  //           </div>
+  //         </div>
+  //       )}
+  //     />
+  //   );
+  // }
 
   if (!selectedTrack) {
     return (
-      <JourneyTree
+      <Orientation
         current={2}
         maxReached={2}
         renderContent={() => (
@@ -566,7 +572,7 @@ export default function JourneyPaveTheWayPage() {
 
   return (
     <>
-      <JourneyTree
+      <Orientation
         current={2}
         maxReached={nextPhase}
         resolvePhasePath={(phase) => buildJourneyPhaseHref(phase, selectedTrack.id)}
@@ -574,515 +580,367 @@ export default function JourneyPaveTheWayPage() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: isSectionPanelOpen ? "0.9fr 1.75fr 1.25fr" : "1fr 3fr",
-              gridTemplateRows: "3fr 1fr",
-              columnGap: "25px",
-              rowGap: "20px",
+              gridTemplateColumns: "1fr",
+              gridTemplateRows: "1fr 2fr",
+              gap: "var(--space-lg)",
               width: "100%",
               height: "100%",
-              padding: "40px",
+              minHeight: 0,
+              padding: "var(--space-xl)",
               overflow: "hidden",
-              position: "relative",
-              transition: "grid-template-columns 0.25s ease",
+              boxSizing: "border-box",
             }}
           >
+            {/* Stats Section */}
             <div
               style={{
+                display: "flex",
                 gridArea: "1 / 1 / 2 / 2",
-                display: "flex",
                 flexDirection: "column",
-                justifyContent: "flex-start",
-                alignItems: "center",
-                gap: "0.5rem",
-                minWidth: 0,
-              }}
-            >
-              <h1 style={{ color: "white", margin: 0 }}>Quick Stats</h1>
-
-              <div
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  backgroundColor: "var(--medium-blue)",
-                  padding: "1rem",
-                  borderRadius: "4vh",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  alignItems: "stretch",
-                  boxSizing: "border-box",
-                  transition: "all 0.25s ease",
-                }}
-              >
-                <div>
-                  <h1 style={{ color: "white", marginBottom: "0.5rem", marginTop: 0 }}>Current Level</h1>
-                  <RoadmapProgress isScore={false} text={currentLevel} />
-                </div>
-
-                <div>
-                  <h1 style={{ color: "white", marginBottom: "0.5rem", marginTop: 0 }}>Roadmap Progress</h1>
-
-                  <div
-                    style={{
-                      width: "100%",
-                      height: "2vh",
-                      backgroundColor: "#131F3F",
-                      borderRadius: "1vh",
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: `${Math.max(0, Math.min(100, completionPercent))}%`,
-                        height: "100%",
-                        backgroundColor: "#E6FFB2",
-                        borderRadius: "1vh",
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <RoadmapProgress
-                  done={String(completedTopics)}
-                  text="Completed Topics"
-                />
-
-                <RoadmapProgress
-                  done={String(remainingTopics)}
-                  text="Remaining Topics"
-                  color="#FFB2B2"
-                />
-              </div>
-            </div>
-
-            <div
-              style={{
-                gridArea: "1 / 2 / 2 / 3",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "flex-start",
-                alignItems: "flex-start",
-                gap: "0.5rem",
-                overflow: "hidden",
-                minWidth: 0,
-              }}
-            >
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem", width: "100%" }}>
-                <h1 style={{ color: "white", margin: 0 }}>
-                  {selectedTrack?.title || "Track"} Roadmap
-                </h1>
-
-                {sectionAccessMessage ? (
-                  <p style={{ margin: 0, color: "#FFD3D3", fontSize: "0.95rem" }}>
-                    {sectionAccessMessage}
-                  </p>
-                ) : null}
-              </div>
-
-              <div
-                style={{
-                  backgroundColor: "#C1CBE6",
-                  padding: "2rem",
-                  borderRadius: "4vh",
-                  minWidth: 0,
-                  minHeight: 0,
-                  overflowY: "auto",
-                  scrollbarWidth: "none",
-                  width: "100%",
-                  flex: 1,
-                  boxSizing: "border-box",
-                }}
-              >
-                {steps.length ? (
-                  <StepFlow
-                    variant="dark"
-                    steps={steps}
-                    roadmapId={selectedTrack?.roadmapId || undefined}
-                    selectedIndex={isSectionPanelOpen ? selectedIndex : undefined}
-                    lockedStepIndexes={lockedStepIndexes}
-                    onSelect={handleSectionSelect}
-                    isNavigatable={false}
-                    routeOnClick={false}
-                  />
-                ) : (
-                  <div style={{ color: "black" }}>
-                    <p style={{ marginTop: 0 }}>
-                      No roadmap sections are available for this track yet.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => router.push("/features/roadmap")}
-                      style={{
-                        border: "none",
-                        borderRadius: "2vh",
-                        backgroundColor: "var(--medium-blue)",
-                        color: "white",
-                        padding: "0.7rem 1.2rem",
-                        cursor: "pointer",
-                        fontFamily: "var(--font-nova-square)",
-                      }}
-                    >
-                      Open Roadmaps
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div
-              style={{
-                gridArea: "2 / 1 / 3 / 2",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "flex-start",
-                alignItems: "center",
-                gap: "0.5rem",
-                minWidth: 0,
-              }}
-            >
-              <h1 style={{ color: "white", margin: 0 }}>Test Your Skills</h1>
-
-              <JourneyButton
-                variant="sA"
-                course="Start Assessment"
-                style={{ width: "100%", height: "100%" }}
-                onClick={openAssessmentPopup}
-              />
-            </div>
-
-            <div
-              style={{
-                gridArea: "2 / 2 / 3 / 3",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "flex-start",
-                alignItems: "flex-start",
-                gap: "0.5rem",
-                overflow: "hidden",
-                minWidth: 0,
+                gap: "var(--space-md)",
                 minHeight: 0,
               }}
             >
-              {/* HEADER */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-                <h1 style={{ color: "white", margin: 0 }}>Courses</h1>
-
-              </div>
-
-              {/* SCROLL AREA */}
-              <div
+              <h1
                 style={{
-                  width: "100%",
-                  flex: 1,
-                  minWidth: 0,
-                  minHeight: 0,
-
-                  overflowX: "auto",
-                  overflowY: "hidden",
-
-                  scrollbarWidth: "none",
+                  color: "white",
+                  fontSize: "var(--text-lg)",
+                  margin: 0,
                 }}
               >
-                {/* LOADING */}
-                {isLoadingRoadmap && !roadmapCourses ? (
-                  <div style={{ color: "white", opacity: 0.7 }}>
-                    Loading courses...
-                  </div>
-                ) : null}
+                Stats
+              </h1>
 
-                {/* COURSES */}
-                {!isLoadingRoadmap && activeCourseSection?.courses?.length ? (
-                  <div
+              <div
+                style={{
+                  display: "flex",
+                  width: "100%",
+                  height: "100%",
+                  backgroundColor: "var(--medium-blue)",
+                  borderRadius: "var(--radius-xl)",
+                  flexDirection: "column",
+                  padding: "var(--space-lg)",
+                  justifyContent: "space-between",
+                  boxSizing: "border-box",
+                }}
+              >
+                {/* Roadmap Progress */}
+                <div
+                  style={{
+                    display: "flex",
+                    width: "100%",
+                    gap: "var(--space-md)",
+                    alignItems: "center",
+                  }}
+                >
+                  <h1
                     style={{
-                      display: "flex",
-                      flexDirection: "row",
-                      flexWrap: "nowrap",
-                      gap: "var(--space-md)",
-                      width: "max-content",
-                      maxHeight:"100%",
+                      color: "white",
+                      fontSize: "var(--text-md)",
+                      margin: 0,
                     }}
                   >
-                    {activeCourseSection.courses.map((course) => (
-                      <div key={course.id} >
-                        <CourseCard
-                          title={course.title}
-                          provider={course.provider}
-                          status={courseStatusById?.[course.id] ?? "default"}
-                          onSelect={() => handleCourseClick(course)}
-                          style={{
-                            maxHeight:"100%",
-                            height:"100%",
-                          }}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
+                    Roadmap Progress
+                  </h1>
 
-                {/* EMPTY STATE */}
-                {!isLoadingRoadmap &&
-                  (!activeCourseSection?.courses || activeCourseSection.courses.length === 0) ? (
-                  <div style={{ color: "#C1CBE6" }}>
-                    No courses available for this section.
+                  <div
+                    style={{
+                      minWidth: 0,
+                      flex: 1,
+                      height: "var(--space-lg)",
+                      backgroundColor: "var(--dark-blue)",
+                      borderRadius: "999px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: "60%",
+                        height: "100%",
+                        backgroundColor: "var(--light-green)",
+                        borderRadius: "999px",
+                      }}
+                    />
                   </div>
-                ) : null}
+                </div>
+
+                {/* Stats */}
+                <div
+                  style={{
+                    flex: 1,
+                    display: "flex",
+                    gap: "var(--space-lg)",
+                    alignItems: "flex-start",
+                    justifyContent: "space-evenly",
+                    maxHeight: "fit-content",
+                  }}
+                >
+                  <RoadmapProgress
+                    text={"Current Level"}
+                    done="Beginner"
+                    color="white"
+                  />
+
+                  <RoadmapProgress
+                    text={"Completed Topics"}
+                    done="10"
+                  />
+
+                  <RoadmapProgress
+                    text={"Remaining Topics"}
+                    done="10"
+                    color="var(--light-red)"
+                  />
+
+                  <RoadmapProgress
+                    text={"Skills Assessed"}
+                    done="10"
+                    total="100"
+                    color="var(--light-orange)"
+                  />
+                </div>
               </div>
             </div>
 
-            {isSectionPanelOpen && selectedSection ? (
+            {/* Roadmap Section */}
+            <div
+              style={{
+                gridArea: "2 / 1 / 3 / 2",
+                display: "grid",
+                gridTemplateColumns: "2fr 1fr",
+                gridTemplateRows: "1fr",
+                minHeight: 0,
+                overflow: "hidden",
+                gap: "var(--space-lg)"
+              }}
+            >
               <div
                 style={{
-                  gridArea: "1 / 3 / 3 / 4",
                   display: "flex",
                   flexDirection: "column",
-                  padding: "1rem 1.35rem",
-                  backgroundColor: "var(--medium-grey)",
-                  borderRadius: "4vh",
-                  alignItems: "center",
+                  gap: "var(--space-md)",
+                  minHeight: 0,
                   overflow: "hidden",
-                  minWidth: 0,
                 }}
               >
-                <div
+                <h1
                   style={{
-                    width: "100%",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "flex-start",
-                    gap: "1rem",
-                    marginBottom: "1rem",
+                    color: "white",
+                    fontSize: "var(--text-lg)",
+                    margin: 0,
+                    flexShrink: 0,
                   }}
                 >
-                  <div style={{ minWidth: 0 }}>
-                    <h2
-                      style={{
-                        fontSize: "1.35rem",
-                        color: "white",
-                        margin: 0,
-                        wordBreak: "break-word",
-                      }}
-                    >
-                      {selectedSection.title}
-                    </h2>
-
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginTop: "0.65rem" }}>
-                      <span
-                        style={{
-                          padding: "0.28rem 0.65rem",
-                          borderRadius: "999px",
-                          backgroundColor:
-                            selectedSection.completionStatus === "completed"
-                              ? "rgba(212, 255, 71, 0.18)"
-                              : selectedSection.completionStatus === "in_progress"
-                                ? "rgba(193, 203, 230, 0.2)"
-                                : "rgba(255, 255, 255, 0.12)",
-                          color:
-                            selectedSection.completionStatus === "completed"
-                              ? "var(--primary-green)"
-                              : "white",
-                          fontSize: "0.78rem",
-                          fontFamily: "var(--font-nova-square)",
-                        }}
-                      >
-                        {selectedSectionStatus}
-                      </span>
-
-                      <span
-                        style={{
-                          padding: "0.28rem 0.65rem",
-                          borderRadius: "999px",
-                          backgroundColor: "rgba(255, 255, 255, 0.12)",
-                          color: "white",
-                          fontSize: "0.78rem",
-                          fontFamily: "var(--font-nova-square)",
-                        }}
-                      >
-                        {selectedSection.completedSteps}/{selectedSection.totalSteps} topics
-                      </span>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setSelectedSectionPreferenceId("")}
-                    style={{
-                      border: "none",
-                      backgroundColor: "transparent",
-                      color: "white",
-                      cursor: "pointer",
-                      padding: 0,
-                      flexShrink: 0,
-                    }}
-                  >
-                    <img
-                      src="/global/close.svg"
-                      alt="Close section details"
-                      style={{
-                        width: "1.4rem",
-                        height: "1.4rem",
-                        filter: "invert(1)",
-                      }}
-                    />
-                  </button>
-                </div>
+                  Roadmap
+                </h1>
 
                 <div
                   style={{
-                    height: "0.1rem",
-                    backgroundColor: "white",
-                    width: "100%",
-                    marginBottom: "1rem",
-                  }}
-                />
-
-                <div
-                  className="journey-section-scroll-box"
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    width: "100%",
-                    minHeight: 0,
                     flex: 1,
+                    minHeight: 0,
+                    minWidth: 0,
                     overflowY: "auto",
                     overflowX: "hidden",
                     scrollbarWidth: "none",
-                    msOverflowStyle: "none",
-                    paddingRight: "0.2rem",
+
+                    backgroundColor: "var(--bg-grey)",
+                    borderRadius: "var(--radius-xl)",
+                    padding: "var(--space-lg)",
+                    boxSizing: "border-box",
                   }}
                 >
-                  {Boolean(selectedSection.resources.length) ? (
-                    <div
-                      style={{
-                        width: "100%",
-                        marginBottom: "1rem",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "0.7rem",
-                      }}
-                    >
-                      <p
+
+                  {steps.length ? (
+                    <StepFlow
+                    style={{
+                    }}
+                      variant="dark"
+                      steps={steps}
+                      roadmapId={selectedTrack?.roadmapId || undefined}
+                      selectedIndex={
+                        isSectionPanelOpen ? selectedIndex : undefined
+                      }
+                      lockedStepIndexes={lockedStepIndexes}
+                      onSelect={handleSectionSelect}
+                      isNavigatable={false}
+                      routeOnClick={false}
+                    />
+                  ) : (
+                    <div style={{ color: "black" }}>
+                      <p style={{ marginTop: 0 }}>
+                        No roadmap sections are available for this track yet.
+                      </p>
+
+                      <button
+                        type="button"
+                        onClick={() => router.push("/features/roadmap")}
                         style={{
-                          margin: 0,
-                          fontSize: "1.1rem",
+                          border: "none",
+                          borderRadius: "2vh",
+                          backgroundColor: "var(--medium-blue)",
                           color: "white",
+                          padding: "0.7rem 1.2rem",
+                          cursor: "pointer",
                           fontFamily: "var(--font-nova-square)",
                         }}
                       >
-                        Resources:
-                      </p>
-
-                      {selectedSection.resources.map((resource) => {
-                        const key = `${resource.url}|${resource.title}|${resource.resourceType}`;
-
-                        return (
-                          <RoadmapResourceCard
-                            key={key}
-                            resourceType={resource.resourceType}
-                            title={resource.title}
-                            url={resource.url}
-                          />
-                        );
-                      })}
-
-                      <div
-                        style={{
-                          height: "0.1rem",
-                          backgroundColor: "white",
-                          width: "100%",
-                        }}
-                      />
+                        Open Roadmaps
+                      </button>
                     </div>
-                  ) : null}
+                  )}
+                </div>
+              </div>
 
-                  {selectedSection.skills.length ? (
-                    <p
-                      style={{
-                        margin: "0 0 1rem 0",
-                        fontSize: "1.1rem",
-                        color: "white",
-                        fontFamily: "var(--font-nova-square)",
-                      }}
-                    >
-                      Topics to cover:
-                    </p>
-                  ) : null}
+              {/* Resources */}
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "var(--space-md)",
+                  minHeight: 0,
+                  overflow: "hidden",
+                }}
+              >
+                <h1
+                  style={{
+                    color: "white",
+                    fontSize: "var(--text-lg)",
+                    margin: 0,
+                    flexShrink: 0,
+                  }}
+                >
+                  Topics & Resources
+                </h1>
 
+                <div
+                  style={{
+                    flex: 1,
+                    backgroundColor: "var(--medium-blue)",
+                    borderRadius: "var(--radius-xl)",
+                    padding: "var(--space-md)",
+                    overflowY: "auto",
+                    overflowX: "hidden",
+                    scrollbarWidth: "none",
+                    gap: "var(--space-md)",
+                  }}
+                >
+                  {/* Title */}
+                  <h2
+                    style={{
+                      fontSize: "var(--text-lg)",
+                      color: "white",
+                      fontFamily: "var(--font-nova-square)",
+                    }}
+                  >
+                    {selectedSection?.title || "Select a Section"}
+                  </h2>
+
+                  {/* Divider */}
+                  <div
+                    style={{
+                      height: "0.1rem",
+                      backgroundColor: "white",
+                      width: "100%",
+                    }}
+                  />
+
+                  {/* Content */}
                   <div
                     style={{
                       display: "flex",
                       flexDirection: "column",
                       width: "100%",
+                      minHeight: 0,
+                      flex: 1,
+                      overflowY: "auto",
+                      overflowX: "hidden",
+                      scrollbarWidth: "none",
+                      msOverflowStyle: "none",
+                      paddingRight: "var(--space-xxs)",
+                      gap: "var(--space-md)",
                     }}
                   >
-                    {selectedSection.skills.map((skill, index) => (
-                      <StepCheckbox
-                        key={skill.id}
-                        text={skill.text}
-                        isChecked={skill.checked}
-                        disabled={Boolean(selectedSection.locked)}
-                        onToggle={() => {
-                          void toggleSkill(index);
+                    {Boolean(selectedSection?.resources.length) && (
+                      <div
+                        style={{
+                          width: "100%",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "var(--space-sm)",
                         }}
-                      />
-                    ))}
+                      >
+                        <p
+                          style={{
+                            fontSize: "var(--text-md)",
+                            color: "white",
+                            fontFamily: "var(--font-nova-square)",
+                          }}
+                        >
+                          Resources:
+                        </p>
+
+                        {selectedSection?.resources.map((resource) => {
+                          const key = `${resource.url}|${resource.title}|${resource.resourceType}`;
+
+                          return (
+                            <RoadmapResourceCard
+                              key={key}
+                              resourceType={resource.resourceType}
+                              title={resource.title}
+                              url={resource.url}
+                            />
+                          );
+                        })}
+
+                        <div
+                          style={{
+                            height: "0.1rem",
+                            backgroundColor: "white",
+                            width: "100%",
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    {(selectedSection?.skills.length ?? 0) > 0 ? (
+                      <p
+                        style={{
+                          fontSize: "var(--text-md)",
+                          color: "white",
+                          fontFamily: "var(--font-nova-square)",
+                        }}
+                      >
+                        Topics to cover:
+                      </p>
+                    ) : null}
+
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        width: "100%",
+                      }}
+                    >
+                      {(selectedSection?.skills || []).map((skill, index) => (
+                        <StepCheckbox
+                          key={skill.id}
+                          text={skill.text}
+                          isChecked={skill.checked}
+                          disabled={Boolean(selectedSection?.locked)}
+                          onToggle={() => {
+                            void toggleSkill(index);
+                          }}
+                        />
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
-            ) : null}
-
-            {activeSystemError ? (
-              <p
-                style={{
-                  margin: 0,
-                  color: "#FFD3D3",
-                  position: "absolute",
-                  bottom: "16px",
-                  right: "24px",
-                  fontSize: "0.9rem",
-                }}
-              >
-                {activeSystemError}
-              </p>
-            ) : null}
-
-            <style jsx>{`
-            .journey-section-scroll-box::-webkit-scrollbar {
-              width: 0;
-              height: 0;
-            }
-          `}</style>
+            </div>
           </div>
         )}
       />
 
-      {activePopupCourse && activePopupMode ? (
-        <CourseActionPopup
-          mode={activePopupMode}
-          courseTitle={activePopupCourse.title}
-          courseOrg={activePopupCourse.provider}
-          onConfirm={activePopupMode === "enroll" ? confirmEnrollment : confirmCompletion}
-          onCancel={() => {
-            setActivePopupCourse(null);
-            setActivePopupMode(null);
-          }}
-          onContinue={activePopupMode === "complete" ? handleContinueCourse : undefined}
-        />
-      ) : null}
 
-      {pendingAssessmentSection ? (
-        <SkillConfirmPopup
-          skillName={pendingAssessmentSection.title}
-          isLoading={isStartingAssessment}
-          testCode="Section Test"
-          onCancel={() => {
-            if (!isStartingAssessment) {
-              setPendingAssessmentSection(null);
-            }
-          }}
-          onConfirm={(questions) => {
-            void handleStartAssessment(questions);
-          }}
-        />
-      ) : null}
     </>
   );
 }
