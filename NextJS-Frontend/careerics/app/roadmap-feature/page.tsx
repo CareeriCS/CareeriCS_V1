@@ -24,6 +24,28 @@ type CachedApiRequest<T> = {
 };
 
 const ROADMAP_DETAILS_CACHE_TTL_MS = 60_000;
+const ROADMAP_PROGRESS_UPDATED_EVENT = "careerics-roadmap-progress-updated";
+
+type RoadmapProgressSyncPayload = {
+  roadmapId: string;
+  userId: string;
+  progress: RoadmapProgressSummary;
+  updatedAt: number;
+};
+
+function getProgressStepIds(progressSummary: RoadmapProgressSummary): Set<string> {
+  const stepIds = new Set<string>();
+
+  for (const section of progressSummary.sections || []) {
+    for (const step of section.steps || []) {
+      if (step.step_id) {
+        stepIds.add(step.step_id);
+      }
+    }
+  }
+
+  return stepIds;
+}
 
 function normalizeRoadmapListPayload(payload: unknown): RoadmapListItem[] {
   if (Array.isArray(payload)) {
@@ -59,6 +81,7 @@ export default function RoadmapFeaturePage() {
   const [sectionAccessMessage, setSectionAccessMessage] = useState<string | null>(null);
 
   const inFlightStepIdsRef = useRef<Set<string>>(new Set());
+  const hasManualSectionSelectionRef = useRef(false);
   const roadmapByIdCacheRef = useRef<Map<string, CachedApiRequest<RoadmapRead>>>(new Map());
 
   const activeRoadmapId = useMemo(() => {
@@ -184,6 +207,76 @@ export default function RoadmapFeaturePage() {
     };
   }, [activeRoadmapId, isAuthLoading, user?.id]);
 
+  useEffect(() => {
+    hasManualSectionSelectionRef.current = false;
+  }, [activeRoadmapId]);
+
+  useEffect(() => {
+    const applySyncedProgress = (payload: RoadmapProgressSyncPayload | null) => {
+      if (!payload || !user?.id || !activeRoadmapId) {
+        return;
+      }
+
+      if (payload.roadmapId !== activeRoadmapId || payload.userId !== user.id) {
+        return;
+      }
+
+      setProgress(payload.progress);
+
+      const syncedStepIds = getProgressStepIds(payload.progress);
+      setLocalStepCompletion((previous) => {
+        if (!syncedStepIds.size) {
+          return previous;
+        }
+
+        let changed = false;
+        const next = { ...previous };
+
+        for (const stepId of syncedStepIds) {
+          if (stepId in next) {
+            delete next[stepId];
+            changed = true;
+          }
+        }
+
+        return changed ? next : previous;
+      });
+
+      if (!hasManualSectionSelectionRef.current && !stepParam) {
+        setSelectedSectionPreferenceId("");
+      }
+    };
+
+    const handleProgressUpdated = (event: Event) => {
+      const customEvent = event as CustomEvent<RoadmapProgressSyncPayload | null>;
+      applySyncedProgress(customEvent.detail || null);
+    };
+
+    const handleStorageUpdated = (event: StorageEvent) => {
+      if (event.key !== ROADMAP_PROGRESS_UPDATED_EVENT || !event.newValue) {
+        return;
+      }
+
+      try {
+        const parsed = JSON.parse(event.newValue) as RoadmapProgressSyncPayload;
+        applySyncedProgress(parsed);
+      } catch {
+        // Ignore malformed sync payloads.
+      }
+    };
+
+    window.addEventListener(ROADMAP_PROGRESS_UPDATED_EVENT, handleProgressUpdated as EventListener);
+    window.addEventListener("storage", handleStorageUpdated);
+
+    return () => {
+      window.removeEventListener(
+        ROADMAP_PROGRESS_UPDATED_EVENT,
+        handleProgressUpdated as EventListener,
+      );
+      window.removeEventListener("storage", handleStorageUpdated);
+    };
+  }, [activeRoadmapId, stepParam, user?.id]);
+
   const { isLarge } = useResponsive();
 
   const sections = useMemo(() => {
@@ -194,13 +287,27 @@ export default function RoadmapFeaturePage() {
     });
   }, [localStepCompletion, progress, roadmap]);
 
+  const fallbackCurrentSectionId = useMemo(() => {
+    const firstIncompleteUnlocked = sections.find(
+      (section) => !section.locked && section.completionStatus !== "completed",
+    );
+
+    if (firstIncompleteUnlocked) {
+      return firstIncompleteUnlocked.id;
+    }
+
+    const unlockedSections = sections.filter((section) => !section.locked);
+    return unlockedSections[unlockedSections.length - 1]?.id || sections[0]?.id || "";
+  }, [sections]);
+
   const sectionSelection = useMemo(() => {
     return resolveRoadmapSectionSelection({
       sections,
       preferredSectionId: selectedSectionPreferenceId,
       requestedSectionParam: stepParam,
+      fallbackSectionId: fallbackCurrentSectionId,
     });
-  }, [sections, selectedSectionPreferenceId, stepParam]);
+  }, [fallbackCurrentSectionId, sections, selectedSectionPreferenceId, stepParam]);
 
   const { selectedSection, selectedIndex } = sectionSelection;
   const activeSectionAccessMessage = sectionAccessMessage || sectionSelection.lockedMessage;
@@ -223,6 +330,7 @@ export default function RoadmapFeaturePage() {
         return;
       }
 
+      hasManualSectionSelectionRef.current = true;
       setSelectedSectionPreferenceId(nextSection.id);
 
       // MOBILE LOGIC ONLY
@@ -247,16 +355,26 @@ export default function RoadmapFeaturePage() {
     }
 
     const params = new URLSearchParams(searchParams.toString());
-    params.set("roadmap", activeRoadmapId);
-    params.set("step", selectedSection.id);
+    let changed = false;
+
+    if (params.get("roadmap") !== activeRoadmapId) {
+      params.set("roadmap", activeRoadmapId);
+      changed = true;
+    }
+
+    const shouldWriteStepParam = Boolean(stepParam) || Boolean(selectedSectionPreferenceId);
+    if (shouldWriteStepParam && params.get("step") !== selectedSection.id) {
+      params.set("step", selectedSection.id);
+      changed = true;
+    }
 
     const nextQuery = params.toString();
     const currentQuery = searchParams.toString();
 
-    if (nextQuery !== currentQuery) {
+    if (changed && nextQuery !== currentQuery) {
       router.replace(`?${nextQuery}`, { scroll: false });
     }
-  }, [activeRoadmapId, router, searchParams, selectedSection]);
+  }, [activeRoadmapId, router, searchParams, selectedSection, selectedSectionPreferenceId, stepParam]);
 
   const toggleSkill = async (skillIndex: number) => {
     if (!selectedSection || !activeRoadmapId) {
@@ -281,48 +399,27 @@ export default function RoadmapFeaturePage() {
 
     const previousChecked = step.checked;
     const nextChecked = !previousChecked;
+    const optimisticLocalCompletion = {
+      ...localStepCompletion,
+      [step.id]: nextChecked,
+    };
+    const optimisticSections = buildRoadmapUiSections({
+      roadmap,
+      progress,
+      localStepCompletion: optimisticLocalCompletion,
+    });
+    const optimisticCurrentSection = optimisticSections.find(
+      (section) => section.id === selectedSection.id,
+    );
 
     setSectionAccessMessage(null);
-    setLocalStepCompletion((previous) => ({
-      ...previous,
-      [step.id]: nextChecked,
-    }));
+    setLocalStepCompletion(optimisticLocalCompletion);
 
-    if (!user?.id) {
-      return;
-    }
-
-    inFlightStepIdsRef.current.add(step.id);
-
-    const response = await roadmapService.upsertStepProgress(activeRoadmapId, user.id, step.id, {
-      completion_status: nextChecked ? "completed" : "not_started",
-    });
-
-    inFlightStepIdsRef.current.delete(step.id);
-
-    if (!response.success || !response.data) {
-      setLocalStepCompletion((previous) => ({
-        ...previous,
-        [step.id]: previousChecked,
-      }));
-      setSectionAccessMessage(response.message || "Unable to update progress right now.");
-      return;
-    }
-
-    setProgress(response.data);
-    setLocalStepCompletion((previous) => {
-      const next = { ...previous };
-      delete next[step.id];
-      return next;
-    });
-
-    if (nextChecked && selectedSection) {
-      const updatedSections = buildRoadmapUiSections({
-        roadmap,
-        progress: response.data,
-        localStepCompletion: {},
-      });
-      const nextSection = getNextUnlockedRoadmapSectionAfterCompletion(updatedSections, selectedSection.id);
+    if (nextChecked && optimisticCurrentSection?.completionStatus === "completed") {
+      const nextSection = getNextUnlockedRoadmapSectionAfterCompletion(
+        optimisticSections,
+        selectedSection.id,
+      );
 
       if (nextSection) {
         setSectionAccessMessage(null);
@@ -332,6 +429,59 @@ export default function RoadmapFeaturePage() {
           setIsStatsOpen(true);
         }
       }
+    }
+
+    if (!user?.id) {
+      return;
+    }
+
+    inFlightStepIdsRef.current.add(step.id);
+
+    try {
+      const response = await roadmapService.upsertStepProgress(activeRoadmapId, user.id, step.id, {
+        completion_status: nextChecked ? "completed" : "not_started",
+      });
+
+      if (!response.success || !response.data) {
+        setLocalStepCompletion((previous) => ({
+          ...previous,
+          [step.id]: previousChecked,
+        }));
+        setSectionAccessMessage(response.message || "Unable to update progress right now.");
+        return;
+      }
+
+      setProgress(response.data);
+      setLocalStepCompletion((previous) => {
+        if (previous[step.id] !== nextChecked) {
+          return previous;
+        }
+        const next = { ...previous };
+        delete next[step.id];
+        return next;
+      });
+
+      const syncPayload: RoadmapProgressSyncPayload = {
+        roadmapId: activeRoadmapId,
+        userId: user.id,
+        progress: response.data,
+        updatedAt: Date.now(),
+      };
+
+      window.dispatchEvent(
+        new CustomEvent(ROADMAP_PROGRESS_UPDATED_EVENT, {
+          detail: syncPayload,
+        }),
+      );
+      localStorage.setItem(ROADMAP_PROGRESS_UPDATED_EVENT, JSON.stringify(syncPayload));
+    } catch {
+      setLocalStepCompletion((previous) => ({
+        ...previous,
+        [step.id]: previousChecked,
+      }));
+      setSectionAccessMessage("Unable to update progress right now.");
+    } finally {
+      inFlightStepIdsRef.current.delete(step.id);
     }
   };
 

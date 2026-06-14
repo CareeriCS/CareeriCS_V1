@@ -46,6 +46,18 @@ export function toRoadmapStepSlug(text: string): string {
   return text.toLowerCase().replace(/\s+/g, "-");
 }
 
+function getCompletionStatus(completed: number, total: number): RoadmapCompletionStatus {
+  if (total <= 0 || completed <= 0) {
+    return "not_started";
+  }
+
+  if (completed >= total) {
+    return "completed";
+  }
+
+  return "in_progress";
+}
+
 export function buildRoadmapUiSections(options: {
   roadmap: RoadmapRead | null;
   progress: RoadmapProgressSummary | null;
@@ -64,7 +76,7 @@ export function buildRoadmapUiSections(options: {
     }
   }
 
-  return orderedSections.map((section, index) => {
+  const sectionsWithSkills = orderedSections.map((section) => {
     const rawResources = section.steps
       .slice()
       .sort((a, b) => a.order - b.order)
@@ -113,25 +125,20 @@ export function buildRoadmapUiSections(options: {
         };
       });
 
-    const previousIncompleteSection = orderedSections.slice(0, index).find((previousSection) => {
-      const previousProgress = progressSectionsById.get(previousSection.id);
-      return previousProgress?.completion_status !== "completed";
-    });
+    const hasLocalOverride = skills.some((skill) => skill.id in localStepCompletion);
+    const optimisticCompletedSteps = skills.filter((skill) => skill.checked).length;
+    const totalSteps = sectionProgress?.total_steps ?? skills.length;
+    const completedSteps = hasLocalOverride
+      ? optimisticCompletedSteps
+      : sectionProgress?.completed_steps ?? optimisticCompletedSteps;
+    const completionStatus = getCompletionStatus(completedSteps, totalSteps);
+    const completionPercent = totalSteps > 0
+      ? Math.round((completedSteps / totalSteps) * 100)
+      : 0;
 
     const hasExistingProgress = (sectionProgress?.steps || []).some((step) => {
       return step.completion_status !== "not_started";
     });
-
-    const locked = Boolean(previousIncompleteSection) && !hasExistingProgress;
-    const lockReason = locked && previousIncompleteSection
-      ? `Complete "${previousIncompleteSection.title}" before opening "${section.title}".`
-      : null;
-
-    const completedSteps = sectionProgress?.completed_steps ?? skills.filter((skill) => skill.checked).length;
-    const totalSteps = sectionProgress?.total_steps ?? skills.length;
-    const completionPercent = sectionProgress?.completion_percent ?? (
-      totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0
-    );
 
     return {
       id: section.id,
@@ -139,13 +146,28 @@ export function buildRoadmapUiSections(options: {
       href: section.id,
       resources,
       skills,
-      locked,
-      lockReason,
-      completionStatus: sectionProgress?.completion_status ?? "not_started",
+      completionStatus,
       completionPercent,
       completedSteps,
       totalSteps,
       hasExistingProgress,
+    };
+  });
+
+  return sectionsWithSkills.map((section, index) => {
+    const previousIncompleteSection = sectionsWithSkills.slice(0, index).find((previousSection) => {
+      return previousSection.completionStatus !== "completed";
+    });
+
+    const locked = Boolean(previousIncompleteSection) && !section.hasExistingProgress;
+    const lockReason = locked && previousIncompleteSection
+      ? `Complete "${previousIncompleteSection.title}" before opening "${section.title}".`
+      : null;
+
+    return {
+      ...section,
+      locked,
+      lockReason,
     };
   });
 }
