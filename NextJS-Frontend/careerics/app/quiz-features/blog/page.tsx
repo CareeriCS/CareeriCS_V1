@@ -1,7 +1,7 @@
 "use client";
 
 import React, { Suspense, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { fetchCareerBlogDetails, type CareerBlogDetails, type LevelDetail } from "@/lib/career-blog";
@@ -59,7 +59,46 @@ function renderLoadingState(label: string) {
   );
 }
 
+function BlogBackButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label="Go back"
+      style={{
+        position: "fixed",
+        top: "var(--space-xl)",
+        left: "var(--space-xl)",
+        zIndex: 20,
+        width: "var(--icon-lg)",
+        height: "var(--icon-lg)",
+        borderRadius: "999px",
+        border: "none",
+        backgroundColor: "transparent",
+        padding: 0,
+        cursor: "pointer",
+      }}
+    >
+      <img
+        src="/global/next.svg"
+        alt=""
+        aria-hidden="true"
+        style={{
+          width: "100%",
+          height: "100%",
+          transform: "rotate(180deg)",
+          backgroundColor: "white",
+          padding: "var(--space-xxs)",
+          boxSizing: "border-box",
+          borderRadius: "999px",
+        }}
+      />
+    </button>
+  );
+}
+
 function BlogContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const careerId = searchParams.get("trackId") || "";
   const jobTitle = searchParams.get("jobTitle") || "Job Title";
@@ -145,7 +184,8 @@ function BlogContent() {
 
   if (!careerId) {
     return (
-      <div style={{ width: "100%", color: "#fff", fontFamily: "var(--font-nova-square)", padding: "10vh 3vw" }}>
+      <div style={{ width: "100%", color: "#fff", fontFamily: "var(--font-nova-square)", padding: "8vh 3vw 10vh" }}>
+        <BlogBackButton onClick={() => router.back()} />
         <div
           style={{
             minHeight: "70vh",
@@ -171,7 +211,8 @@ function BlogContent() {
   }
 
   return (
-    <div style={{ width: "100%", color: "#fff", fontFamily: "var(--font-nova-square)", padding: "10vh 3vw" }}>
+    <div style={{ width: "100%", color: "#fff", fontFamily: "var(--font-nova-square)", padding: "8vh 3vw 10vh" }}>
+      <BlogBackButton onClick={() => router.back()} />
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6vh" }}>
         <div>
           <h1 style={{ fontSize: "4.8vh", margin: 0 }}>{jobTitle}</h1>
