@@ -615,7 +615,7 @@ export default function RoadmapFeaturePage() {
             padding: "var(--space-md)",
             backgroundColor: "var(--medium-grey)",
             borderRadius: "var(--radius-xl)",
-            width:isLarge?"var(--container-xs)":"70vw",
+            width:isLarge?  "var(--container-xs)":"70vw",
             alignItems: "center",
             overflow: "hidden",
             gap: "var(--space-md)",
