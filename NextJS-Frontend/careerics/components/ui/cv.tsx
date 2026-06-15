@@ -392,7 +392,7 @@ export default function CV() {
         ) : null}
         {status === "enhancing" &&
           <div style={{ maxWidth: "var(--container-sm)" }}>
-            <Animation message="Calculating your score..." />
+            <Animation  />
           </div>
         }
       </div>
