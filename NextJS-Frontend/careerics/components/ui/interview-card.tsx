@@ -35,15 +35,13 @@ export default function InterviewContainer({
         style={{
           position: "relative",
           display: "flex",
-          aspectRatio: "16 / 9", // Tailwinds' 'aspect-video'
-          width: "100%",
+          width: "var(--container-sm)",
+          height: "var(--container-2xs)",
           alignItems: "center",
           justifyContent: "center",
           overflow: "hidden",
           borderRadius: "var(--radius-2xl)",
           backgroundColor: "var(--bg-grey)",
-          minHeight: "14rem",
-          maxHeight: "min(56vh, 32rem)",
           ...videoBoxStyle,
         }}
       >

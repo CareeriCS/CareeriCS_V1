@@ -434,11 +434,11 @@ export default function HobbiesGrid() {
             alignSelf: "center",
           }}
         >
-          {step !== 0 && (
             <Button
               variant="secondary-inverted"
               type="button"
               onClick={handleBack}
+              disabled={step == 0}
               style={{
                 paddingInline: "var(--space-2xl)",
                 paddingBlock: "0",
@@ -465,7 +465,6 @@ export default function HobbiesGrid() {
               />
               Previous
             </Button>
-          )}
 
           <Button
             variant={"primary-inverted"}

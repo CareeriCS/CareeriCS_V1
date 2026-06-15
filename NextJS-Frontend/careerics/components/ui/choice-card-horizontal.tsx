@@ -46,6 +46,7 @@ export default function ChoiceCardHorizontal({
         backgroundColor: "#16203d",
         borderRadius: "var(--radius-lg)",
         padding: "var(--space-lg)",
+        paddingInline: "var(--space-xl)",
         display: "flex",
         alignItems: "center",
         justifyContent: "flex-start",
@@ -118,6 +119,7 @@ export default function ChoiceCardHorizontal({
             disabled={buttonDisabled || isLoading}
             style={{
               marginLeft: "auto",
+              paddingInline:"var(--space-lg)",
             }}
           >
             {isLoading ? buttonLoadingText : buttonText}

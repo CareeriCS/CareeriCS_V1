@@ -699,11 +699,8 @@ export default function JobBrowserPage({
   const pageEnd = totalJobs ? Math.min(totalJobs, currentPage * PAGE_SIZE) : 0;
 
   const renderLeftPanelContent = () => {
-    if (isLoading) {
-      return <p style={{ color: "white", opacity: 0.8, margin: 0 }}>Loading jobs...</p>;
-    }
-
-    if (!jobs.length) {
+    
+    if (!isLoading && !jobs.length) {
       return <p style={{ color: "white", opacity: 0.8, margin: 0 }}>No jobs match your filters yet.</p>;
     }
 
@@ -731,7 +728,7 @@ export default function JobBrowserPage({
       style={{
         display: "flex",
         flexDirection: "column",
-        justifyContent: "flex-start",
+        justifyContent: "space-between",
         width: "100%",
         height: "100%",
       }}
@@ -1062,10 +1059,11 @@ export default function JobBrowserPage({
             display: "flex",
             justifyContent: "flex-start",
             alignItems: "flex-start",
-            maxWidth: isLarge ? "100%" : isMedium ? "55%" : "100%",
-            width: "100%",
+            width: "fit-content",
+            minWidth: "fit-content",
             minHeight: "0",
             overflowY: "auto",
+            overflowX: "hidden",
             scrollbarWidth: "none",
           }}
         >
@@ -1085,6 +1083,7 @@ export default function JobBrowserPage({
                 fontSize: "var(--text-base)",
                 fontFamily: "var(--font-jura)",
                 lineHeight: "var(--line-normal)",
+                minWidth:"var(--container-md)"
               }}
             >
               {isLoading ? "Loading job details..." : "No job selected yet."}

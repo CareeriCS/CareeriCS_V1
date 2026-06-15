@@ -453,7 +453,7 @@ export default function RecordingPage() {
       pointerEvents: isPeeking ? "none" : "auto"
     }}>
       <img
-        src={status === "idle" ? "/interview/record.svg" : status === "recording" ? "/interview/Pause.svg" : "/interview/Play.svg"}
+        src={status === "idle" ? "/interview/record.svg" : status === "recording" ? "/interview/pause.svg" : "/interview/Play.svg"}
         alt="Control"
         style={{ height: "var(--icon-2xl)", cursor: isQuestionsLoading ? "not-allowed" : "pointer", opacity: isQuestionsLoading ? 0.5 : 1 }}
         onClick={handleCameraToggle}
@@ -481,14 +481,14 @@ export default function RecordingPage() {
     >
       <div
         style={{
-          width: isLarge ? "55vw" : "85vw",
+          width: "var(--container-sm)",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
           position: "relative",
-          gap:"var(--space-lg)",
-          justifyContent:"space-evenly",
-          height:"100%"
+          gap: "var(--space-lg)",
+          justifyContent: "space-evenly",
+          height: "100%"
         }}
       >
         <audio
@@ -496,15 +496,15 @@ export default function RecordingPage() {
           preload="auto"
           onError={handlePromptAudioError}
           style={{ display: "none" }}
-          />
+        />
         <div
           style={{
             display: "flex",
             width: "100%",
             justifyContent: "space-between",
-            alignItems:"flex-start",
-            height:"fit-content",
-          gap:"var(--space-lg)",
+            alignItems: "flex-start",
+            height: "fit-content",
+            gap: "var(--space-lg)",
           }}
         >
 
@@ -512,13 +512,13 @@ export default function RecordingPage() {
             style={{
               margin: 0,
               textAlign: "center",
-              fontSize: followupText?"var(--text-xs)":"var(--text-lg)",
+              fontSize: followupText ? "var(--text-xs)" : "var(--text-lg)",
               lineHeight: "var(--line-normal)",
               color: "var(--text-primary)",
               fontFamily: "var(--font-nova-square), sans-serif",
             }}
           >
-            {`${followupText?"": `${unlockedId} .`} ${currentQuestionText}`}
+            {`${followupText ? "" : `${unlockedId} .`} ${currentQuestionText}`}
           </h2>
           <Button
             type="button"
@@ -538,6 +538,13 @@ export default function RecordingPage() {
               opacity: !canReplayQuestionAudio || isReplayingQuestion ? 0.65 : 1,
             }}
           >
+            <img
+            src="/interview/speaker.svg"
+            style={{
+              height:"var(--icon-xs)"
+            }}
+            />
+            
             {isReplayingQuestion ? "Replaying..." : "Replay"}
           </Button>
         </div>
@@ -546,7 +553,13 @@ export default function RecordingPage() {
           // STICKY TITLE: Always shows the unlocked question
           questionTitle={`${unlockedId}. ${currentQuestionText}`}
           videoContent={
-            <div style={{ color: "white", fontSize: "18px", textAlign: "center" }}>
+            <div style={{
+              width: "100%",
+              color: "white",
+              fontSize: "18px",
+              textAlign: "center"
+            }}
+            >
               {isQuestionsLoading
                 ? "Loading questions..."
                 : questionsError || actionError
@@ -565,31 +578,23 @@ export default function RecordingPage() {
                               ? "Ready to submit"
                               : ""}
 
-
-              <div
+              <video
+                ref={previewVideoRef}
+                autoPlay={status === "recording"}
+                muted
+                playsInline
+                controls={status !== "recording"}
+                src={status !== "recording" ? recordedPreviewUrl ?? undefined : undefined}
                 style={{
                   width: "100%",
-                  height: "100%",
-                  transform: status === "recording" ? "scaleX(-1)" : "none",
+                  objectFit: "cover",
+                  borderRadius: "24px",
+                  transform: "scaleX(-1)",
+                  display: status === "recording" || recordedPreviewUrl ? "block" : "none",
                 }}
-              >
-                <video
-                  ref={previewVideoRef}
-                  autoPlay={status === "recording"}
-                  muted
-                  playsInline
-                  controls={status !== "recording"}
-                  src={status !== "recording" ? recordedPreviewUrl ?? undefined : undefined}
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "cover",
-                    borderRadius: "24px",
-                    display: status === "recording" || recordedPreviewUrl ? "block" : "none",
-                  }}
-                />
-              </div>
+              />
             </div>
+
           }
           controlsContent={controls}
           actionButton={
@@ -622,7 +627,7 @@ export default function RecordingPage() {
                 style={{
                   cursor: isSubmitDisabled ? "not-allowed" : "pointer",
                   opacity: isSubmitDisabled ? 0.5 : 1,
-                  paddingInline:"var(--space-2xl)",
+                  paddingInline: "var(--space-2xl)",
                 }}
               >
                 {isSubmitting ? "Submitting..." : isFinalizingRecording ? "Preparing..." : "Submit"}

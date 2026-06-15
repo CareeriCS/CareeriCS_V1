@@ -134,8 +134,7 @@ export const ActivityCard = ({
               cursor: onClick ? "pointer" : "default",
               opacity: onClick ? 1 : 0.55,
 
-              width: "var(--icon-sm)",
-              height: "var(--icon-sm)",
+              width: "var(--icon-md)",
 
               display: "flex",
               alignItems: "center",
@@ -153,7 +152,7 @@ export const ActivityCard = ({
               style={{
                 width: "100%",
                 height: "100%",
-                filter: "invert(1)",
+                filter: theme === "dark"?"invert(1)":"none",
                 objectFit: "contain",
               }}
             />
@@ -172,8 +171,7 @@ export const ActivityCard = ({
               alignItems: "center",
               justifyContent: "center",
 
-              width: "var(--icon-sm)",
-              height: "var(--icon-sm)",
+              width: "var(--icon-md)",
 
               padding: 0,
               flexShrink: 0,
@@ -189,7 +187,7 @@ export const ActivityCard = ({
                 width: "100%",
                 height: "100%",
                 objectFit: "contain",
-                filter: "brightness(1)",
+                filter: theme === "dark"?"brightness(1)":"brightness(0)",
               }}
             />
           </button>

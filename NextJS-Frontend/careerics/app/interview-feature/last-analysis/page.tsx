@@ -216,7 +216,7 @@ export default function LastAnalysisPage() {
     >
       <div
         style={{
-          width: isLarge ? "55vw" : "85vw",
+          width: "",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
@@ -283,7 +283,6 @@ export default function LastAnalysisPage() {
           videoBoxStyle={{
             background: "var(--medium-grey)",
             height: "fit-content",
-            width: "100%",
 
           }}
           videoContent={
@@ -424,16 +423,16 @@ export default function LastAnalysisPage() {
 
         <div style={{ display: "flex", gap: "40px", marginTop: "60px" }}>
           <Button
-            variant="primary-inverted"
-            onClick={() => router.push("/features/interview")}
-          >
-            Practice more
-          </Button>
-          <Button
             variant="secondary-inverted"
             onClick={() => router.push("/features/home")}
           >
             Go back to home
+          </Button>
+          <Button
+            variant="primary-inverted"
+            onClick={() => router.push("/features/interview")}
+          >
+            Practice more
           </Button>
         </div>
       </div>
