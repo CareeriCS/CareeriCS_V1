@@ -1,12 +1,18 @@
-import React, { ReactNode } from "react";
-import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import React from "react";
 import { useResponsive } from "@/hooks/useResponsive";
 
+interface JourneyProgressCardProps {
+  percentage?: number;
+  isLoading?: boolean;
+  style?: React.CSSProperties;
+}
 
-export const JourneyProgressCard = ({ percentage = 10, style }: any) => {
+export const JourneyProgressCard = ({
+  percentage = 10,
+  style,
+}: JourneyProgressCardProps) => {
 
-  const { isLarge, isMedium, isSmall, width } = useResponsive();
+  const { isLarge } = useResponsive();
 
   return (
     <div

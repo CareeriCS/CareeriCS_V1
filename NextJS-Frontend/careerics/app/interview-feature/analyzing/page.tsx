@@ -43,6 +43,7 @@ export default function AnalyzingPage() {
     questionId,
     answerId,
     followupMode,
+    questionCount,
     currentQ,
     questions,
     buildRecordingUrl,
@@ -225,7 +226,12 @@ export default function AnalyzingPage() {
 
     const evaluate = async () => {
       try {
-        const response = await interviewService.evaluateAnswer(sessionId, questionId);
+        const response = await interviewService.evaluateAnswer(
+          sessionId,
+          questionId,
+          followupMode,
+          answerId,
+        );
         if (!alive) {
           return;
         }
@@ -334,6 +340,7 @@ export default function AnalyzingPage() {
     const nextParams = new URLSearchParams({
       type: interviewType,
       sessionId,
+      count: String(questionCount),
       q: String(currentQ),
     });
     router.push(`/interview-feature/last-analysis?${nextParams.toString()}`);

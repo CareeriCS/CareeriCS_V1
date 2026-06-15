@@ -214,8 +214,8 @@ export default function AuthCallback() {
     };
 
     const loadSupabase = async () => {
-      const module = await import("@/lib/supabase");
-      return module.supabase;
+      const supabaseModule = await import("@/lib/supabase");
+      return supabaseModule.supabase;
     };
 
     if (hashResult?.accessToken && hashResult?.refreshToken) {

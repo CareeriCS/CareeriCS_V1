@@ -20,6 +20,7 @@ export default function RecordingPage() {
     sessionId,
     followupText,
     followupAudio,
+    followupMode,
     currentQ,
     questions,
     isQuestionsLoading,
@@ -362,6 +363,7 @@ export default function RecordingPage() {
       sessionId,
       currentQuestion.questionId,
       media,
+      Boolean(followupText || followupMode),
     );
 
     setIsSubmitting(false);
@@ -376,7 +378,7 @@ export default function RecordingPage() {
         q: String(activeId),
         questionId: currentQuestion.questionId,
         answerId: submitResponse.data?.answer_id,
-        followupMode: Boolean(followupText),
+        followupMode: Boolean(followupText || followupMode),
       }),
     );
   };

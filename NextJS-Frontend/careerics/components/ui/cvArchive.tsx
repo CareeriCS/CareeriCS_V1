@@ -47,6 +47,24 @@ type LearningSkillItem = {
   isCurrent?: boolean;
 };
 
+interface PastTestItem {
+  id: string;
+  title: string;
+  score: number;
+}
+
+interface PastTestsCardProps {
+  tests: PastTestItem[];
+  style?: React.CSSProperties;
+}
+
+interface MoreSkillsCardProps {
+  skills: string[];
+  selected?: string;
+  onSelect: (skill: string) => void;
+  style?: React.CSSProperties;
+}
+
 export const LearningSkillsCard = ({
   items,
   selectedId,
@@ -136,7 +154,7 @@ export const LearningSkillsCard = ({
 };
 
 // --- Card 2: Past Tests (VERTICAL EDIT) ---
-export const PastTestsCard = ({ tests, style }: any) => {
+export const PastTestsCard = ({ tests, style }: PastTestsCardProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const handleScroll = () => {
     if (scrollRef.current) scrollRef.current.scrollBy({ top: 100, behavior: 'smooth' });
@@ -153,7 +171,7 @@ export const PastTestsCard = ({ tests, style }: any) => {
         display: "flex", flexDirection: "column", gap: "5px", 
         overflowY: "auto", scrollbarWidth: "none", flexGrow: 1 
       }}>
-        {tests.map((test: any) => (
+        {tests.map((test) => (
           <div key={test.id} style={{ 
             backgroundColor: "rgba(193, 203, 230, 0.95)", borderRadius: "18px", padding: "5px 10px", 
             display: "flex", justifyContent: "space-between", alignItems: "center", color: "#1A213D"
@@ -177,7 +195,12 @@ export const PastTestsCard = ({ tests, style }: any) => {
 };
 
 // --- Card 3: More Skills to Test (DYNAMIC SELECTION) ---
-export const MoreSkillsCard = ({ skills, selected, onSelect, style }: any) => {
+export const MoreSkillsCard = ({
+  skills,
+  selected,
+  onSelect,
+  style,
+}: MoreSkillsCardProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const handleScroll = () => {
     if (scrollRef.current) scrollRef.current.scrollBy({ top: 120, behavior: 'smooth' });

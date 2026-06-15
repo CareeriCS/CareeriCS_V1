@@ -7,6 +7,14 @@ import InputField from "@/components/ui/input-field";
 import { Button } from "@/components/ui/button"
 import AlertMessage from "@/components/ui/alert-message";
 
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return "Failed to send reset email.";
+}
+
 
 /**
  * Reset password page — sends a password-reset email via Supabase.
@@ -29,8 +37,8 @@ export default function ResetPassword() {
     try {
       await authService.resetPassword(email);
       setSuccess("Check your email for a password reset link.");
-    } catch (err: any) {
-      setError(err.message ?? "Failed to send reset email.");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }

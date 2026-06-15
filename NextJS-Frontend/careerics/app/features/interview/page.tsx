@@ -7,7 +7,16 @@ import ChoiceCard from "@/components/ui/choice-card";
 import TipCard from "@/components/ui/3ateyat";
 import CustomizeInterviewPopup from "@/components/ui/popup";
 import { ActivityCard } from "@/components/ui/activity-card";
-import { normalizeInterviewType, buildInterviewRecordingRoute, buildInterviewSessionName, formatInterviewArchiveDate, getTechnicalInterviewTypes } from "@/lib/interview";
+import {
+  buildInterviewRecordingRoute,
+  buildInterviewSessionName,
+  DEFAULT_INTERVIEW_QUESTION_COUNT,
+  formatInterviewArchiveDate,
+  getTechnicalInterviewTypes,
+  MAX_INTERVIEW_QUESTION_COUNT,
+  MIN_INTERVIEW_QUESTION_COUNT,
+  normalizeInterviewType,
+} from "@/lib/interview";
 import { useAuth } from "@/providers/auth-provider";
 import { interviewService } from "@/services/interview.service";
 import { reportsService } from "@/services/reports.service";
@@ -20,13 +29,15 @@ export default function Interview() {
   const router = useRouter();
   const { user, isLoading } = useAuth();
 
-  const [isStartingInterview, setIsStartingInterview] = useState(false);
+  const [startingInterviewType, setStartingInterviewType] = useState<string | null>(null);
   const [archiveItems, setArchiveItems] = useState<APIInterviewArchiveItem[]>([]);
   const [isArchiveLoading, setIsArchiveLoading] = useState(false);
   const [archiveError, setArchiveError] = useState<string | null>(null);
   const [technicalTypes, setTechnicalTypes] = useState<string[]>([]);
   const [isLoadingTechnicalTypes, setIsLoadingTechnicalTypes] = useState(false);
+  const [behavioralPopupError, setBehavioralPopupError] = useState<string | null>(null);
   const [technicalPopupError, setTechnicalPopupError] = useState<string | null>(null);
+  const [isBehavioralPopupOpen, setIsBehavioralPopupOpen] = useState(false);
   const [isTechnicalPopupOpen, setIsTechnicalPopupOpen] = useState(false);
   const [selectedTechnicalType, setSelectedTechnicalType] = useState("");
   const [startError, setStartError] = useState<string | null>(null);
@@ -83,12 +94,15 @@ export default function Interview() {
   }, [isLoadingTechnicalTypes, technicalTypes.length]);
 
   const startInterview = useCallback(
-    async (interviewType: string) => {
-      if (isStartingInterview) {
+    async (interviewType: string, questionCount: number) => {
+      if (startingInterviewType) {
         return false;
       }
 
-      setIsStartingInterview(true);
+      const normalizedType = normalizeInterviewType(interviewType);
+
+      setStartingInterviewType(normalizedType);
+      setBehavioralPopupError(null);
       setTechnicalPopupError(null);
       setStartError(null);
 
@@ -102,7 +116,6 @@ export default function Interview() {
           return false;
         }
 
-        const normalizedType = normalizeInterviewType(interviewType);
         const response = await interviewService.createSession({
           name: buildInterviewSessionName(normalizedType),
           type: normalizedType,
@@ -112,23 +125,45 @@ export default function Interview() {
 
         if (!response.success || !response.data?.id) {
           const message = response.message || "Failed to start interview session.";
-          setTechnicalPopupError(message);
+          if (normalizedType === "HR") {
+            setBehavioralPopupError(message);
+          } else {
+            setTechnicalPopupError(message);
+          }
           setStartError(message);
           return false;
         }
 
-        router.push(buildInterviewRecordingRoute(normalizedType, response.data.id));
+        router.push(
+          buildInterviewRecordingRoute(normalizedType, response.data.id, questionCount),
+        );
         return true;
       } finally {
-        setIsStartingInterview(false);
+        setStartingInterviewType(null);
       }
     },
-    [isLoading, isStartingInterview, router, user?.id],
+    [isLoading, router, startingInterviewType, user?.id],
   );
 
   const handleStartBehavioral = useCallback(() => {
-    void startInterview("HR");
-  }, [startInterview]);
+    if (!isLoading && !user?.id) {
+      router.push("/auth/login");
+      return;
+    }
+
+    setBehavioralPopupError(null);
+    setIsBehavioralPopupOpen(true);
+  }, [isLoading, router, user?.id]);
+
+  const handleConfirmBehavioral = useCallback(
+    async (questionCount: number) => {
+      const started = await startInterview("HR", questionCount);
+      if (started) {
+        setIsBehavioralPopupOpen(false);
+      }
+    },
+    [startInterview],
+  );
 
   const handleOpenTechnicalPopup = useCallback(() => {
     if (!isLoading && !user?.id) {
@@ -136,14 +171,15 @@ export default function Interview() {
       return;
     }
 
+    setTechnicalPopupError(null);
     setIsTechnicalPopupOpen(true);
     void loadTechnicalTypes();
   }, [isLoading, loadTechnicalTypes, router, user?.id]);
 
   const handleStartTechnical = useCallback(
-    async (technicalType: string) => {
+    async (technicalType: string, questionCount: number) => {
       setSelectedTechnicalType(technicalType);
-      const started = await startInterview(technicalType);
+      const started = await startInterview(technicalType, questionCount);
       if (started) {
         setIsTechnicalPopupOpen(false);
       }
@@ -162,8 +198,10 @@ export default function Interview() {
     link.remove();
   }, []);
 
-  const startButtonLabel = useMemo(() => {
-    if (isStartingInterview) {
+  const isStartingAnyInterview = Boolean(startingInterviewType);
+
+  const behavioralButtonLabel = useMemo(() => {
+    if (startingInterviewType === "HR") {
       return "Starting...";
     }
 
@@ -172,7 +210,19 @@ export default function Interview() {
     }
 
     return "Start";
-  }, [isLoading, isStartingInterview]);
+  }, [isLoading, startingInterviewType]);
+
+  const technicalButtonLabel = useMemo(() => {
+    if (startingInterviewType && startingInterviewType !== "HR") {
+      return "Starting...";
+    }
+
+    if (isLoading) {
+      return "Loading...";
+    }
+
+    return "Start";
+  }, [isLoading, startingInterviewType]);
 
   const { isLarge, isMedium, isSmall } = useResponsive();
   const CardType = isLarge ? ChoiceCard : ChoiceCardHorizontal;
@@ -195,8 +245,8 @@ export default function Interview() {
           description="Practice answering the most common interview questions and improve how you present yourself and your skills."
           buttonVariant="primary-inverted"
           onClick={handleStartBehavioral}
-          disabled={isLoading || isStartingInterview}
-          buttonLabel={startButtonLabel}
+          disabled={isLoading || isStartingAnyInterview}
+          buttonLabel={behavioralButtonLabel}
           icon="/interview/hr.svg"
           style={{ gridArea: isLarge ? "1 / 1 / 2 / 2" : "1 / 1 / 2 / 2" }}
         />
@@ -206,8 +256,8 @@ export default function Interview() {
           description="Choose the technical career you want to practice, then we will load the matching technical question bank."
           buttonVariant="primary-inverted"
           onClick={handleOpenTechnicalPopup}
-          disabled={isLoading || isStartingInterview}
-          buttonLabel={startButtonLabel}
+          disabled={isLoading || isStartingAnyInterview}
+          buttonLabel={technicalButtonLabel}
           icon="/interview/tech.svg"
           style={{ gridArea: isLarge ? "1 / 2 / 2 / 3" : "2 / 1 / 3 / 2" }}
         />
@@ -268,23 +318,52 @@ export default function Interview() {
         ) : null}
       </div>
 
+      {isBehavioralPopupOpen ? (
+        <CustomizeInterviewPopup
+          onClose={() => {
+            if (isStartingAnyInterview) {
+              return;
+            }
+
+            setIsBehavioralPopupOpen(false);
+          }}
+          onStart={(_, questionCount) => {
+            void handleConfirmBehavioral(questionCount);
+          }}
+          options={["HR"]}
+          title="Behavioral Interview Details"
+          isSubmitting={startingInterviewType === "HR"}
+          errorMessage={behavioralPopupError}
+          initialValue="HR"
+          hideRoleSelect
+          minQuestions={MIN_INTERVIEW_QUESTION_COUNT}
+          maxQuestions={MAX_INTERVIEW_QUESTION_COUNT}
+          initialQuestionCount={DEFAULT_INTERVIEW_QUESTION_COUNT}
+          helperText="Choose how many behavioral questions you want to practice in this mock interview."
+        />
+      ) : null}
+
       {isTechnicalPopupOpen ? (
         <CustomizeInterviewPopup
           onClose={() => {
-            if (isStartingInterview) {
+            if (isStartingAnyInterview) {
               return;
             }
 
             setIsTechnicalPopupOpen(false);
           }}
-          onStart={(technicalType) => {
-            void handleStartTechnical(technicalType);
+          onStart={(technicalType, questionCount) => {
+            void handleStartTechnical(technicalType, questionCount);
           }}
           options={technicalTypes}
-          isSubmitting={isStartingInterview}
+          isSubmitting={Boolean(startingInterviewType && startingInterviewType !== "HR")}
           isLoadingOptions={isLoadingTechnicalTypes}
           errorMessage={technicalPopupError}
           initialValue={selectedTechnicalType}
+          minQuestions={MIN_INTERVIEW_QUESTION_COUNT}
+          maxQuestions={MAX_INTERVIEW_QUESTION_COUNT}
+          initialQuestionCount={DEFAULT_INTERVIEW_QUESTION_COUNT}
+          helperText="Choose your technical career and how many questions you want, and we'll load the matching question bank."
         />
       ) : null}
     </>

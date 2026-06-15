@@ -6,6 +6,14 @@ import InputField from "@/components/ui/input-field";
 import { Button } from "@/components/ui/button";
 import AlertMessage from "@/components/ui/alert-message";
 
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return "Failed to update password.";
+}
+
 /**
  * Update password page — the user lands here after clicking the
  * password-reset link in their email. Supabase automatically
@@ -89,8 +97,8 @@ export default function UpdatePassword() {
     try {
       await authService.updatePassword(password);
       router.push("/features/home");
-    } catch (err: any) {
-      setError(err.message ?? "Failed to update password.");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }

@@ -37,6 +37,7 @@ function normalizeRoadmapListPayload(payload: unknown): RoadmapListItem[] {
 export default function JobHunt() {
   const router = useRouter();
   const { user, isLoading: isAuthLoading } = useAuth();
+  const userId = user?.id;
   const { selectedTrack } = useJourneyPhase(5);
   const [recentlyViewedJobs, setRecentlyViewedJobs] = useState<JobUiModel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -94,7 +95,7 @@ export default function JobHunt() {
     const loadDashboard = async () => {
       setIsLoading(true);
 
-      if (!user?.id) {
+      if (!userId) {
         if (!isActive) {
           return;
         }
@@ -104,7 +105,7 @@ export default function JobHunt() {
         return;
       }
 
-      const recentResponse = await jobService.getRecentlyViewedJobs(user.id, { limit: 12 });
+      const recentResponse = await jobService.getRecentlyViewedJobs(userId, { limit: 12 });
 
       if (!isActive) {
         return;
@@ -123,7 +124,7 @@ export default function JobHunt() {
     return () => {
       isActive = false;
     };
-  }, [isAuthLoading, user?.id]);
+  }, [isAuthLoading, userId]);
 
   const { isLarge, isMedium, isSmall, width } = useResponsive();
   const RecentlyViewed = isSmall ? StackContainer : InlineContainer;
@@ -153,8 +154,8 @@ export default function JobHunt() {
 
     setSelectedAssessmentOptionId(resolveDefaultAssessmentOptionId());
 
-    if (user?.id) {
-      const sessionsRes = await skillAssessmentService.getUserSessions(user.id);
+    if (userId) {
+      const sessionsRes = await skillAssessmentService.getUserSessions(userId);
       const submittedCount =
         sessionsRes.success && sessionsRes.data
           ? sessionsRes.data.filter((session) => session.status === "submitted").length
@@ -169,7 +170,7 @@ export default function JobHunt() {
     resolveDefaultAssessmentOptionId,
     roadmaps.length,
     roadmapsError,
-    user?.id,
+    userId,
   ]);
 
   const handleStartAssessment = (questions: number) => {
