@@ -313,7 +313,7 @@ export interface RoadmapCourse {
   id: string;
   provider: string;
   title: string;
-  url: string;
+  url?: string;
   description?: string | null;
   language?: string | null;
   is_free?: boolean | null;

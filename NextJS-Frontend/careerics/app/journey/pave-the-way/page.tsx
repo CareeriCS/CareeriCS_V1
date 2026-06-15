@@ -40,6 +40,7 @@ import type {
   RoadmapProgressSummary,
   RoadmapRead,
 } from "@/types";
+import RoadmapPanelContent from "@/components/ui/roadmap-resources";
 
 const ROADMAP_PROGRESS_UPDATED_EVENT = "careerics-roadmap-progress-updated";
 
@@ -93,7 +94,6 @@ export default function JourneyPaveTheWayPage() {
   const [roadmapProgress, setRoadmapProgress] = useState<RoadmapProgressSummary | null>(null);
   const [roadmapCourses, setRoadmapCourses] = useState<RoadmapCoursesRead | null>(null);
   const [currentLearning, setCurrentLearning] = useState<CurrentRoadmapLearning | null>(null);
-  const [activePanelTab, setActivePanelTab] = useState<"resources" | "courses">("resources");
   const [courseProgress, setCourseProgress] = useState<CourseProgressState>({ current: [], completed: [] });
   const [courseProgressError, setCourseProgressError] = useState<string | null>(null);
   const [activePopupMode, setActivePopupMode] = useState<"enroll" | "complete" | "retake" | null>(null);
@@ -976,239 +976,32 @@ export default function JourneyPaveTheWayPage() {
                   display: "flex",
                   flexDirection: "column",
                   gap: "var(--space-md)",
-                  minHeight: activePanelTab === "resources" ? 0 : undefined,
+                  minHeight: 0,
                   overflow: "hidden",
-                  alignSelf: activePanelTab === "courses" ? "start" : "stretch",
+                  alignSelf: "stretch",
                 }}
               >
-                <div
+              <h1
                   style={{
-                    display: "flex",
-                    gap: "var(--space-sm)",
+                    color: "white",
+                    fontSize: "var(--text-lg)",
+                    margin: 0,
                     flexShrink: 0,
                   }}
                 >
-                  <button
-                    type="button"
-                    onClick={() => setActivePanelTab("resources")}
-                    style={{
-                      border: "none",
-                      borderRadius: "var(--radius-md)",
-                      backgroundColor: activePanelTab === "resources" ? "var(--light-green)" : "transparent",
-                      color: activePanelTab === "resources" ? "black" : "white",
-                      fontSize: "var(--text-lg)",
-                      margin: 0,
-                      padding: "var(--space-xs) var(--space-md)",
-                      fontFamily: "var(--font-nova-square)",
-                      cursor: "pointer",
-                    }}
-                  >
-                    Resources
-                  </button>
+                  Topics & Resources
+                </h1>                
 
-                  <button
-                    type="button"
-                    onClick={() => setActivePanelTab("courses")}
-                    style={{
-                      border: "none",
-                      borderRadius: "var(--radius-md)",
-                      backgroundColor: activePanelTab === "courses" ? "var(--light-green)" : "transparent",
-                      color: activePanelTab === "courses" ? "black" : "white",
-                      fontSize: "var(--text-lg)",
-                      margin: 0,
-                      padding: "var(--space-xs) var(--space-md)",
-                      fontFamily: "var(--font-nova-square)",
-                      cursor: "pointer",
-                    }}
-                  >
-                    Courses
-                  </button>
-                </div>
+                <RoadmapPanelContent
+                  sectionAccessMessage={sectionAccessMessage}
+                  selectedSection={selectedSection ?? undefined}
+                  selectedSectionCourses={selectedSectionCourses}
+                  courseProgressError={courseProgressError}
+                  courseStatusById={courseStatusById}
+                  toggleSkill={toggleSkill}
+                  handleCourseClick={handleCourseClick}
+                />
 
-                <div
-                  style={{
-                    flex: activePanelTab === "resources" ? 1 : "0 0 auto",
-                    maxHeight: activePanelTab === "resources" ? undefined : "fit-content",
-                    backgroundColor: "var(--medium-blue)",
-                    borderRadius: "var(--radius-xl)",
-                    padding: "var(--space-md)",
-                    overflowY: activePanelTab === "resources" ? "auto" : "visible",
-                    overflowX: "hidden",
-                    scrollbarWidth: "none",
-                    msOverflowStyle: "none",
-                    gap: "var(--space-md)",
-                  }}
-                >
-                  <h2
-                    style={{
-                      fontSize: "var(--text-lg)",
-                      color: "white",
-                      fontFamily: "var(--font-nova-square)",
-                    }}
-                  >
-                    {selectedSection?.title || "Select a Section"}
-                  </h2>
-
-                  <div
-                    style={{
-                      height: "0.1rem",
-                      backgroundColor: "white",
-                      width: "100%",
-                    }}
-                  />
-
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      width: "100%",
-                      minHeight: activePanelTab === "resources" ? 0 : undefined,
-                      flex: activePanelTab === "resources" ? 1 : undefined,
-                      height: activePanelTab === "courses" ? "fit-content" : undefined,
-                      overflowY: activePanelTab === "resources" ? "auto" : "visible",
-                      overflowX: "hidden",
-                      scrollbarWidth: "none",
-                      msOverflowStyle: "none",
-                      paddingRight: "var(--space-xxs)",
-                      paddingTop: activePanelTab === "courses" ? "var(--space-md)" : undefined,
-                      gap: "var(--space-md)",
-                    }}
-                  >
-                    {sectionAccessMessage ? (
-                      <p
-                        style={{
-                          fontSize: "var(--text-sm)",
-                          color: "var(--light-orange)",
-                          fontFamily: "var(--font-nova-square)",
-                          margin: 0,
-                        }}
-                      >
-                        {sectionAccessMessage}
-                      </p>
-                    ) : null}
-
-                    {activePanelTab === "resources" ? (
-                      <>
-                        {Boolean(selectedSection?.resources.length) && (
-                          <div
-                            style={{
-                              width: "100%",
-                              display: "flex",
-                              flexDirection: "column",
-                              gap: "var(--space-sm)",
-                            }}
-                          >
-                            <p
-                              style={{
-                                fontSize: "var(--text-md)",
-                                color: "white",
-                                fontFamily: "var(--font-nova-square)",
-                              }}
-                            >
-                              Resources:
-                            </p>
-
-                            {selectedSection?.resources.map((resource) => {
-                              const key = `${resource.url}|${resource.title}|${resource.resourceType}`;
-
-                              return (
-                                <RoadmapResourceCard
-                                  key={key}
-                                  resourceType={resource.resourceType}
-                                  title={resource.title}
-                                  url={resource.url}
-                                />
-                              );
-                            })}
-
-                            <div
-                              style={{
-                                height: "0.1rem",
-                                backgroundColor: "white",
-                                width: "100%",
-                              }}
-                            />
-                          </div>
-                        )}
-
-                        {(selectedSection?.skills.length ?? 0) > 0 ? (
-                          <p
-                            style={{
-                              fontSize: "var(--text-md)",
-                              color: "white",
-                              fontFamily: "var(--font-nova-square)",
-                            }}
-                          >
-                            Topics to cover:
-                          </p>
-                        ) : null}
-
-                        <div
-                          style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            width: "100%",
-                          }}
-                        >
-                          {(selectedSection?.skills || []).map((skill, index) => (
-                            <StepCheckbox
-                              key={skill.id}
-                              text={skill.text}
-                              isChecked={skill.checked}
-                              disabled={Boolean(selectedSection?.locked)}
-                              onToggle={() => {
-                                void toggleSkill(index);
-                              }}
-                            />
-                          ))}
-                        </div>
-                      </>
-                    ) : selectedSectionCourses.length > 0 ? (
-                      <div
-                        style={{
-                          display: "flex",
-                          flexDirection: "column",
-                          width: "100%",
-                          gap: "var(--space-md)",
-                        }}
-                      >
-                        {courseProgressError ? (
-                          <p
-                            style={{
-                              fontSize: "var(--text-sm)",
-                              color: "var(--light-orange)",
-                              fontFamily: "var(--font-nova-square)",
-                              margin: 0,
-                            }}
-                          >
-                            {courseProgressError}
-                          </p>
-                        ) : null}
-
-                        {selectedSectionCourses.map((course) => (
-                          <CourseCard
-                            key={course.id}
-                            title={course.title}
-                            provider={course.provider}
-                            status={courseStatusById?.[course.id] ?? "default"}
-                            onSelect={() => handleCourseClick(course)}
-                          />
-                        ))}
-                      </div>
-                    ) : (
-                      <p
-                        style={{
-                          fontSize: "var(--text-sm)",
-                          color: "white",
-                          fontFamily: "var(--font-nova-square)",
-                          margin: 0,
-                        }}
-                      >
-                        No courses available.
-                      </p>
-                    )}
-                  </div>
-                </div>
               </div>
             </div>
           </div>
