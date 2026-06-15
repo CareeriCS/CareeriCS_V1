@@ -16,6 +16,8 @@ import { reportsService } from "@/services/reports.service";
 import { useResponsive } from "@/hooks/useResponsive";
 import { Button } from "@/components/ui/button";
 
+const PDF_SCROLLBAR_GUTTER_PX = 28;
+
 export default function LastAnalysisPage() {
   const router = useRouter();
   const {
@@ -301,27 +303,32 @@ export default function LastAnalysisPage() {
             >
               <div
                 style={{
+                  position: "relative",
                   backgroundColor: "white",
                   borderRadius: "25px",
                   boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
                   overflow: "hidden",
-                  maxHeight: "200px",
+                  height: "200px",
+                  width: isLarge ? "166px" : "min(166px, 100%)",
+                  flexShrink: 0,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  aspectRatio: !isLarge ? "none" : "10 / 12",
                 }}
               >
                 {downloadUrl ? (
                   <iframe
-                    src={`${downloadUrl}#view=FitH&zoom=page-fit&pagemode=none&toolbar=0`}
+                    src={`${downloadUrl}#view=FitH&zoom=page-fit&pagemode=none&toolbar=0&navpanes=0&scrollbar=0`}
                     title="Interview analysis preview"
                     style={{
-                      width: "100%",
+                      position: "absolute",
+                      inset: 0,
+                      width: `calc(100% + ${PDF_SCROLLBAR_GUTTER_PX}px)`,
                       height: "100%",
                       border: "none",
+                      backgroundColor: "white",
+                      display: "block",
                     }}
-
                   />
                 ) : (
                   <span
