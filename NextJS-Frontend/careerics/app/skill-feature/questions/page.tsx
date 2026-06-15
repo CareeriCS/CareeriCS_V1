@@ -358,7 +358,7 @@ export default function QuestionsPage() {
       {
         isReviewing && (
           <Button
-            variant="outline"
+            variant="secondary"
             size="sm"
             className="mt-[var(--space-lg)]"
             onClick={() =>

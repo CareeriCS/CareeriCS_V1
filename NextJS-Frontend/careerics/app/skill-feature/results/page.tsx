@@ -366,27 +366,27 @@ export default function ResultsPage() {
                             : "center",
                 }}
             >
-               <h2
-  style={{
-    margin: 0,
-    color: "white",
-    fontSize: "var(--space-xl)",
-  }}
->
-  Your Proficiency Level
-</h2>
+                <h2
+                    style={{
+                        margin: 0,
+                        color: "white",
+                        fontSize: "var(--space-xl)",
+                    }}
+                >
+                    Your Proficiency Level
+                </h2>
 
-<p
-  className="m-0 mt-[var(--space-md)] text-[length:var(--text-xl)] font-normal leading-[var(--line-tight)] text-[var(--primary-green)]"
-  style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
->
-  {lvl}
-</p>
+                <p
+                    className="m-0 mt-[var(--space-md)] text-[length:var(--text-xl)] font-normal leading-[var(--line-tight)] text-[var(--primary-green)]"
+                    style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
+                >
+                    {lvl}
+                </p>
 
-<p style={{
-                        maxWidth: "30rem",
-                        color: "rgba(255,255,255,0.7)",
-                    }}>
+                <p style={{
+                    maxWidth: "30rem",
+                    color: "rgba(255,255,255,0.7)",
+                }}>
                     Assessment complete. You can review each question to see the correct answers, or
                     retake the assessment to generate a fresh session.
                 </p>

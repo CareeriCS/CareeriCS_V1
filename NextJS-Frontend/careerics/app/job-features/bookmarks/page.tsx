@@ -230,7 +230,7 @@ export default function BookmarkedJobs() {
         gap: "calc(var(--space-xl) *2 )",
         height: "100%",
         overflow: "hidden",
-        justifyContent: "flex-start",
+        justifyContent: "space-between",
         position: "relative"
       }}
     >

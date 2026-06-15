@@ -35,8 +35,7 @@ export default function JourneyLayout({
                         position: "relative",
                         display: "flex",
                         flex: 1,
-                        overflowX:"hidden",
-                        overflowY:"auto",
+                        overflow:"hidden",
                         scrollbarWidth: "none",
                     }}
                 >

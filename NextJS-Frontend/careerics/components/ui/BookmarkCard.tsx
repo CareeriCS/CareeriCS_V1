@@ -58,6 +58,7 @@ const BookmarkCard: React.FC<BookmarkCardProps> = ({
         style={{
           marginLeft: "auto",
           marginTop: "auto",
+          paddingInline:"var(--space-xl)",
         }}
         onClick={() => router.push('/job-features/bookmarks')}
       >

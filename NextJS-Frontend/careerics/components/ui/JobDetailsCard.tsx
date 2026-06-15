@@ -291,6 +291,9 @@ const JobDetailsCard: React.FC<JobDetailsProps> = ({
             isLoading={isApplying}
             disabled={isApplyDisabled}
             onClick={onApply}
+            style={{
+              paddingInline:"var(--space-xl)",
+            }}
           >
             {actionLabel}
           </Button>
