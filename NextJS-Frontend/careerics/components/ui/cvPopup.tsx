@@ -136,8 +136,8 @@ export default function CVPop({
 
         <div
           style={{
-            backgroundColor: "white",
-            color: "#8E8E8E",
+            backgroundColor: "var(--form-grey)",
+            color: "var(--text-primary)",
             padding: "12px 25px",
             borderRadius: "2vh",
             fontSize: "1rem",
@@ -181,8 +181,8 @@ export default function CVPop({
               type="button"
               onClick={handleButtonClick}
               style={{
-                width: "100%",
-                minHeight: "170px",
+                width: "90%",
+                minHeight: "130px",
                 borderRadius: "28px",
                 border: "1px dashed rgba(17, 24, 39, 0.22)",
                 backgroundColor: "rgba(255, 255, 255, 0.55)",
@@ -207,7 +207,7 @@ export default function CVPop({
                 <img
                   src={selectedFileName ? "/cv/file.svg" : "/cv/upload.svg"}
                   alt="Upload"
-                  style={{ height: "12vh", maxHeight: "72px" }}
+                  style={{ height: "12vh", maxHeight: "60px" }}
                 />
                 <div
                   style={{
@@ -241,7 +241,7 @@ export default function CVPop({
                 paddingInline: "3vw",
                 borderRadius: "15px",
                 fontSize: "1.1rem",
-                fontWeight: 600,
+                fontWeight:300,
                 cursor: status === "loading" ? "not-allowed" : "pointer",
                 transition: "0.3s opacity",
               }}
