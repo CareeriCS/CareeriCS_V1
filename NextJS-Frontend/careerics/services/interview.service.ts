@@ -204,11 +204,13 @@ export const interviewService = {
     sessionId: string,
     questionId: string,
     audio: Blob,
+    isFollowup = false,
   ): Promise<ApiResponse<APISubmitAnswerResponse>> {
     const form = new FormData();
     form.append("session_id", sessionId);
     form.append("question_id", questionId);
     form.append("audio", audio, "answer.webm");
+    form.append("is_followup", isFollowup ? "true" : "false");
     return fastapiApi.post<APISubmitAnswerResponse>("/answers/", form);
   },
 
@@ -219,10 +221,16 @@ export const interviewService = {
   evaluateAnswer(
     sessionId: string,
     questionId: string,
+    isFollowup = false,
+    answerId?: string,
   ): Promise<ApiResponse<APIEvaluationResponse | null>> {
     const form = new FormData();
     form.append("session_id", sessionId);
     form.append("question_id", questionId);
+    form.append("is_followup", isFollowup ? "true" : "false");
+    if (answerId) {
+      form.append("answer_id", answerId);
+    }
     return fastapiApi
       .post<unknown>("/answers/evaluate/", form)
       .then((response) => {

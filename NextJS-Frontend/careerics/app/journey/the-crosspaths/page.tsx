@@ -5,7 +5,12 @@ import { useRouter } from "next/navigation";
 
 import JourneyTree from "@/components/ui/journey-tree";
 import { RectangularCard } from "@/components/ui/rectangular-card";
-import { fetchCareerBlogDetails, type CareerBlogDetails, type LevelDetail } from "@/lib/career-blog";
+import {
+  fetchCareerBlogDetails,
+  formatSalaryRange,
+  type CareerBlogDetails,
+  type LevelDetail,
+} from "@/lib/career-blog";
 import { buildJourneyPhaseHref } from "@/lib/journey";
 import { useJourneyPhase } from "@/hooks/use-journey-phase";
 import { careerService } from "@/services";
@@ -472,7 +477,7 @@ export default function JourneyCrosspathsPage() {
               <div>
                 <h1 style={{ fontSize: "var(--text-md)", marginBottom: "var(--space-xs)" }}>Salary Range</h1>
                 <h1 style={{ fontSize: "var(--text-md)", color: "lightgrey", margin: 0 }}>
-                  {currentLevelData.salary}
+                  {formatSalaryRange(currentLevelData.salary)}
                 </h1>
               </div>
 

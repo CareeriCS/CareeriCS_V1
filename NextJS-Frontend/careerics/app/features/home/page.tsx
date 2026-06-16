@@ -700,22 +700,29 @@ export default function HomePage() {
         )}
 
         {visibleBookmarkedJourneyTracks.map((track) => {
-          const trackRemoving = removingTrackIds.has(track.id);
-          return (
-            <ChoiceCard
-              key={track.id}
-              isSelected={activeTrack?.id === track.id}
-              title={track.title}
-              image={`/tracks/${track.id}.svg`}
-              description={track.description}
-              buttonLabel={trackRemoving ? "Removing..." : "Continue"}
-              disabled={trackRemoving}
-              onClick={() => handleSelectTrack(track.id)}
-              onAction={() => openTrackJourney(track)}
-              onRemove={() => { void handleRemoveTrack(track); }}
-            />
-          );
-        })}
+            const isRemovingTrack = removingTrackIds.has(track.id);
+
+            return (
+              <ChoiceCard
+                key={track.id}
+                isSelected={activeTrack?.id === track.id}
+                title={track.title}
+                image={
+                  track.iconTrackId
+                    ? `/tracks/${track.iconTrackId}.svg`
+                    : "/tracks/career-quiz.svg"
+                }
+                description={track.description}
+                buttonLabel={isRemovingTrack ? "Removing..." : "Continue"}
+                disabled={isRemovingTrack}
+                onClick={() => handleSelectTrack(track.id)}
+                onAction={() => openTrackJourney(track)}
+                onRemove={() => {
+                  void handleRemoveTrack(track);
+                }}
+              />
+            );
+          })}
 
         {showJourneyEmptyPlaceholder && (
           <ChoiceCard

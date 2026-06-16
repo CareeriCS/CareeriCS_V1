@@ -18,6 +18,7 @@ import {
 } from "@/lib/track-roadmap-links";
 import { getUnifiedBookmarks } from "@/lib/unified-bookmarks";
 import type {
+  APICareerTrack,
   APICareerTrackScore,
   JourneyTrackProgress,
   RoadmapListItem,
@@ -41,6 +42,8 @@ export type JourneyTrackCard = {
   roadmapId: string | null;
   score: number | null;
   source: "bookmark" | "recommendation";
+  /** Real career track id for `/tracks/{id}.svg`; omit when only a roadmap id is known. */
+  iconTrackId?: string | null;
 };
 
 export type JourneyPhaseProgress = JourneyPhaseDefinition & {
@@ -728,11 +731,135 @@ function normalizeTrackKey(value?: string | null): string {
   return String(value ?? "").trim();
 }
 
+function normalizeCareerTrackLabel(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/roadmap$/i, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+type CareerTrackLookup = {
+  byId: Map<string, APICareerTrack>;
+  byName: Map<string, APICareerTrack>;
+};
+
+function buildCareerTrackLookup(careerTracks: APICareerTrack[]): CareerTrackLookup {
+  const byId = new Map<string, APICareerTrack>();
+  const byName = new Map<string, APICareerTrack>();
+
+  for (const track of careerTracks) {
+    const id = normalizeTrackKey(track.id);
+    if (!id) {
+      continue;
+    }
+
+    byId.set(id, track);
+
+    const normalizedName = normalizeCareerTrackLabel(track.name || "");
+    if (normalizedName && !byName.has(normalizedName)) {
+      byName.set(normalizedName, track);
+    }
+  }
+
+  return { byId, byName };
+}
+
+function resolveCareerTrackIdFromLookup(
+  lookup: CareerTrackLookup,
+  candidateId?: string | null,
+): string | null {
+  const id = normalizeTrackKey(candidateId);
+  return id && lookup.byId.has(id) ? id : null;
+}
+
+function resolveCareerTrackIdByTitle(
+  lookup: CareerTrackLookup,
+  ...titles: Array<string | null | undefined>
+): string | null {
+  for (const title of titles) {
+    const normalized = normalizeCareerTrackLabel(String(title ?? "").trim());
+    if (!normalized) {
+      continue;
+    }
+
+    const exactMatch = lookup.byName.get(normalized);
+    if (exactMatch) {
+      return exactMatch.id;
+    }
+
+    for (const [name, track] of lookup.byName.entries()) {
+      if (normalized.includes(name) || name.includes(normalized)) {
+        return track.id;
+      }
+    }
+  }
+
+  return null;
+}
+
+function resolveIconTrackIdFromBookmark(
+  bookmark: UnifiedBookmarkEntry,
+  recommendedTrack: APICareerTrackScore | null,
+  storedLink: ReturnType<typeof resolveStoredTrackRoadmapLink>,
+  lookup: CareerTrackLookup,
+  titleFallback: string,
+): string | null {
+  const idCandidates: Array<string | null | undefined> =
+    bookmark.kind === "career"
+      ? [bookmark.entity_id]
+      : [
+          bookmark.metadata?.track_id,
+          recommendedTrack?.track_id,
+          storedLink?.trackId,
+        ];
+
+  for (const candidate of idCandidates) {
+    const resolved = resolveCareerTrackIdFromLookup(lookup, candidate);
+    if (resolved) {
+      return resolved;
+    }
+  }
+
+  return resolveCareerTrackIdByTitle(
+    lookup,
+    bookmark.metadata?.track_name,
+    bookmark.title,
+    recommendedTrack?.track_name,
+    storedLink?.trackName,
+    titleFallback,
+  );
+}
+
+function enrichJourneyTrackIconIds(
+  tracks: JourneyTrackCard[],
+  lookup: CareerTrackLookup,
+): JourneyTrackCard[] {
+  return tracks.map((track) => {
+    const existingIconTrackId = resolveCareerTrackIdFromLookup(lookup, track.iconTrackId);
+    if (existingIconTrackId) {
+      return {
+        ...track,
+        iconTrackId: existingIconTrackId,
+      };
+    }
+
+    const fromCardId = resolveCareerTrackIdFromLookup(lookup, track.id);
+    const fromTitle = resolveCareerTrackIdByTitle(lookup, track.title);
+
+    return {
+      ...track,
+      iconTrackId: fromCardId || fromTitle || null,
+    };
+  });
+}
+
 function createJourneyTrackCardFromBookmark(
   bookmark: UnifiedBookmarkEntry,
   roadmapTitleById: Map<string, string>,
   recommendationsByTrackId: Map<string, APICareerTrackScore>,
   recommendationsByRoadmapId: Map<string, APICareerTrackScore>,
+  lookup: CareerTrackLookup,
 ): JourneyTrackCard | null {
   if (bookmark.kind !== "career" && bookmark.kind !== "roadmap") {
     return null;
@@ -799,6 +926,13 @@ function createJourneyTrackCardFromBookmark(
     roadmapId,
     score: typeof bookmark.score === "number" ? bookmark.score : null,
     source: "bookmark",
+    iconTrackId: resolveIconTrackIdFromBookmark(
+      bookmark,
+      recommendedTrack,
+      storedLink,
+      lookup,
+      titleFallback,
+    ),
   };
 }
 
@@ -814,6 +948,7 @@ function mergeJourneyTrack(
     roadmapId: incoming.roadmapId ?? target.roadmapId,
     score: typeof incoming.score === "number" ? incoming.score : target.score,
     source: target.source === "bookmark" ? "bookmark" : incoming.source || target.source,
+    iconTrackId: incoming.iconTrackId ?? target.iconTrackId ?? null,
   };
 }
 
@@ -821,7 +956,9 @@ function normalizeTrackCards(
   bookmarks: UnifiedBookmarkEntry[],
   recommendations: APICareerTrackScore[],
   roadmaps: RoadmapListItem[],
+  careerTracks: APICareerTrack[],
 ): JourneyTrackCard[] {
+  const lookup = buildCareerTrackLookup(careerTracks);
   const roadmapTitleById = new Map(roadmaps.map((roadmap) => [roadmap.id, roadmap.title] as const));
   registerTrackRoadmapLinksFromRecommendations(recommendations, roadmaps);
   const recommendationsByTrackId = new Map<string, APICareerTrackScore>();
@@ -848,6 +985,7 @@ function normalizeTrackCards(
       roadmapTitleById,
       recommendationsByTrackId,
       recommendationsByRoadmapId,
+      lookup,
     );
     if (!candidate) {
       continue;
@@ -877,6 +1015,9 @@ function normalizeTrackCards(
       roadmapId: normalizeTrackKey(recommendation.roadmap_id) || null,
       score: recommendation.score,
       source: "recommendation",
+      iconTrackId:
+        resolveCareerTrackIdFromLookup(lookup, trackId) ||
+        resolveCareerTrackIdByTitle(lookup, recommendation.track_name),
     };
 
     if (!byTrackId.has(trackId)) {
@@ -897,12 +1038,12 @@ function mergeJourneyProgressTracks(options: {
   tracks: JourneyTrackCard[];
   journeyProgress: JourneyTrackProgress[];
   roadmaps: RoadmapListItem[];
-  careerTracks: Array<{ id: string; name: string; description?: string | null }>;
+  careerTracks: APICareerTrack[];
 }): JourneyTrackCard[] {
   const { tracks, journeyProgress, roadmaps, careerTracks } = options;
+  const lookup = buildCareerTrackLookup(careerTracks);
   const byTrackId = new Map(tracks.map((track) => [normalizeTrackKey(track.id), track] as const));
   const roadmapsById = new Map(roadmaps.map((roadmap) => [roadmap.id, roadmap] as const));
-  const careerTracksById = new Map(careerTracks.map((track) => [track.id, track] as const));
 
   for (const progress of journeyProgress) {
     const trackId = normalizeTrackKey(progress.track_id);
@@ -922,15 +1063,16 @@ function mergeJourneyProgressTracks(options: {
       continue;
     }
 
-    const matchedCareerTrack = careerTracksById.get(trackId);
+    const matchedCareerTrack = lookup.byId.get(trackId) || null;
     const matchedRoadmap = roadmapId ? roadmapsById.get(roadmapId) : null;
+    const title =
+      matchedCareerTrack?.name ||
+      matchedRoadmap?.title ||
+      "Career Track";
 
     byTrackId.set(trackId, {
       id: trackId,
-      title:
-        matchedCareerTrack?.name ||
-        matchedRoadmap?.title ||
-        "Career Track",
+      title,
       description:
         matchedCareerTrack?.description ||
         matchedRoadmap?.description ||
@@ -938,6 +1080,9 @@ function mergeJourneyProgressTracks(options: {
       roadmapId,
       score: null,
       source: "recommendation",
+      iconTrackId:
+        resolveCareerTrackIdFromLookup(lookup, trackId) ||
+        resolveCareerTrackIdByTitle(lookup, title, matchedRoadmap?.title),
     });
   }
 
@@ -1162,16 +1307,23 @@ export async function loadJourneyTrackCards(
         });
       }
 
-      const tracks = mergeJourneyProgressTracks({
-        tracks: normalizeTrackCards(bookmarks, recommendations, roadmaps),
-        journeyProgress: journeyProgressResponse.success && journeyProgressResponse.data?.tracks
-          ? journeyProgressResponse.data.tracks
-          : [],
-        roadmaps,
-        careerTracks: careerTracksResponse.success && careerTracksResponse.data
+      const careerTracks =
+        careerTracksResponse.success && careerTracksResponse.data
           ? careerTracksResponse.data
-          : [],
-      });
+          : [];
+      const lookup = buildCareerTrackLookup(careerTracks);
+
+      const tracks = enrichJourneyTrackIconIds(
+        mergeJourneyProgressTracks({
+          tracks: normalizeTrackCards(bookmarks, recommendations, roadmaps, careerTracks),
+          journeyProgress: journeyProgressResponse.success && journeyProgressResponse.data?.tracks
+            ? journeyProgressResponse.data.tracks
+            : [],
+          roadmaps,
+          careerTracks,
+        }),
+        lookup,
+      );
       journeyTrackCardsCache.set(cacheKey, {
         data: tracks,
         expiresAt: Date.now() + JOURNEY_TRACK_CARDS_CACHE_TTL_MS,

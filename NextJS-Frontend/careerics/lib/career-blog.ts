@@ -22,6 +22,14 @@ export interface CareerBlogDetails {
 }
 
 /**
+ * Format salary range values coming from the API.
+ * Normalizes strings like "$50K - $80K" or "50k-80k" into "$50 - $80" or "50 - 80".
+ */
+export function formatSalaryRange(value: string): string {
+  return value.replace(/(\d)\s*[kK]\b/g, "$1").trim();
+}
+
+/**
  * Fetch career blog details for a specific career and level.
  *
  * @param careerId - The career ID (UUID from career_tracks.id)

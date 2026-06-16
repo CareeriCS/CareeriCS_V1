@@ -4,6 +4,12 @@ import React, { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { useResponsive } from "@/hooks/useResponsive";
+import {
+  DEFAULT_INTERVIEW_QUESTION_COUNT,
+  MAX_INTERVIEW_QUESTION_COUNT,
+  MIN_INTERVIEW_QUESTION_COUNT,
+  normalizeInterviewQuestionCount,
+} from "@/lib/interview";
 
 interface CustomizeInterviewPopupProps {
   onClose: () => void;
@@ -14,6 +20,11 @@ interface CustomizeInterviewPopupProps {
   isLoadingOptions?: boolean;
   errorMessage?: string | null;
   initialValue?: string;
+  hideRoleSelect?: boolean;
+  minQuestions?: number;
+  maxQuestions?: number;
+  initialQuestionCount?: number;
+  helperText?: string;
 }
 
 export default function CustomizeInterviewPopup({
@@ -25,9 +36,21 @@ export default function CustomizeInterviewPopup({
   isLoadingOptions = false,
   errorMessage = null,
   initialValue = "",
+  hideRoleSelect = false,
+  minQuestions = MIN_INTERVIEW_QUESTION_COUNT,
+  maxQuestions = MAX_INTERVIEW_QUESTION_COUNT,
+  initialQuestionCount = DEFAULT_INTERVIEW_QUESTION_COUNT,
+  helperText,
 }: CustomizeInterviewPopupProps) {
   const [selectedRole, setSelectedRole] = useState(initialValue);
-  const [numberOfQuestions, setNumberOfQuestions] = useState(3);
+  const [numberOfQuestions, setNumberOfQuestions] = useState(() =>
+    normalizeInterviewQuestionCount(
+      initialQuestionCount,
+      minQuestions,
+      maxQuestions,
+      DEFAULT_INTERVIEW_QUESTION_COUNT,
+    ),
+  );
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const { isLarge, isSmall } = useResponsive();
@@ -36,10 +59,26 @@ export default function CustomizeInterviewPopup({
     setSelectedRole(initialValue);
   }, [initialValue]);
 
+  useEffect(() => {
+    setNumberOfQuestions(
+      normalizeInterviewQuestionCount(
+        initialQuestionCount,
+        minQuestions,
+        maxQuestions,
+        DEFAULT_INTERVIEW_QUESTION_COUNT,
+      ),
+    );
+  }, [initialQuestionCount, maxQuestions, minQuestions]);
+
   const sortedOptions = useMemo(
     () => [...options].sort((left, right) => left.localeCompare(right)),
     [options]
   );
+
+  const resolvedHelperText = isLoadingOptions
+    ? "Loading the available technical interview careers..."
+    : helperText ||
+      "We'll load the technical question bank for the exact career you choose here.";
 
   const handleStart = () => {
     if (!selectedRole || isSubmitting) {
@@ -53,7 +92,7 @@ export default function CustomizeInterviewPopup({
     <div
        role="dialog"
       aria-modal="true"
-      aria-label="Replace bookmark"
+      aria-label={title}
       onClick={onClose}
       style={{
         position: "fixed",
@@ -126,107 +165,109 @@ export default function CustomizeInterviewPopup({
           }}
         />
 
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            gap: "18px",
-          }}
-        >
-          <span
+        {!hideRoleSelect ? (
+          <div
             style={{
-              fontSize: "20px",
-              fontWeight: 500,
-              paddingTop: "10px",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+              gap: "18px",
             }}
           >
-            Career / Role:
-          </span>
-
-          <div style={{ position: "relative", width: "260px" }}>
-            <div
-              onClick={() => setIsDropdownOpen((open) => !open)}
+            <span
               style={{
-                backgroundColor: "white",
-                padding: "12px 20px",
-                borderRadius: "14px",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                cursor: "pointer",
-                fontSize: "16px",
-                width: "100%",
-                boxSizing: "border-box",
-                minHeight: "52px",
+                fontSize: "20px",
+                fontWeight: 500,
+                paddingTop: "10px",
               }}
             >
-              <span
-                style={{
-                  color: selectedRole ? "#000" : "#8E8E8E",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              >
-                {selectedRole || "Click to choose"}
-              </span>
+              Career / Role:
+            </span>
 
-              <span
-                style={{
-                  transition: "0.2s",
-                  transform: isDropdownOpen ? "rotate(180deg)" : "rotate(0deg)",
-                }}
-              >
-                v
-              </span>
-            </div>
-
-            {isDropdownOpen && (
+            <div style={{ position: "relative", width: "260px" }}>
               <div
+                onClick={() => setIsDropdownOpen((open) => !open)}
                 style={{
-                  position: "absolute",
-                  top: "110%",
-                  left: 0,
-                  width: "100%",
                   backgroundColor: "white",
+                  padding: "12px 20px",
                   borderRadius: "14px",
-                  boxShadow: "0 10px 20px rgba(0,0,0,0.1)",
-                  overflow: "hidden",
-                  zIndex: 10,
-                  maxHeight: "230px",
-                  overflowY: "auto",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  cursor: "pointer",
+                  fontSize: "16px",
+                  width: "100%",
+                  boxSizing: "border-box",
+                  minHeight: "52px",
                 }}
               >
-                {sortedOptions.map((role) => (
-                  <button
-                    key={role}
-                    type="button"
-                    onClick={() => {
-                      setSelectedRole(role);
-                      setIsDropdownOpen(false);
-                    }}
-                    style={{
-                      width: "100%",
-                      padding: "12px 20px",
-                      cursor: "pointer",
-                      border: "none",
-                      borderBottom: "1px solid #f0f0f0",
-                      color: "#333",
-                      fontSize: "14px",
-                      textAlign: "left",
-                      backgroundColor:
-                        selectedRole === role ? "#eef6d0" : "white",
-                      fontFamily: "inherit",
-                    }}
-                  >
-                    {role}
-                  </button>
-                ))}
+                <span
+                  style={{
+                    color: selectedRole ? "#000" : "#8E8E8E",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {selectedRole || "Click to choose"}
+                </span>
+
+                <span
+                  style={{
+                    transition: "0.2s",
+                    transform: isDropdownOpen ? "rotate(180deg)" : "rotate(0deg)",
+                  }}
+                >
+                  v
+                </span>
               </div>
-            )}
+
+              {isDropdownOpen && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "110%",
+                    left: 0,
+                    width: "100%",
+                    backgroundColor: "white",
+                    borderRadius: "14px",
+                    boxShadow: "0 10px 20px rgba(0,0,0,0.1)",
+                    overflow: "hidden",
+                    zIndex: 10,
+                    maxHeight: "230px",
+                    overflowY: "auto",
+                  }}
+                >
+                  {sortedOptions.map((role) => (
+                    <button
+                      key={role}
+                      type="button"
+                      onClick={() => {
+                        setSelectedRole(role);
+                        setIsDropdownOpen(false);
+                      }}
+                      style={{
+                        width: "100%",
+                        padding: "12px 20px",
+                        cursor: "pointer",
+                        border: "none",
+                        borderBottom: "1px solid #f0f0f0",
+                        color: "#333",
+                        fontSize: "14px",
+                        textAlign: "left",
+                        backgroundColor:
+                          selectedRole === role ? "#eef6d0" : "white",
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      {role}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        ) : null}
 
         <div
           style={{
@@ -248,23 +289,19 @@ export default function CustomizeInterviewPopup({
 
           <input
             type="number"
-            min={3}
-            max={10}
+            min={minQuestions}
+            max={maxQuestions}
             value={numberOfQuestions}
             onChange={(event) => {
               const value = Number(event.target.value);
-
-              if (value < 3) {
-                setNumberOfQuestions(3);
-                return;
-              }
-
-              if (value > 10) {
-                setNumberOfQuestions(10);
-                return;
-              }
-
-              setNumberOfQuestions(value);
+              setNumberOfQuestions(
+                normalizeInterviewQuestionCount(
+                  value,
+                  minQuestions,
+                  maxQuestions,
+                  DEFAULT_INTERVIEW_QUESTION_COUNT,
+                ),
+              );
             }}
             style={{
               width: "260px",
@@ -290,9 +327,7 @@ export default function CustomizeInterviewPopup({
             lineHeight: 1.5,
           }}
         >
-          {isLoadingOptions
-            ? "Loading the available technical interview careers..."
-            : "We'll load the technical question bank for the exact career you choose here."}
+          {resolvedHelperText}
         </p>
 
         {errorMessage ? (

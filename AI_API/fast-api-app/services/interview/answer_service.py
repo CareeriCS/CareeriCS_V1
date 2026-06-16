@@ -30,10 +30,11 @@ def get_answer_by_question_and_session(
     question_id: UUID,
     session_id: UUID
 ) -> models.Answer | None:
-    
+
     return db.query(models.Answer).filter(
         models.Answer.question_id == question_id,
-        models.Answer.session_id == session_id
+        models.Answer.session_id == session_id,
+        models.Answer.isfollowup.is_(False),
     ).first()
 
 
@@ -46,6 +47,7 @@ async def submit_answer_service(
     session_id: UUID,
     question_id: UUID,
     audio: UploadFile,
+    is_followup: bool = False,
 ):
 
     session = db.get(models.Session, session_id)
@@ -56,11 +58,13 @@ async def submit_answer_service(
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
 
-    existing_answer = (
-        db.query(models.Answer)
-        .filter_by(session_id=session_id, question_id=question_id)
-        .first()
-    )
+    existing_answer = None
+    if not is_followup:
+        existing_answer = (
+            db.query(models.Answer)
+            .filter_by(session_id=session_id, question_id=question_id, isfollowup=False)
+            .first()
+        )
 
     uploaded_path = None
     wav_path = None
@@ -110,7 +114,7 @@ async def submit_answer_service(
         answer_text=transcript,
         answer_audio=wav_path,
         answer_video=mp4_path,
-        isfollowup=False,
+        isfollowup=is_followup,
     )
 
     db.add(answer)
@@ -132,12 +136,15 @@ async def evaluate_answer_service_wrapper(
     db: DBSession,
     session_id: UUID,
     question_id: UUID,
+    is_followup: bool = False,
+    answer_id: UUID | None = None,
 ):
-
-    answer = (
-        db.query(models.Answer)
-        .filter_by(session_id=session_id, question_id=question_id)
-        .first()
+    answer = _resolve_answer_for_evaluation(
+        db,
+        session_id,
+        question_id,
+        is_followup,
+        answer_id,
     )
 
     if not answer:
@@ -153,20 +160,18 @@ async def evaluate_answer_service_wrapper(
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    existing_followup = (
-        db.query(models.Followup)
-        .join(models.Answer, models.Followup.answer_id == models.Answer.id)
-        .filter(
-            models.Answer.session_id == session_id,
-            models.Answer.question_id == question_id,
-        )
-        .first()
+    main_answer = _get_main_answer(db, session_id, question_id)
+    existing_followup = _get_followup_for_main_answer(db, main_answer)
+
+    is_followup_allowed = (not is_followup) and (existing_followup is None)
+    question_text = (
+        existing_followup.fquestion_text
+        if is_followup and existing_followup
+        else question.question_text
     )
 
-    is_followup_allowed = (existing_followup is None) and (not answer.isfollowup)
-
     evaluation = evaluate_answer_service(
-        question_text=question.question_text,
+        question_text=question_text,
         user_answer=answer.answer_text,
         interview_type=session.type,
         is_followup=is_followup_allowed,
@@ -180,11 +185,17 @@ async def evaluate_answer_service_wrapper(
     # store feedback and score immediately
     _store_evaluation(db, answer, feedback, score)
 
-    followup_info = None
-    followup_recommended = False
-
     _run_final_media_analysis(db, answer)
 
+    if is_followup:
+        return {
+            "evaluation": feedback,
+            "grade": score,
+            "followup_recommended": False,
+            "followup": None,
+            "emotion_evaluation": answer.emotion_evaluation,
+            "tone_evaluation": answer.tone_evaluation,
+        }
 
     if existing_followup:
         return {
@@ -198,10 +209,7 @@ async def evaluate_answer_service_wrapper(
 
 
     if is_followup_allowed and followup_required:
-
         followup_info = _handle_followup(db, answer.id, improvement)
-
-        followup_recommended = True
 
         return {
             "evaluation": feedback,
@@ -240,6 +248,76 @@ def _store_evaluation(
     db.commit()
 
 
+def _get_main_answer(
+    db: DBSession,
+    session_id: UUID,
+    question_id: UUID,
+) -> models.Answer | None:
+    return (
+        db.query(models.Answer)
+        .filter_by(session_id=session_id, question_id=question_id, isfollowup=False)
+        .first()
+    )
+
+
+def _get_answer_for_evaluation(
+    db: DBSession,
+    session_id: UUID,
+    question_id: UUID,
+    is_followup: bool,
+) -> models.Answer | None:
+    return (
+        db.query(models.Answer)
+        .filter_by(
+            session_id=session_id,
+            question_id=question_id,
+            isfollowup=is_followup,
+        )
+        .first()
+    )
+
+
+def _resolve_answer_for_evaluation(
+    db: DBSession,
+    session_id: UUID,
+    question_id: UUID,
+    is_followup: bool,
+    answer_id: UUID | None,
+) -> models.Answer | None:
+    if answer_id is None:
+        return _get_answer_for_evaluation(db, session_id, question_id, is_followup)
+
+    answer = db.get(models.Answer, answer_id)
+    if not answer:
+        return None
+
+    if (
+        answer.session_id != session_id
+        or answer.question_id != question_id
+        or answer.isfollowup != is_followup
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Provided answer_id does not match the requested interview answer context.",
+        )
+
+    return answer
+
+
+def _get_followup_for_main_answer(
+    db: DBSession,
+    main_answer: models.Answer | None,
+) -> models.Followup | None:
+    if not main_answer:
+        return None
+
+    return (
+        db.query(models.Followup)
+        .filter(models.Followup.answer_id == main_answer.id)
+        .first()
+    )
+
+
 # ======================================================
 # FOLLOW-UP HANDLING
 # ======================================================
@@ -267,10 +345,6 @@ def _handle_followup(
     )
 
     db.add(followup)
-
-    answer = db.get(models.Answer, answer_id)
-
-    answer.isfollowup = True
 
     db.commit()
     db.refresh(followup)

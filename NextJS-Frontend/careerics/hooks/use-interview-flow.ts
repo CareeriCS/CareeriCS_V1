@@ -4,9 +4,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { interviewService } from "@/services/interview.service";
 import { normalizeInterviewAudioUrl } from "@/lib/interview-media";
-import { normalizeInterviewType as normalizeCanonicalInterviewType } from "@/lib/interview";
-
-const INTERVIEW_TEST_QUESTION_LIMIT = 2;
+import {
+  DEFAULT_INTERVIEW_QUESTION_COUNT,
+  normalizeInterviewQuestionCount,
+  normalizeInterviewType as normalizeCanonicalInterviewType,
+} from "@/lib/interview";
 
 export type InterviewType = string;
 
@@ -20,6 +22,7 @@ export interface UIQuestion {
 interface RecordingOverrides {
   type?: InterviewType;
   sessionId?: string | null;
+  questionCount?: number | null;
   q?: string;
   questionId?: string | null;
   followup?: string | null;
@@ -31,6 +34,7 @@ interface RecordingOverrides {
 interface AnalyzingOverrides {
   type?: InterviewType;
   sessionId?: string;
+  questionCount?: number | null;
   q?: string;
   questionId?: string;
   answerId?: string;
@@ -55,6 +59,14 @@ export function useInterviewFlow() {
   const sessionId = searchParams.get("sessionId") || "";
   const questionId = searchParams.get("questionId") || "";
   const answerId = searchParams.get("answerId") || "";
+  const questionCount = useMemo(() => {
+    return normalizeInterviewQuestionCount(
+      searchParams.get("count"),
+      undefined,
+      undefined,
+      DEFAULT_INTERVIEW_QUESTION_COUNT,
+    );
+  }, [searchParams]);
   const followupText = searchParams.get("followup") || "";
   const followupAudio = searchParams.get("followupAudio") || "";
   const followupId = searchParams.get("followupId") || "";
@@ -94,8 +106,7 @@ export function useInterviewFlow() {
         audioUrl: normalizeInterviewAudioUrl(q.question_audio, "questions"),
       }));
 
-      // Temporary test cap requested to speed up end-to-end validation.
-      setQuestions(mapped.slice(0, INTERVIEW_TEST_QUESTION_LIMIT));
+      setQuestions(mapped.slice(0, questionCount));
       setIsQuestionsLoading(false);
     };
 
@@ -104,7 +115,7 @@ export function useInterviewFlow() {
     return () => {
       alive = false;
     };
-  }, [interviewType]);
+  }, [interviewType, questionCount]);
 
   const buildRecordingUrl = useCallback(
     (overrides: RecordingOverrides = {}) => {
@@ -120,6 +131,14 @@ export function useInterviewFlow() {
         next.delete("sessionId");
       } else if (typeof overrides.sessionId === "string") {
         next.set("sessionId", overrides.sessionId);
+      }
+
+      if (overrides.questionCount === null) {
+        next.delete("count");
+      } else if (typeof overrides.questionCount === "number") {
+        next.set("count", String(normalizeInterviewQuestionCount(overrides.questionCount)));
+      } else if (!next.get("count")) {
+        next.set("count", String(questionCount));
       }
 
       if (overrides.q) {
@@ -164,7 +183,7 @@ export function useInterviewFlow() {
 
       return `/interview-feature/recording?${next.toString()}`;
     },
-    [searchParams, interviewType],
+    [searchParams, interviewType, questionCount],
   );
 
   const buildAnalyzingUrl = useCallback(
@@ -172,6 +191,9 @@ export function useInterviewFlow() {
       const params = new URLSearchParams({
         type: overrides.type || interviewType,
         sessionId: overrides.sessionId || sessionId,
+        count: String(
+          normalizeInterviewQuestionCount(overrides.questionCount ?? questionCount),
+        ),
         q: overrides.q || String(currentQ),
         questionId: overrides.questionId || questionId,
       });
@@ -191,7 +213,7 @@ export function useInterviewFlow() {
 
       return `/interview-feature/analyzing?${params.toString()}`;
     },
-    [interviewType, sessionId, currentQ, questionId, followupMode],
+    [interviewType, sessionId, questionCount, currentQ, questionId, followupMode],
   );
 
   const getQuestionByStep = useCallback(
@@ -222,6 +244,7 @@ export function useInterviewFlow() {
     sessionId,
     questionId,
     answerId,
+    questionCount,
     followupText,
     followupAudio,
     followupId,

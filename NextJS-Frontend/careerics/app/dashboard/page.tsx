@@ -6,6 +6,14 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useAuth } from "@/providers/auth-provider";
 import { authService } from "@/services/auth.service";
 
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return "Unknown error";
+}
+
 /**
  * Protected dashboard page — only renders if the user has a valid
  * Supabase session (JWT). Demonstrates:
@@ -25,8 +33,8 @@ function DashboardContent() {
     try {
       await authService.signOut();
       router.push("/auth/login");
-    } catch (err: any) {
-      console.error("Logout failed:", err.message);
+    } catch (err: unknown) {
+      console.error("Logout failed:", getErrorMessage(err));
     }
   }
 
@@ -39,8 +47,8 @@ function DashboardContent() {
     try {
       const res = await authService.me();
       setApiResponse(JSON.stringify(res, null, 2));
-    } catch (err: any) {
-      setApiResponse(`Error: ${err.message}`);
+    } catch (err: unknown) {
+      setApiResponse(`Error: ${getErrorMessage(err)}`);
     } finally {
       setApiLoading(false);
     }

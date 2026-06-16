@@ -42,7 +42,9 @@ export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const onCompleteRef = useRef(onComplete);
 
-  onCompleteRef.current = onComplete;
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
 
   const clearTimer = useCallback(() => {
     if (intervalRef.current) {

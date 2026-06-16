@@ -41,6 +41,7 @@ function normalizeRoadmapListPayload(payload: unknown): RoadmapListItem[] {
 export default function JourneyJobHuntPage() {
   const router = useRouter();
   const { user, isLoading: isAuthLoading } = useAuth();
+  const userId = user?.id;
   const {
     selectedTrack,
     maxReached,
@@ -108,7 +109,7 @@ export default function JourneyJobHuntPage() {
     const loadDashboard = async () => {
       setIsLoading(true);
 
-      if (!user?.id) {
+      if (!userId) {
         if (!isActive) {
           return;
         }
@@ -122,9 +123,9 @@ export default function JourneyJobHuntPage() {
       }
 
       const [recentResponse, savedResponse, applicationsResponse] = await Promise.all([
-        jobService.getRecentlyViewedJobs(user.id, { limit: 12 }),
-        jobService.getSavedJobs(user.id, { limit: 1 }),
-        jobService.getUserApplications(user.id, { limit: 1 }),
+        jobService.getRecentlyViewedJobs(userId, { limit: 12 }),
+        jobService.getSavedJobs(userId, { limit: 1 }),
+        jobService.getUserApplications(userId, { limit: 1 }),
       ]);
 
       if (!isActive) {
@@ -154,7 +155,7 @@ export default function JourneyJobHuntPage() {
     return () => {
       isActive = false;
     };
-  }, [isAuthLoading, user?.id]);
+  }, [isAuthLoading, userId]);
 
   const bookmarkDescription = useMemo(() => {
     if (!savedJobsCount) {
@@ -197,8 +198,8 @@ export default function JourneyJobHuntPage() {
 
     setSelectedAssessmentOptionId(resolveDefaultAssessmentOptionId());
 
-    if (user?.id) {
-      const sessionsRes = await skillAssessmentService.getUserSessions(user.id);
+    if (userId) {
+      const sessionsRes = await skillAssessmentService.getUserSessions(userId);
       const submittedCount =
         sessionsRes.success && sessionsRes.data
           ? sessionsRes.data.filter((session) => session.status === "submitted").length
@@ -213,7 +214,7 @@ export default function JourneyJobHuntPage() {
     resolveDefaultAssessmentOptionId,
     roadmaps.length,
     roadmapsError,
-    user?.id,
+    userId,
   ]);
 
   const handleStartAssessment = (questions: number) => {

@@ -22,6 +22,7 @@ router = APIRouter(
 async def submit_answer(
     session_id: UUID = Form(...),
     question_id: UUID = Form(...),
+    is_followup: bool = Form(False),
     audio: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
@@ -30,6 +31,7 @@ async def submit_answer(
         session_id,
         question_id,
         audio,
+        is_followup,
     )
 
 
@@ -40,12 +42,16 @@ async def submit_answer(
 async def evaluate_answer(
     session_id: UUID = Form(...),
     question_id: UUID = Form(...),
+    is_followup: bool = Form(False),
+    answer_id: UUID | None = Form(None),
     db: Session = Depends(get_db),
 ):
     return await evaluate_answer_service_wrapper(
         db,
         session_id,
         question_id,
+        is_followup,
+        answer_id,
     )
 
 @router.get("/by_question_session/", response_model=AnswerRead | None)
