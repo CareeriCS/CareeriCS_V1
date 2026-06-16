@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useState } from "react";
-
+import { Button } from "./button";
 interface CVPopProps {
   onClose: () => void;
   lastVersion: string;
@@ -136,7 +136,7 @@ export default function CVPop({
 
         <div
           style={{
-            backgroundColor: "var(--form-grey)",
+            backgroundColor: "var(--medium-grey)",
             color: "var(--text-primary)",
             padding: "12px 25px",
             borderRadius: "2vh",
@@ -224,26 +224,20 @@ export default function CVPop({
                   }}
                   title={selectedFileName || undefined}
                 >
-                  {selectedFileName || "Choose a PDF or DOCX file"}
+                  {selectedFileName || "Upload your latest CV in PDF format"}
                 </div>
               </div>
             </button>
 
-            <button
+            <Button
               type="button"
+              variant="popup"
               onClick={!selectedFileName ? handleButtonClick : handleExtract}
               disabled={status === "loading"}
               style={{
-                backgroundColor: "var(--medium-grey)",
-                color: "white",
-                border: "none",
-                paddingBlock: "1.5vh",
-                paddingInline: "3vw",
-                borderRadius: "15px",
-                fontSize: "1.1rem",
-                fontWeight:300,
-                cursor: status === "loading" ? "not-allowed" : "pointer",
-                transition: "0.3s opacity",
+               minWidth: "150px",
+                flex: 1,
+                whiteSpace: "nowrap",
               }}
               onMouseOver={(event) => {
                 event.currentTarget.style.opacity = "0.8";
@@ -257,7 +251,7 @@ export default function CVPop({
                 : !selectedFileName
                   ? "Open Files"
                   : "Extract"}
-            </button>
+            </Button>
 
             {status === "success" ? (
               <p style={{ color: "#000000", fontSize: "14px", margin: 0 }}>

@@ -35,7 +35,7 @@ export default function InterviewContainer({
         style={{
           position: "relative",
           display: "flex",
-          width: "var(--container-sm)",
+          width: "var(--container-xm)",
           height: "var(--container-2xs)",
           alignItems: "center",
           justifyContent: "center",
@@ -43,6 +43,7 @@ export default function InterviewContainer({
           borderRadius: "var(--radius-2xl)",
           backgroundColor: "var(--bg-grey)",
           ...videoBoxStyle,
+
         }}
       >
         {videoContent}

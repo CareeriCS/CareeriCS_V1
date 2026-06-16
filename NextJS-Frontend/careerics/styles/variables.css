@@ -171,6 +171,7 @@
    --container-2xs: clamp(12rem, 96vw, 18rem);
    --container-xs: clamp(16rem, 94vw, 24rem);
    --container-sm: clamp(20rem, 90vw, 30rem);
+   --container-xm: clamp(22rem, 85vw, 35rem);
    --container-md: clamp(25rem, 85vw, 45rem);
    --container-lg: clamp(30rem, 80vw, 65rem);
    --container-xl: clamp(36rem, 86vw, 78rem);
