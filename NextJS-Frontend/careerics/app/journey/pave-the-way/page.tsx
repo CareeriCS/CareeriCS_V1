@@ -887,7 +887,7 @@ export default function JourneyPaveTheWayPage() {
               style={{
                 gridArea: "2 / 1 / 3 / 2",
                 display: "grid",
-                gridTemplateColumns: "2fr 1fr",
+                gridTemplateColumns: "2.2fr 1fr",
                 gridTemplateRows: "1fr",
                 minHeight: 0,
                 overflow: "hidden",

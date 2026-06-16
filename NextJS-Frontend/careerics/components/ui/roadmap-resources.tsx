@@ -32,11 +32,13 @@ interface Course {
 interface RoadmapPanelContentProps {
   sectionAccessMessage?: string | null;
   selectedSection?: Section;
-  selectedSectionCourses: Course[];
+  selectedSectionCourses?: Course[];
   courseProgressError?: string | null;
   courseStatusById?: Partial<Record<string, "enrolled" | "completed">>
   toggleSkill: (index: number) => Promise<void>;
-  handleCourseClick: (course: Course) => void;
+  handleCourseClick?: (course: Course) => void;
+  courses?: boolean;
+  title?: string;
 }
 
 export default function RoadmapPanelContent({
@@ -47,12 +49,15 @@ export default function RoadmapPanelContent({
   courseStatusById,
   toggleSkill,
   handleCourseClick,
+  courses = true,
+  title,
 }: RoadmapPanelContentProps) {
 
 
-  
+
   const [activePanelTab, setActivePanelTab] = useState<"resources" | "courses">("resources");
-  
+  const [openSkillId, setOpenSkillId] = useState<string | null>(null);
+
   return (
     <div
       style={{
@@ -61,163 +66,178 @@ export default function RoadmapPanelContent({
         display: "flex",
         flexDirection: "column",
         justifyContent: "flex-start",
-        backgroundColor: "var(--bg-grey)",
+        backgroundColor: courses?"var(--bg-grey)":"transparent",
         borderRadius: "var(--radius-xl)",
+        flex: 1,
       }}
     >
-
-      {activePanelTab === "courses" &&
-
-        <div
-        style={{
-            paddingTop:"var(--space-xs)",
-            width: "100%",
-            height: "fit-content",
-            display: "flex",
-            justifyContent: "flex-start",
-          }}
-          >
-          <div
-            style={{
-              width: "fit-content",
-              backgroundColor: "var(--medium-blue)",
-              borderTopLeftRadius: "var(--radius-lg)",
-              cursor: "pointer",
-            }}
-          >
+      {courses &&
+        <>
+          {activePanelTab === "courses" &&
 
             <div
-              onClick={() => setActivePanelTab("resources")}
               style={{
-                height: "fit-content",
-                backgroundColor: "var(--bg-grey)",
-                borderTopLeftRadius: "var(--radius-lg)",
-                borderBottomRightRadius: "var(--radius-lg)",
-                paddingInline: "var(--space-md)",
-                fontFamily: "var(--font-nova-square)",
-                fontSize: "var(--text-md)",
-                cursor: "pointer",
-              }}
-              >
-              Topics
-            </div>
-          </div>
-          <div
-            style={{
-              height: "fit-content",
-              width: "100%",
-              backgroundColor: "var(--bg-grey)",
-              borderTopRightRadius: "var(--radius-lg)",
-              display: "flex",
-            }}
-            >
-            <div
-              onClick={() => setActivePanelTab("courses")}
-              style={{
-                height: "fit-content",
-                backgroundColor: "var(--medium-blue)",
-                color: "white",
-                width: "fit-content",
-                borderTopRightRadius: "var(--radius-lg)",
-                borderTopLeftRadius: "var(--radius-lg)",
-                fontFamily: "var(--font-nova-square)",
-                fontSize: "var(--text-md)",
-                paddingInline: "var(--space-md)",
-                cursor: "pointer",
-              }}
-            >
-              Courses
-            </div>
-            <div
-              style={{
-                minWidth: "0",
-                flex: 1,
+                paddingTop: "var(--space-xs)",
                 width: "100%",
-                backgroundColor: "var(--medium-blue)",
-                borderTopRightRadius: "var(--radius-lg)",
+                height: "fit-content",
+                display: "flex",
+                justifyContent: "flex-start",
               }}
             >
               <div
                 style={{
-                  height: "100%",
+                  width: "fit-content",
+                  backgroundColor: "var(--medium-blue)",
+                  borderTopLeftRadius: "var(--radius-lg)",
+                  cursor: "pointer",
+                }}
+              >
+
+                <div
+                  onClick={() => setActivePanelTab("resources")}
+                  style={{
+                    height: "fit-content",
+                    backgroundColor: "var(--bg-grey)",
+                    borderTopLeftRadius: "var(--radius-lg)",
+                    borderBottomRightRadius: "var(--radius-lg)",
+                    paddingInline: "var(--space-md)",
+                    fontFamily: "var(--font-nova-square)",
+                    fontSize: "var(--text-md)",
+                    cursor: "pointer",
+                  }}
+                >
+                  Topics
+                </div>
+              </div>
+              <div
+                style={{
+                  height: "fit-content",
                   width: "100%",
                   backgroundColor: "var(--bg-grey)",
                   borderTopRightRadius: "var(--radius-lg)",
-                  borderBottomLeftRadius: "var(--radius-lg)",
-                  
+                  display: "flex",
                 }}
               >
+                <div
+                  onClick={() => setActivePanelTab("courses")}
+                  style={{
+                    height: "fit-content",
+                    backgroundColor: "var(--medium-blue)",
+                    color: "white",
+                    width: "fit-content",
+                    borderTopRightRadius: "var(--radius-lg)",
+                    borderTopLeftRadius: "var(--radius-lg)",
+                    fontFamily: "var(--font-nova-square)",
+                    fontSize: "var(--text-md)",
+                    paddingInline: "var(--space-md)",
+                    cursor: "pointer",
+                  }}
+                >
+                  Courses
+                </div>
+                <div
+                  style={{
+                    minWidth: "0",
+                    flex: 1,
+                    width: "100%",
+                    backgroundColor: "var(--medium-blue)",
+                    borderTopRightRadius: "var(--radius-lg)",
+                  }}
+                >
+                  <div
+                    style={{
+                      height: "100%",
+                      width: "100%",
+                      backgroundColor: "var(--bg-grey)",
+                      borderTopRightRadius: "var(--radius-lg)",
+                      borderBottomLeftRadius: "var(--radius-lg)",
+
+                    }}
+                  >
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-      }
+          }
 
-
-
-
-
-      {activePanelTab === "resources" &&
-        <div
-        style={{
-          width: "100%",
-          height: "fit-content",
-          display: "flex",
-          justifyContent: "flex-start",
-          paddingTop:"var(--space-xs)",
-        }}
-        >
-          <div
-            onClick={() => setActivePanelTab("resources")}
-            style={{
-              height: "fit-content",
-              backgroundColor: "var(--medium-blue)",
-              borderTopLeftRadius: "var(--radius-lg)",
-              borderTopRightRadius: "var(--radius-lg)",
-              paddingInline: "var(--space-md)",
-              fontFamily: "var(--font-nova-square)",
-              fontSize: "var(--text-md)",
-              color: "white",
-
-              cursor: "pointer",
-            }}
-          >
-            Topics
-          </div>
-          <div
-            style={{
-              height: "fit-content",
-              width: "100%",
-              borderTopRightRadius: "var(--radius-lg)",
-              backgroundColor: "var(--medium-blue)",
-            }}
-          >
+          {activePanelTab === "resources" &&
             <div
-              onClick={() => setActivePanelTab("courses")}
               style={{
-                height: "fit-content",
                 width: "100%",
-                borderTopRightRadius: "var(--radius-lg)",
-                backgroundColor: "var(--bg-grey)",
-                borderBottomLeftRadius: "var(--radius-lg)",
-                fontFamily: "var(--font-nova-square)",
-                fontSize: "var(--text-md)",
-                paddingInline: "var(--space-md)",
-                cursor: "pointer",
+                height: "fit-content",
+                display: "flex",
+                justifyContent: "flex-start",
+                paddingTop: "var(--space-xs)",
               }}
             >
-              Courses
-            </div>
-          </div>
+              <div
+                onClick={() => setActivePanelTab("resources")}
+                style={{
+                  height: "fit-content",
+                  backgroundColor: "var(--medium-blue)",
+                  borderTopLeftRadius: "var(--radius-lg)",
+                  borderTopRightRadius: "var(--radius-lg)",
+                  paddingInline: "var(--space-md)",
+                  fontFamily: "var(--font-nova-square)",
+                  fontSize: "var(--text-md)",
+                  color: "white",
 
+                  cursor: "pointer",
+                }}
+              >
+                Topics
+              </div>
+              <div
+                style={{
+                  height: "fit-content",
+                  width: "100%",
+                  borderTopRightRadius: "var(--radius-lg)",
+                  backgroundColor: "var(--medium-blue)",
+                }}
+              >
+                <div
+                  onClick={() => setActivePanelTab("courses")}
+                  style={{
+                    height: "fit-content",
+                    width: "100%",
+                    borderTopRightRadius: "var(--radius-lg)",
+                    backgroundColor: "var(--bg-grey)",
+                    borderBottomLeftRadius: "var(--radius-lg)",
+                    fontFamily: "var(--font-nova-square)",
+                    fontSize: "var(--text-md)",
+                    paddingInline: "var(--space-md)",
+                    cursor: "pointer",
+                  }}
+                >
+                  Courses
+                </div>
+              </div>
+
+            </div>
+          }
+        </>
+      }
+
+      {!courses &&
+        <div
+        style={{
+          fontSize:"var(--text-md)",
+          textAlign:"center",
+          fontFamily:"var(--font-nova-square)",
+          paddingTop:"var(--space-sm)",
+          color:"white",
+        }}
+        >
+          {title}
         </div>
       }
+
       <div
         style={{
-          backgroundColor: "var(--medium-blue)",
+          backgroundColor: courses?"var(--medium-blue)":"transparent",
           flex: 1,
           borderRadius: "var(--radius-xl)",
-          borderTopLeftRadius: activePanelTab === "courses"?"var(--radius-xl)":"0",
+          borderTopLeftRadius: activePanelTab === "courses" ? "var(--radius-xl)" : "0",
           padding: "var(--space-md)",
           overflowY: "auto",
           overflowX: "hidden",
@@ -255,9 +275,8 @@ export default function RoadmapPanelContent({
           ) : null}
 
 
-          {activePanelTab === "resources" ? (
+          {!courses || activePanelTab === "resources" ? (
             <>
-              
               <div
                 style={{
                   display: "flex",
@@ -272,59 +291,34 @@ export default function RoadmapPanelContent({
                       text={skill.text}
                       isChecked={skill.checked}
                       disabled={Boolean(selectedSection?.locked)}
+                      isOpen={openSkillId === skill.id}
+                      onOpen={() =>
+                        setOpenSkillId(
+                          openSkillId === skill.id ? null : skill.id
+                        )
+                      }
                       onToggle={() => {
                         void toggleSkill(index);
                       }}
-                    />
+                    >
+                      {selectedSection?.resources.map((resource: Resource) => {
+                        const key = `${resource.url}|${resource.title}|${resource.resourceType}`;
+
+                        return (
+                          <RoadmapResourceCard
+                            key={key}
+                            resourceType={resource.resourceType}
+                            title={resource.title}
+                            url={resource.url}
+                          />
+                        );
+                      })}
+                    </StepCheckbox>
                   )
                 )}
-                <div
-                  style={{
-                    height: "0.1rem",
-                    backgroundColor: "white",
-                    width: "100%",
-                  }}
-                />
               </div>
-              {Boolean(selectedSection?.resources.length) && (
-                <div
-                  style={{
-                    width: "100%",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "var(--space-sm)",
-                  }}
-                >
-                  <p
-                    style={{
-                      fontSize: "var(--text-md)",
-                      color: "white",
-                      fontFamily: "var(--font-nova-square)",
-                      margin: 0,
-                    }}
-                  >
-                    Resources:
-                  </p>
-
-                  {selectedSection?.resources.map((resource: Resource) => {
-                    const key = `${resource.url}|${resource.title}|${resource.resourceType}`;
-
-                    return (
-                      <RoadmapResourceCard
-                        key={key}
-                        resourceType={resource.resourceType}
-                        title={resource.title}
-                        url={resource.url}
-                      />
-                    );
-                  })}
-
-
-                </div>
-              )}
-
             </>
-          ) : selectedSectionCourses.length > 0 ? (
+          ) : selectedSectionCourses?.length ?? 0 ? (
             <div
               style={{
                 display: "flex",
@@ -347,12 +341,12 @@ export default function RoadmapPanelContent({
                 </p>
               ) : null}
 
-              {selectedSectionCourses.map((course: Course) => (
+              {(selectedSectionCourses ?? []).map((course: Course) => (
                 <CourseCard
                   key={course.id}
                   title={course.title}
                   provider={course.provider}
-                  onSelect={() => handleCourseClick(course)}
+                  onSelect={() => handleCourseClick?.(course)}
                   status={courseStatusById?.[course.id] ?? "default"}
                 />
               ))}

@@ -17,6 +17,7 @@ import { useAuth } from "@/providers/auth-provider";
 import { roadmapService } from "@/services";
 import type { ApiResponse, RoadmapListItem, RoadmapProgressSummary, RoadmapRead } from "@/types";
 import { useResponsive } from "@/hooks/useResponsive";
+import RoadmapPanelContent from "@/components/ui/roadmap-resources";
 
 type CachedApiRequest<T> = {
   expiresAt: number;
@@ -612,10 +613,9 @@ export default function RoadmapFeaturePage() {
           style={{
             display: "flex",
             flexDirection: "column",
-            padding: "var(--space-md)",
             backgroundColor: "var(--medium-grey)",
             borderRadius: "var(--radius-xl)",
-            width:isLarge?  "var(--container-xs)":"70vw",
+            width:isLarge?"30vw":"70vw",
             alignItems: "center",
             overflow: "hidden",
             gap: "var(--space-md)",
@@ -625,116 +625,13 @@ export default function RoadmapFeaturePage() {
             zIndex: 999,
           }}
         >
-          {/* Title */}
-          <h2
-            style={{
-              fontSize: "var(--text-lg)",
-              color: "white",
-              fontFamily: "var(--font-nova-square)",
-            }}
-          >
-            {selectedSection?.title || "Section"}
-          </h2>
-
-          {/* Divider */}
-          <div
-            style={{
-              height: "0.1rem",
-              backgroundColor: "white",
-              width: "100%",
-            }}
+          <RoadmapPanelContent
+            sectionAccessMessage={sectionAccessMessage}
+            selectedSection={selectedSection ?? undefined}
+            toggleSkill={toggleSkill}
+            courses={false}
+            title={selectedSection?.title || "Section"}
           />
-
-          {/* Content */}
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              width: "100%",
-              minHeight: 0,
-              flex: 1,
-              overflowY: "auto",
-              overflowX: "hidden",
-              scrollbarWidth: "none",
-              msOverflowStyle: "none",
-              paddingRight: "var(--space-xxs)",
-              gap: "var(--space-md)",
-            }}
-          >
-            {Boolean(selectedSection?.resources.length) && (
-              <div
-                style={{
-                  width: "100%",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "var(--space-sm)",
-                }}
-              >
-                <p
-                  style={{
-                    fontSize: "var(--text-md)",
-                    color: "white",
-                    fontFamily: "var(--font-nova-square)",
-                  }}
-                >
-                  Resources:
-                </p>
-
-                {selectedSection?.resources.map((resource) => {
-                  const key = `${resource.url}|${resource.title}|${resource.resourceType}`;
-
-                  return (
-                    <RoadmapResourceCard
-                      key={key}
-                      resourceType={resource.resourceType}
-                      title={resource.title}
-                      url={resource.url}
-                    />
-                  );
-                })}
-
-                <div
-                  style={{
-                    height: "0.1rem",
-                    backgroundColor: "white",
-                    width: "100%",
-                  }}
-                />
-              </div>
-            )}
-
-            {(selectedSection?.skills.length ?? 0) > 0 ? (
-              <p
-                style={{
-                  fontSize: "var(--text-md)",
-                  color: "white",
-                  fontFamily: "var(--font-nova-square)",
-                }}
-              >
-                Topics to cover:
-              </p>
-            ) : null}
-
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                width: "100%",
-              }}
-            >
-              {(selectedSection?.skills || []).map((skill, index) => (
-                <StepCheckbox
-                  key={skill.id}
-                  text={skill.text}
-                  isChecked={skill.checked}
-                  disabled={Boolean(selectedSection?.locked)}
-                  onToggle={() => {
-                    void toggleSkill(index);
-                  }}
-                />
-              ))}
-            </div>
-          </div>
         </div>
       )}
 
