@@ -4,8 +4,6 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import React, { CSSProperties, ReactNode } from "react";
 import { X } from "lucide-react";
-import { useMemo, useEffect, useState } from "react";
-import { useResponsive } from "@/hooks/useResponsive";
 import { normalizeBackendAssetUrl } from "@/lib/asset-url";
 
 interface ChoiceCardProps {
@@ -51,8 +49,6 @@ export default function ChoiceCard({
 
   const isBookmark = type === "bookmark";
   const effectiveSelected = isSelected || isBookmark;
-
-  const { isLarge, isMedium, isSmall, width } = useResponsive();
 
   return (
     <div
@@ -145,7 +141,7 @@ export default function ChoiceCard({
       </div>
 
       {/* img */}
-      {!isBookmark && !isMedium &&
+      {!isBookmark &&
         <img
           src={displayImage}
           alt={title || "career icon"}

@@ -41,6 +41,8 @@ export type JourneyTrackCard = {
   roadmapId: string | null;
   score: number | null;
   source: "bookmark" | "recommendation";
+  /** Real career track id for `/tracks/{id}.svg`; omit when only a roadmap id is known. */
+  iconTrackId?: string | null;
 };
 
 export type JourneyPhaseProgress = JourneyPhaseDefinition & {
@@ -728,6 +730,23 @@ function normalizeTrackKey(value?: string | null): string {
   return String(value ?? "").trim();
 }
 
+function resolveIconTrackIdFromBookmark(
+  bookmark: UnifiedBookmarkEntry,
+  recommendedTrack: APICareerTrackScore | null,
+  storedLink: ReturnType<typeof resolveStoredTrackRoadmapLink>,
+): string | null {
+  if (bookmark.kind === "career") {
+    return normalizeTrackKey(bookmark.entity_id) || null;
+  }
+
+  return (
+    normalizeTrackKey(bookmark.metadata?.track_id) ||
+    normalizeTrackKey(recommendedTrack?.track_id) ||
+    normalizeTrackKey(storedLink?.trackId) ||
+    null
+  );
+}
+
 function createJourneyTrackCardFromBookmark(
   bookmark: UnifiedBookmarkEntry,
   roadmapTitleById: Map<string, string>,
@@ -799,6 +818,7 @@ function createJourneyTrackCardFromBookmark(
     roadmapId,
     score: typeof bookmark.score === "number" ? bookmark.score : null,
     source: "bookmark",
+    iconTrackId: resolveIconTrackIdFromBookmark(bookmark, recommendedTrack, storedLink),
   };
 }
 
@@ -814,6 +834,7 @@ function mergeJourneyTrack(
     roadmapId: incoming.roadmapId ?? target.roadmapId,
     score: typeof incoming.score === "number" ? incoming.score : target.score,
     source: target.source === "bookmark" ? "bookmark" : incoming.source || target.source,
+    iconTrackId: incoming.iconTrackId ?? target.iconTrackId ?? null,
   };
 }
 
@@ -877,6 +898,7 @@ function normalizeTrackCards(
       roadmapId: normalizeTrackKey(recommendation.roadmap_id) || null,
       score: recommendation.score,
       source: "recommendation",
+      iconTrackId: trackId,
     };
 
     if (!byTrackId.has(trackId)) {
@@ -938,6 +960,7 @@ function mergeJourneyProgressTracks(options: {
       roadmapId,
       score: null,
       source: "recommendation",
+      iconTrackId: matchedCareerTrack ? trackId : null,
     });
   }
 

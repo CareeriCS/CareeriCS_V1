@@ -775,7 +775,11 @@ export default function HomePage() {
                 key={track.id}
                 isSelected={activeTrack?.id === track.id}
                 title={track.title}
-                image={`/tracks/${track.id}.svg`}
+                image={
+                  track.iconTrackId
+                    ? `/tracks/${track.iconTrackId}.svg`
+                    : "/tracks/career-quiz.svg"
+                }
                 description={track.description}
                 buttonLabel={isRemovingTrack ? "Removing..." : "Continue"}
                 disabled={isRemovingTrack}
