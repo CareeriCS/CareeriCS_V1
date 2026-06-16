@@ -314,6 +314,7 @@ return (
           width: "1px",
           height: "var(--container-sm)",
           backgroundColor: "var(--border-strong)",
+           
         }}
       />
 
@@ -323,6 +324,9 @@ return (
           videoBoxStyle={{
             backgroundColor: "rgba(255, 255, 255, 0.41)",
             boxShadow: "0 20px 50px rgba(0,0,0,0.3)",
+            justifyContent: "space-around",
+            alignItems: "right",
+            marginLeft: "var(--space-2xl)",
           }}
           videoContent={
             <div
@@ -331,9 +335,10 @@ return (
                 height: "var(--container-xs)",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: "var(--space-xl)",
+                gap: "var(--space-2xl)",
                 padding: "var(--space-xl)",
-                width: "var(--container-md)",
+                width: "100%",
+                boxSizing: "border-box",
               }}
             >
               <div
