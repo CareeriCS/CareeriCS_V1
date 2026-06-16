@@ -770,120 +770,116 @@ export default function JourneyPaveTheWayPage() {
               boxSizing: "border-box",
             }}
           >
+
+
             <div
               style={{
                 display: "flex",
+                width: "100%",
                 gridArea: "1 / 1 / 2 / 2",
+                backgroundColor: "var(--medium-blue)",
+                borderRadius: "var(--radius-xl)",
                 flexDirection: "column",
-                gap: "var(--space-md)",
-                minHeight: 0,
+                padding: "var(--space-lg)",
+                gap: "var(--space-lg)",
+                boxSizing: "border-box",
               }}
             >
-              <h1
-                style={{
-                  color: "white",
-                  fontSize: "var(--text-lg)",
-                  margin: 0,
-                }}
-              >
-                Stats
-              </h1>
+
 
               <div
                 style={{
                   display: "flex",
-                  width: "100%",
-                  backgroundColor: "var(--medium-blue)",
-                  borderRadius: "var(--radius-xl)",
-                  flexDirection: "column",
-                  padding: "var(--space-lg)",
                   gap: "var(--space-lg)",
-                  boxSizing: "border-box",
+                  alignItems: "flex-start",
+                  justifyContent: "space-evenly",
+                  flexWrap: isSmall ? "wrap" : "nowrap",
                 }}
               >
-                <div
+                <h1
                   style={{
-                    display: "flex",
-                    width: "100%",
-                    gap: "var(--space-md)",
-                    alignItems: "center",
+                    color: "white",
+                    fontSize: "var(--text-lg)",
+                    margin: 0,
                   }}
                 >
-                  <h1
-                    style={{
-                      color: "white",
-                      fontSize: "var(--text-md)",
-                      margin: 0,
-                    }}
-                  >
-                    Roadmap Progress
-                  </h1>
+                  Stats
+                </h1>
 
+                <RoadmapProgress
+                  text="Current Level"
+                  done={currentLevel}
+                  color={currentLevel == "Advanced" ? "var(--primary-green)" :
+                    currentLevel == "Intermediate" ? "var(--light-orange)"
+                      : "var(--light-orange)"}
+                />
+
+                <RoadmapProgress
+                  text="Completed Topics"
+                  done={String(completedTopics)}
+                  total={String(totalTopics)}
+                />
+
+                <RoadmapProgress
+                  text="Remaining Topics"
+                  done={String(remainingTopics)}
+                  color="var(--light-red)"
+                />
+
+                <RoadmapProgress
+                  text="Skills Assessed"
+                  done={String(assessedSectionsCount)}
+                  total={String(sections.length)}
+                  color="var(--light-orange)"
+                />
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  width: "100%",
+                  gap: "var(--space-md)",
+                  alignItems: "center",
+                }}
+              >
+                <h1
+                  style={{
+                    color: "white",
+                    fontSize: "var(--text-md)",
+                    margin: 0,
+                  }}
+                >
+                  Roadmap Progress
+                </h1>
+
+                <div
+                  style={{
+                    minWidth: 0,
+                    flex: 1,
+                    height: "var(--space-lg)",
+                    backgroundColor: "var(--dark-blue)",
+                    borderRadius: "999px",
+                    overflow: "hidden",
+                  }}
+                >
                   <div
                     style={{
-                      minWidth: 0,
-                      flex: 1,
-                      height: "var(--space-lg)",
-                      backgroundColor: "var(--dark-blue)",
+                      width: `${completionPercent}%`,
+                      height: "100%",
+                      backgroundColor: "var(--light-green)",
                       borderRadius: "999px",
-                      overflow: "hidden",
                     }}
-                  >
-                    <div
-                      style={{
-                        width: `${completionPercent}%`,
-                        height: "100%",
-                        backgroundColor: "var(--light-green)",
-                        borderRadius: "999px",
-                      }}
-                    />
-                  </div>
-
-                  <p
-                    style={{
-                      color: "var(--light-green)",
-                      fontSize: "var(--text-sm)",
-                      margin: 0,
-                    }}
-                  >
-                    {completionPercent}%
-                  </p>
+                  />
                 </div>
 
-                <div
+                <p
                   style={{
-                    display: "flex",
-                    gap: "var(--space-lg)",
-                    alignItems: "flex-start",
-                    justifyContent: "space-evenly",
-                    flexWrap: isSmall ? "wrap" : "nowrap",
+                    color: "var(--light-green)",
+                    fontSize: "var(--text-sm)",
+                    margin: 0,
                   }}
                 >
-                  <RoadmapProgress
-                    text="Current Level"
-                    done={currentLevel}
-                    color="white"
-                  />
-
-                  <RoadmapProgress
-                    text="Completed Topics"
-                    done={String(completedTopics)}
-                    total={String(totalTopics)}
-                  />
-
-                  <RoadmapProgress
-                    text="Remaining Topics"
-                    done={String(remainingTopics)}
-                    color="var(--light-red)"
-                  />
-
-                  <RoadmapProgress
-                    text="Skills Assessed"
-                    done={String(assessedSectionsCount)}
-                    total={String(sections.length)}
-                    color="var(--light-orange)"
-                  />
-                </div>
+                  {completionPercent}%
+                </p>
               </div>
             </div>
 
@@ -904,12 +900,16 @@ export default function JourneyPaveTheWayPage() {
                   flexDirection: "column",
                   gap: "var(--space-md)",
                   minHeight: 0,
+                  borderRadius: "var(--radius-xl)",
                   overflow: "hidden",
+                  paddingInline: "var(--space-lg)",
+                  paddingBlock: "var(--space-sm)",
+                  backgroundColor: "var(--bg-grey)",
                 }}
               >
                 <h1
                   style={{
-                    color: "white",
+                    color: "black",
                     fontSize: "var(--text-lg)",
                     margin: 0,
                     flexShrink: 0,
@@ -928,8 +928,6 @@ export default function JourneyPaveTheWayPage() {
                     scrollbarWidth: "none",
                     msOverflowStyle: "none",
                     backgroundColor: "var(--bg-grey)",
-                    borderRadius: "var(--radius-xl)",
-                    padding: "var(--space-lg)",
                     boxSizing: "border-box",
                   }}
                 >
@@ -981,16 +979,6 @@ export default function JourneyPaveTheWayPage() {
                   alignSelf: "stretch",
                 }}
               >
-              <h1
-                  style={{
-                    color: "white",
-                    fontSize: "var(--text-lg)",
-                    margin: 0,
-                    flexShrink: 0,
-                  }}
-                >
-                  Topics & Resources
-                </h1>                
 
                 <RoadmapPanelContent
                   sectionAccessMessage={sectionAccessMessage}

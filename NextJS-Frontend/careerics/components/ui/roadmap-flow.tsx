@@ -194,7 +194,7 @@ export const StepFlow: React.FC<StepFlowProps> = ({
                       : variant === "light" ?
                         "#C1CBE6" :
                         "var(--medium-blue)",
-                fontSize: isSmall?"var(--text-xxs)":"var(--text-sm)",
+                fontSize: isSmall?"var(--text-xxs)":isMedium?"var(--text-xs)":"var(--text-sm)",
                 zIndex: 2,
                 cursor: isLocked ? "not-allowed" : isNavigatable ? "pointer" : "default",
                 paddingBlock: "1rem",
@@ -210,16 +210,22 @@ export const StepFlow: React.FC<StepFlowProps> = ({
               <div
                 style={{
                   display: "flex",
-                  flexDirection: "column",
+                  flexDirection: "row",
                   alignItems: "center",
-                  gap: "0.15rem",
+                  gap:"var(--space-xs)",
+                  justifyContent:"center",
+                  width:"100%",
                 }}
               >
                 <span>{node.label}</span>
                 {isLocked ? (
-                  <span style={{ fontSize: "0.55rem", letterSpacing: "0.08em", textTransform: "uppercase" }}>
-                    Locked
-                  </span>
+                  <img
+                  src="/global/lock.svg"
+                  style={{
+                    height:"var(--icon-xs)",
+                    marginLeft:"auto",
+                  }}
+                  />
                 ) : null}
               </div>
             </div>
