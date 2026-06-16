@@ -473,7 +473,7 @@ export default function JourneyJobHuntPage() {
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  color: "white",
+                  color: "grey",
                   opacity: 0.8,
                 }}
               >

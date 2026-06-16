@@ -5,9 +5,10 @@ import { useEffect, useState } from "react";
 
 type CircleScoreProps = {
     score: number;
+    onClick?: () => void;
 };
 
-export const CircleScore = ({ score }: CircleScoreProps) => {
+export const CircleScore = ({ score, onClick }: CircleScoreProps) => {
 
     const LARGE = 1024;
     const MEDIUM = 640;
@@ -28,7 +29,7 @@ export const CircleScore = ({ score }: CircleScoreProps) => {
     const isMedium = width >= MEDIUM && width < LARGE;
     const isSmall = width < MEDIUM;
 
-    const radius = isLarge?18:15;
+    const radius = isLarge ? 18 : 15;
     const circumference = 2 * Math.PI * radius;
     const offset = circumference - (score / 100) * circumference;
 
@@ -42,6 +43,7 @@ export const CircleScore = ({ score }: CircleScoreProps) => {
 
     return (
         <div
+            onClick={onClick}
             style={{
                 position: "relative",
                 width: "var(--icon-2xl)",
@@ -52,6 +54,7 @@ export const CircleScore = ({ score }: CircleScoreProps) => {
                 alignItems: "center",
                 justifyContent: "center",
                 flexShrink: 0,
+                cursor: onClick ? "pointer" : "default",
             }}
         >
             <svg width="45" height="45" style={{ transform: "rotate(-90deg)" }}>
@@ -84,7 +87,7 @@ export const CircleScore = ({ score }: CircleScoreProps) => {
                 style={{
                     position: "absolute",
                     color: "white",
-                    fontSize: isLarge?"var(--text-xs)":"var(--text-xxs)",
+                    fontSize: isLarge ? "var(--text-xs)" : "var(--text-xxs)",
                     fontFamily: "var(--font-nova-square)",
                 }}
             >

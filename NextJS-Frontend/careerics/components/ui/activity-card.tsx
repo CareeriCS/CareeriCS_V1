@@ -2,6 +2,7 @@ import React from "react";
 
 import { CircleScore } from "@/components/ui/circle-score";
 import { useResponsive } from "@/hooks/useResponsive";
+import { on } from "process";
 
 type Variant = "download" | "retake" | "progress";
 
@@ -122,7 +123,10 @@ export const ActivityCard = ({
         }}
       >
         {isProgress ? (
-          <CircleScore score={score ?? 0} />
+          <CircleScore
+            score={score ?? 0}
+            onClick={onClick}
+          />
         ) : isDownload ? (
           <button
             type="button"
@@ -152,7 +156,7 @@ export const ActivityCard = ({
               style={{
                 width: "100%",
                 height: "100%",
-                filter: theme === "dark"?"invert(1)":"none",
+                filter: theme === "dark" ? "invert(1)" : "none",
                 objectFit: "contain",
               }}
             />
@@ -187,7 +191,7 @@ export const ActivityCard = ({
                 width: "100%",
                 height: "100%",
                 objectFit: "contain",
-                filter: theme === "dark"?"brightness(1)":"brightness(0)",
+                filter: theme === "dark" ? "brightness(1)" : "brightness(0)",
               }}
             />
           </button>

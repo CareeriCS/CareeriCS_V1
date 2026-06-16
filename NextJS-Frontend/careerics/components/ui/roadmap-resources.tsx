@@ -50,9 +50,9 @@ export default function RoadmapPanelContent({
 }: RoadmapPanelContentProps) {
 
 
-
+  
   const [activePanelTab, setActivePanelTab] = useState<"resources" | "courses">("resources");
-
+  
   return (
     <div
       style={{
@@ -69,13 +69,14 @@ export default function RoadmapPanelContent({
       {activePanelTab === "courses" &&
 
         <div
-          style={{
+        style={{
+            paddingTop:"var(--space-xs)",
             width: "100%",
             height: "fit-content",
             display: "flex",
             justifyContent: "flex-start",
           }}
-        >
+          >
           <div
             style={{
               width: "fit-content",
@@ -95,10 +96,9 @@ export default function RoadmapPanelContent({
                 paddingInline: "var(--space-md)",
                 fontFamily: "var(--font-nova-square)",
                 fontSize: "var(--text-md)",
-
                 cursor: "pointer",
               }}
-            >
+              >
               Topics
             </div>
           </div>
@@ -110,7 +110,7 @@ export default function RoadmapPanelContent({
               borderTopRightRadius: "var(--radius-lg)",
               display: "flex",
             }}
-          >
+            >
             <div
               onClick={() => setActivePanelTab("courses")}
               style={{
@@ -144,7 +144,7 @@ export default function RoadmapPanelContent({
                   backgroundColor: "var(--bg-grey)",
                   borderTopRightRadius: "var(--radius-lg)",
                   borderBottomLeftRadius: "var(--radius-lg)",
-
+                  
                 }}
               >
               </div>
@@ -159,12 +159,13 @@ export default function RoadmapPanelContent({
 
       {activePanelTab === "resources" &&
         <div
-          style={{
-            width: "100%",
-            height: "fit-content",
-            display: "flex",
-            justifyContent: "flex-start",
-          }}
+        style={{
+          width: "100%",
+          height: "fit-content",
+          display: "flex",
+          justifyContent: "flex-start",
+          paddingTop:"var(--space-xs)",
+        }}
         >
           <div
             onClick={() => setActivePanelTab("resources")}
@@ -256,19 +257,7 @@ export default function RoadmapPanelContent({
 
           {activePanelTab === "resources" ? (
             <>
-              {(selectedSection?.skills.length ?? 0) > 0 ? (
-                <p
-                  style={{
-                    fontSize: "var(--text-md)",
-                    color: "white",
-                    fontFamily: "var(--font-nova-square)",
-                    margin: 0,
-                  }}
-                >
-                  Topics to cover:
-                </p>
-              ) : null}
-
+              
               <div
                 style={{
                   display: "flex",
