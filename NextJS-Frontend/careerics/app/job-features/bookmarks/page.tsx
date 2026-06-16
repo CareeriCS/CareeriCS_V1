@@ -261,23 +261,10 @@ export default function BookmarkedJobs() {
         </div>
       </div>
 
-      {/* Vertical Divider Separator */}
-      {isLarge && (
-        <div style={{
-          width: "1.5px",
-          backgroundColor: "var(--medium-grey)",
-          height: "90%",
-          alignSelf: "center",
-          flexShrink: 0,
-          position: "relative",
-        }} />
-      )}
-
 
       {/* Floating/Side Details Card Container */}
       <div style={{
         height: "100%",
-        width: "fit-content",
         justifyContent: "center",
         alignItems: "flex-start",
         position: "relative",
@@ -286,6 +273,9 @@ export default function BookmarkedJobs() {
         gridArea: "1 / 1 / 2 / 2",
         marginLeft: isLarge ? "0" : "auto",
         scrollbarWidth: "none",
+        minWidth:"0",
+        flex:1,
+        borderLeft:"1px solid white"
       }}>
         <div
           style={{

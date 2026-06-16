@@ -699,7 +699,7 @@ export default function JobBrowserPage({
   const pageEnd = totalJobs ? Math.min(totalJobs, currentPage * PAGE_SIZE) : 0;
 
   const renderLeftPanelContent = () => {
-    
+
     if (!isLoading && !jobs.length) {
       return <p style={{ color: "white", opacity: 0.8, margin: 0 }}>No jobs match your filters yet.</p>;
     }
@@ -716,7 +716,7 @@ export default function JobBrowserPage({
           isBookmarked={job.isSaved}
           isBookmarkLoading={bookmarkingJobId === job.id}
           onBookmarkToggle={() => handleBookmarkToggle(job)}
-          isSelected={job.id===selectedJobId}
+          isSelected={job.id === selectedJobId}
         />
       </div>
     ));
@@ -770,7 +770,7 @@ export default function JobBrowserPage({
           overflow: "hidden",
           scrollbarWidth: "none",
           position: "relative",
-          gap: "calc(var(--space-xl) *2 )",
+          gap: "calc(var(--space-xl) *1 )",
         }}
       >
         <div
@@ -896,7 +896,7 @@ export default function JobBrowserPage({
                 whiteSpace: "nowrap",
                 fontSize: "var(--text-base)",
                 fontFamily: "var(--font-jura)",
-                marginLeft:"auto",
+                marginLeft: "auto",
               }}
             >
               Reset Filters
@@ -1039,25 +1039,11 @@ export default function JobBrowserPage({
             </Button>
           </div>
         </div>
-
-        {!isSmall && (
-          <div
-            style={{
-              width: "1.5px",
-              backgroundColor: "var(--medium-grey)",
-              height: "95%",
-              flexShrink: 0,
-              position: "relative",
-              alignSelf: "center",
-            }}
-          />
-        )}
-
         {/* job details */}
         <div
           style={{
             display: "flex",
-            justifyContent: "flex-start",
+            justifyContent: "center",
             alignItems: "flex-start",
             width: "fit-content",
             minWidth: "fit-content",
@@ -1065,6 +1051,8 @@ export default function JobBrowserPage({
             overflowY: "auto",
             overflowX: "hidden",
             scrollbarWidth: "none",
+            flex: 1,
+            borderLeft: "1px solid white"
           }}
         >
           {selectedJob ? (
@@ -1083,7 +1071,7 @@ export default function JobBrowserPage({
                 fontSize: "var(--text-base)",
                 fontFamily: "var(--font-jura)",
                 lineHeight: "var(--line-normal)",
-                minWidth:"var(--container-md)"
+                minWidth: "var(--container-md)"
               }}
             >
               {isLoading ? "Loading job details..." : "No job selected yet."}
