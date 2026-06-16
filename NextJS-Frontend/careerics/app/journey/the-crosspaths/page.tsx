@@ -335,8 +335,8 @@ export default function JourneyCrosspathsPage() {
             display: "grid",
             padding: "var(--space-xl)",
             gridTemplateColumns: "repeat(2, 1fr)",
-            gridTemplateRows: "1fr 1.5fr",
-            gridColumnGap: "var(--space-lg)",
+            gridTemplateRows: "1fr 2fr",
+            gridColumnGap: "var(--space-2xl)",
             color: "white",
             textAlign: "left",
             overflow: "hidden",
@@ -375,9 +375,7 @@ export default function JourneyCrosspathsPage() {
                   theme="dark"
                   Title={skill}
                   style={{
-                    flex: 1,
-                    minWidth: "fit-content",
-                    flexGrow: 1,
+                    width:"fit-content",
                   }}
                 />
               ))}
@@ -393,7 +391,8 @@ export default function JourneyCrosspathsPage() {
               alignItems: "flex-start",
               gridArea: "2 / 1 / 3 / 2",
               paddingBlock: "var(--space-xl)",
-              gap: "var(--space-sm)"
+              gap: "var(--space-sm)",
+              overflow:"auto",
             }}
           >
             <h1 style={{ fontSize: "var(--text-lg)", }}>
@@ -459,6 +458,7 @@ export default function JourneyCrosspathsPage() {
                     flex: 1,
                     minWidth: "fit-content",
                     flexGrow: 1,
+                    borderRadius:"999px",
                   }}
                 />
               ))}
@@ -504,8 +504,9 @@ export default function JourneyCrosspathsPage() {
               borderRadius: "var(--radius-xl)",
               padding: "var(--space-xl)",
               gridArea: "2 / 2 / 3 / 3",
+              overflow:"auto",
             }}
-          >
+            >
             <h1 style={{ fontSize: "var(--text-lg)", marginBottom: "var(--space-md)" }}>
               This Would Fit You If
             </h1>
