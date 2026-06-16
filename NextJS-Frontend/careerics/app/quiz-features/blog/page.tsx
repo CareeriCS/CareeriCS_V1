@@ -3,12 +3,22 @@
 import React, { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import { Button } from "@/components/ui/button";
-import { fetchCareerBlogDetails, type CareerBlogDetails, type LevelDetail } from "@/lib/career-blog";
+import { RectangularCard } from "@/components/ui/rectangular-card";
+import {
+  fetchCareerBlogDetails,
+  formatSalaryRange,
+  type CareerBlogDetails,
+  type LevelDetail,
+} from "@/lib/career-blog";
 
 type Level = "Entry" | "Junior" | "Senior";
 
 const LEVELS: Level[] = ["Entry", "Junior", "Senior"];
+
+const TRACK_DESCRIPTION_FALLBACK =
+  "Explore this path and see what the day-to-day work, opportunities, and growth can look like.";
+
+const BLOG_CONTENT_TOP_OFFSET = "calc(var(--icon-lg) + var(--space-md))";
 
 const EMPTY_LEVEL_CONTENT: LevelDetail = {
   salary: "Not available yet",
@@ -67,32 +77,25 @@ function BlogBackButton({ onClick }: { onClick: () => void }) {
       aria-label="Go back"
       style={{
         position: "fixed",
-        top: "var(--space-xl)",
-        left: "var(--space-xl)",
-        zIndex: 20,
+        top: "var(--space-lg)",
+        left: "var(--space-lg)",
+        zIndex: 30,
         width: "var(--icon-lg)",
         height: "var(--icon-lg)",
-        borderRadius: "999px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
         border: "none",
         backgroundColor: "transparent",
         padding: 0,
         cursor: "pointer",
+        color: "white",
+        fontSize: "1.5rem",
+        lineHeight: 1,
+        fontFamily: "inherit",
       }}
     >
-      <img
-        src="/global/next.svg"
-        alt=""
-        aria-hidden="true"
-        style={{
-          width: "100%",
-          height: "100%",
-          transform: "rotate(180deg)",
-          backgroundColor: "white",
-          padding: "var(--space-xxs)",
-          boxSizing: "border-box",
-          borderRadius: "999px",
-        }}
-      />
+      <span aria-hidden="true">{"\u2190"}</span>
     </button>
   );
 }
@@ -102,6 +105,7 @@ function BlogContent() {
   const searchParams = useSearchParams();
   const careerId = searchParams.get("trackId") || "";
   const jobTitle = searchParams.get("jobTitle") || "Job Title";
+  const trackDescription = searchParams.get("description") || TRACK_DESCRIPTION_FALLBACK;
 
   const [activeLevel, setActiveLevel] = useState<Level>("Junior");
   const [careerDetailsByLevel, setCareerDetailsByLevel] = useState<Record<Level, LevelDetail | null>>(
@@ -111,6 +115,7 @@ function BlogContent() {
   const [detailsError, setDetailsError] = useState<string | null>(null);
 
   const activeLevelDetails = careerDetailsByLevel[activeLevel];
+  const current = activeLevelDetails || EMPTY_LEVEL_CONTENT;
 
   useEffect(() => {
     setCareerDetailsByLevel(createEmptyLevelState());
@@ -180,15 +185,23 @@ function BlogContent() {
     };
   }, [activeLevel, activeLevelDetails, careerId]);
 
-  const current = activeLevelDetails || EMPTY_LEVEL_CONTENT;
-
   if (!careerId) {
     return (
-      <div style={{ width: "100%", color: "#fff", fontFamily: "var(--font-nova-square)", padding: "8vh 3vw 10vh" }}>
+      <div
+        style={{
+          position: "relative",
+          width: "100%",
+          height: "100%",
+          color: "white",
+          fontFamily: "var(--font-nova-square)",
+        }}
+      >
         <BlogBackButton onClick={() => router.back()} />
+
         <div
           style={{
             minHeight: "70vh",
+            marginTop: BLOG_CONTENT_TOP_OFFSET,
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
@@ -211,134 +224,245 @@ function BlogContent() {
   }
 
   return (
-    <div style={{ width: "100%", color: "#fff", fontFamily: "var(--font-nova-square)", padding: "8vh 3vw 10vh" }}>
+    <div
+      style={{
+        position: "relative",
+        width: "100%",
+        height: "100%",
+        color: "white",
+        fontFamily: "var(--font-nova-square)",
+      }}
+    >
       <BlogBackButton onClick={() => router.back()} />
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6vh" }}>
-        <div>
-          <h1 style={{ fontSize: "4.8vh", margin: 0 }}>{jobTitle}</h1>
-          <p style={{ color: "#9CA3AF", fontSize: "2.2vh", marginTop: "1vh" }}>Career Path Details</p>
-          <div style={{ display: "flex", gap: "1vw", marginTop: "3vh", flexWrap: "wrap" }}>
-            {current.skills.map((skill, index) => (
-              <div
-                key={`${skill}-${index}`}
-                style={{
-                  backgroundColor: "#1E3A8A",
-                  color: "#fafbfd",
-                  padding: "1.2vh 2.5vw",
-                  borderRadius: "1.2vh",
-                  fontSize: "1.8vh",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  textAlign: "center",
-                  minWidth: "fit-content",
-                }}
-              >
-                {skill.trim()}
-              </div>
-            ))}
 
-            {!current.skills.length ? (
-              <p style={{ color: "#9CA3AF", margin: 0, fontSize: "1.8vh" }}>
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          marginTop: BLOG_CONTENT_TOP_OFFSET,
+          display: "grid",
+          padding: "var(--space-xl)",
+          gridTemplateColumns: "repeat(2, 1fr)",
+          gridTemplateRows: "auto 1fr",
+          gridColumnGap: "var(--space-lg)",
+          rowGap: "var(--space-md)",
+          color: "white",
+          textAlign: "left",
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "flex-start",
+            alignItems: "flex-start",
+            gridArea: "1 / 1 / 2 / 2",
+            alignSelf: "stretch",
+            gap: "var(--space-sm)",
+          }}
+        >
+          <h1 style={{ fontSize: "var(--text-lg)", margin: 0 }}>{jobTitle}</h1>
+
+          <p style={{ fontSize: "var(--text-base)", color: "lightgrey", margin: 0 }}>
+            {trackDescription}
+          </p>
+
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              width: "100%",
+              gap: "var(--space-sm)",
+            }}
+          >
+            {current.skills.length ? (
+              current.skills.slice(0, 3).map((skill) => (
+                <RectangularCard
+                  key={skill}
+                  theme="dark"
+                  Title={skill.trim()}
+                  style={{
+                    flex: 1,
+                    minWidth: "fit-content",
+                    flexGrow: 1,
+                  }}
+                />
+              ))
+            ) : (
+              <p style={{ color: "lightgrey", margin: 0, fontSize: "var(--text-base)" }}>
                 Skills for this level are not available yet.
               </p>
-            ) : null}
+            )}
           </div>
-        </div>
-
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "5vh", marginRight: "2vw", paddingLeft: "20vw" }}>
-          <div style={{ display: "flex", gap: "3vw", padding: "1vh", borderRadius: "4vh" }}>
-            {LEVELS.map((level) => (
-              <Button
-              variant="secondary"
-                key={level}
-                onClick={() => setActiveLevel(level)}
-                disabled={isLoadingDetails && activeLevel === level}
-                style={{
-                  color: "#142143",
-                  borderRadius: "3vh",
-                  padding: "2vh 2vw",
-                  fontSize: "2vh",
-                  fontWeight: "bold",
-                  height: "6vh",
-                  width: "10vw",
-                  border: "none",
-                  opacity: isLoadingDetails && activeLevel === level ? 0.75 : 1,
-                }}
-              >
-                {level === "Entry" ? "Entry Level" : level}
-              </Button>
-            ))}
-          </div>
-
-          {isLoadingDetails ? (
-            <p style={{ margin: 0, color: "#C1CBE6", fontSize: "1.8vh" }}>
-              Loading level details...
-            </p>
-          ) : null}
-
-          <div style={{ display: "flex", gap: "5vw", marginRight: "9vw" }}>
-            <div style={{ textAlign: "left" }}>
-              <p style={{ fontSize: "2.9vh", margin: 0 }}>Salary Range</p>
-              <p style={{ fontSize: "2.9vh", fontWeight: "bold", margin: 0 }}>{current.salary}</p>
-            </div>
-            <div style={{ textAlign: "left" }}>
-              <p style={{ fontSize: "2.2vh", margin: 0 }}>Market Demand</p>
-              <p style={{ fontSize: "3.8vh", fontWeight: "bold", color: current.demandColor, margin: 0 }}>{current.demand}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div style={{ display: "flex", gap: "5vw", alignItems: "flex-start" }}>
-        <div style={{ flex: 1 }}>
-          <h2 style={{ fontSize: "3.5vh", marginBottom: "4vh" }}>Key Responsibilities</h2>
-          {current.responsibilities.length ? (
-            <ul style={{ listStyle: "none", padding: 0 }}>
-              {current.responsibilities.map((item, index) => (
-                <li key={`${item}-${index}`} style={{ color: "#D1D5DB", fontSize: "2.4vh", marginBottom: "2vh", display: "flex", alignItems: "center", gap: "1vw" }}>
-                  <span style={{ color: "#ffffff", fontSize: "2vh" }}>•</span> {item}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p style={{ color: "#9CA3AF", fontSize: "2.2vh", margin: 0 }}>
-              No responsibilities are available for this level yet.
-            </p>
-          )}
         </div>
 
         <div
           style={{
-            flex: 0.6,
-            backgroundColor: "#1C427B",
-            borderRadius: "4vh",
-            padding: "6vh 2vw",
-            minHeight: "45vh",
+            display: "flex",
+            alignSelf: "stretch",
+            flexDirection: "column",
+            justifyContent: "flex-start",
+            alignItems: "flex-start",
+            gridArea: "2 / 1 / 3 / 2",
+            gap: "var(--space-sm)",
           }}
         >
-          <h2 style={{ fontSize: "3.5vh", marginBottom: "4vh" }}>This Would fit you if</h2>
-          {current.fitReason.length ? (
-            <ul style={{ listStyle: "none", padding: 0 }}>
-              {current.fitReason.map((item, index) => (
-                <li key={`${item}-${index}`} style={{ color: "#D1D5DB", fontSize: "2.4vh", marginBottom: "2vh", display: "flex", alignItems: "center", gap: "1vw" }}>
-                  <span style={{ color: "#ffffff", fontSize: "2vh" }}>•</span> {item}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p style={{ color: "#D1D5DB", fontSize: "2.2vh", margin: 0 }}>
-              Fit guidance is not available for this level yet.
+          <h1 style={{ fontSize: "var(--text-lg)", margin: 0 }}>Key Responsibilities</h1>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(1, 1fr)",
+              width: "fit-content",
+              gap: "var(--space-md)",
+            }}
+          >
+            {current.responsibilities.length ? (
+              current.responsibilities.map((item, index) => (
+                <p
+                  key={`${item}-${index}`}
+                  style={{
+                    fontSize: "var(--text-base)",
+                    color: "lightgrey",
+                    margin: 0,
+                  }}
+                >
+                  {"•"} {item}
+                </p>
+              ))
+            ) : (
+              <p style={{ fontSize: "var(--text-base)", color: "lightgrey", margin: 0 }}>
+                No responsibilities are available for this level yet.
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div
+          style={{
+            width: "100%",
+            height: "100%",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "flex-start",
+            alignItems: "flex-start",
+            gap: "var(--space-lg)",
+            gridArea: "1 / 2 / 2 / 3",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              width: "100%",
+              gap: "var(--space-sm)",
+              flexWrap: "wrap",
+            }}
+          >
+            {LEVELS.map((level) => (
+              <RectangularCard
+                key={level}
+                font="jura"
+                theme="light"
+                Title={level === "Entry" ? "Entry Level" : level}
+                selected={activeLevel === level}
+                selectable
+                onSelect={() => setActiveLevel(level)}
+                style={{
+                  flex: 1,
+                  minWidth: "fit-content",
+                  flexGrow: 1,
+                  opacity: isLoadingDetails && activeLevel === level ? 0.75 : 1,
+                }}
+              />
+            ))}
+          </div>
+
+          {isLoadingDetails ? (
+            <p style={{ margin: 0, color: "#C1CBE6", fontSize: "var(--text-base)" }}>
+              Loading level details...
             </p>
-          )}
+          ) : null}
+
+          <div
+            style={{
+              width: "100%",
+              height: "fit-content",
+              display: "flex",
+              justifyContent: "flex-start",
+              alignItems: "flex-start",
+              gap: "var(--space-xl)",
+            }}
+          >
+            <div>
+              <h1 style={{ fontSize: "var(--text-md)", marginBottom: "var(--space-xs)" }}>
+                Salary Range
+              </h1>
+              <h1 style={{ fontSize: "var(--text-md)", color: "lightgrey", margin: 0 }}>
+                {formatSalaryRange(current.salary)}
+              </h1>
+            </div>
+
+            <div>
+              <h1 style={{ fontSize: "var(--text-md)", marginBottom: "var(--space-xs)" }}>
+                Market Demand
+              </h1>
+              <h1 style={{ fontSize: "var(--text-md)", color: current.demandColor, margin: 0 }}>
+                {current.demand}
+              </h1>
+            </div>
+          </div>
+
+          {detailsError ? (
+            <p style={{ margin: 0, color: "#FFD3D3" }}>
+              {detailsError}
+            </p>
+          ) : null}
+        </div>
+
+        <div
+          style={{
+            width: "100%",
+            height: "100%",
+            backgroundColor: "var(--medium-blue)",
+            borderRadius: "var(--radius-xl)",
+            padding: "var(--space-xl)",
+            gridArea: "2 / 2 / 3 / 3",
+          }}
+        >
+          <h1 style={{ fontSize: "var(--text-lg)", marginBottom: "var(--space-md)" }}>
+            This Would Fit You If
+          </h1>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(1, 1fr)",
+              width: "fit-content",
+              gap: "var(--space-md)",
+            }}
+          >
+            {current.fitReason.length ? (
+              current.fitReason.map((item, index) => (
+                <p
+                  key={`${item}-${index}`}
+                  style={{
+                    fontSize: "var(--text-base)",
+                    color: "lightgrey",
+                    margin: 0,
+                  }}
+                >
+                  {"•"} {item}
+                </p>
+              ))
+            ) : (
+              <p style={{ fontSize: "var(--text-base)", color: "lightgrey", margin: 0 }}>
+                Fit guidance is not available for this level yet.
+              </p>
+            )}
+          </div>
         </div>
       </div>
-
-      {detailsError ? (
-        <p style={{ color: "#FFD3D3", marginTop: "3vh", fontSize: "1.8vh" }}>
-          {detailsError}
-        </p>
-      ) : null}
     </div>
   );
 }
