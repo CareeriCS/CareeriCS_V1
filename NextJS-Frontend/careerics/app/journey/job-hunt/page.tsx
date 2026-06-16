@@ -12,7 +12,7 @@ import { RectangularCard } from "@/components/ui/rectangular-card";
 import JourneyTree from "@/components/ui/journey-tree";
 import { useJourneyPhase } from "@/hooks/use-journey-phase";
 import { buildJourneyPhaseHref } from "@/lib/journey";
-import { buildJobDetailsHref, mapApiJobToUiModel } from "@/lib/jobs";
+import { mapApiJobToUiModel } from "@/lib/jobs";
 import { useAuth } from "@/providers/auth-provider";
 import { jobService, roadmapService, skillAssessmentService } from "@/services";
 import type { JobUiModel, RoadmapListItem } from "@/types";
@@ -240,6 +240,14 @@ export default function JourneyJobHuntPage() {
   const Orientation = isLarge ? JourneyTree : JourneyTreeVertical;
   const RecentlyViewed = isSmall ? StackContainer : InlineContainer;
 
+  const handleRecentlyViewedJobClick = useCallback((job: JobUiModel) => {
+    if (!job.jobUrl || typeof window === "undefined") {
+      return;
+    }
+
+    window.open(job.jobUrl, "_blank", "noopener,noreferrer");
+  }, []);
+
   // Delay render until all data is ready
   const isInitializing = isLoadingTracks || isLoading || isAuthLoading;
   if (isInitializing && !selectedTrack) {
@@ -446,27 +454,22 @@ export default function JourneyJobHuntPage() {
           >
             {recentlyViewedJobs.length ? (
               recentlyViewedJobs.map((job) => (
-                <div
+                <RectangularCard
                   key={job.id}
-                  onClick={() => router.push(buildJobDetailsHref(job.id))}
+                  Title={job.title}
+                  titleVariant={isSmall ? "full" : "clip"}
+                  isSubtextVisible
+                  subtext={job.company}
+                  variant="radio"
+                  theme="grey"
+                  font="nova"
+                  selectable
+                  onSelect={() => handleRecentlyViewedJobClick(job)}
                   style={{
-                    cursor: "pointer",
+                    width: "100%",
+                    flex: 1,
                   }}
-                >
-                  <RectangularCard
-                    Title={job.title}
-                    titleVariant={isSmall ? "full" : "clip"}
-                    isSubtextVisible
-                    subtext={job.company}
-                    variant="radio"
-                    theme="grey"
-                    font="nova"
-                    style={{
-                      width: "100%",
-                      flex: 1,
-                    }}
-                  />
-                </div>
+                />
               ))
             ) : !isLoading ? (
               <div

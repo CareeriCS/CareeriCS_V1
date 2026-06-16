@@ -8,7 +8,7 @@ import TipCard from "@/components/ui/3ateyat";
 import LevelCard from "@/components/ui/LevelCard";
 import SkillConfirmPopup from "@/components/ui/skillConfirmPopup";
 import { RectangularCard } from "@/components/ui/rectangular-card";
-import { buildJobDetailsHref, mapApiJobToUiModel } from "@/lib/jobs";
+import { mapApiJobToUiModel } from "@/lib/jobs";
 import { useJourneyPhase } from "@/hooks/use-journey-phase";
 import { useAuth } from "@/providers/auth-provider";
 import { jobService, roadmapService, skillAssessmentService } from "@/services";
@@ -128,6 +128,14 @@ export default function JobHunt() {
 
   const { isLarge, isMedium, isSmall, width } = useResponsive();
   const RecentlyViewed = isSmall ? StackContainer : InlineContainer;
+
+  const handleRecentlyViewedJobClick = useCallback((job: JobUiModel) => {
+    if (!job.jobUrl || typeof window === "undefined") {
+      return;
+    }
+
+    window.open(job.jobUrl, "_blank", "noopener,noreferrer");
+  }, []);
 
   const resolveDefaultAssessmentOptionId = useCallback(() => {
     if (
@@ -295,26 +303,21 @@ export default function JobHunt() {
         >
         {recentlyViewedJobs.length ? (
           recentlyViewedJobs.map((job) => (
-            <div
+            <RectangularCard
               key={job.id}
-              onClick={() => router.push(buildJobDetailsHref(job.id))}
+              Title={job.title}
+              titleVariant={isSmall ? "full" : "clip"}
+              isSubtextVisible
+              subtext={job.company}
+              variant="radio"
+              font="nova"
+              selectable
+              onSelect={() => handleRecentlyViewedJobClick(job)}
               style={{
-                cursor: "pointer",
+                width: "100%",
+                flex: 1,
               }}
-            >
-              <RectangularCard
-                Title={job.title}
-                titleVariant={isSmall ? "full" : "clip"}
-                isSubtextVisible
-                subtext={job.company}
-                variant="radio"
-                font="nova"
-                style={{
-                  width: "100%",
-                  flex: 1,
-                }}
-              />
-            </div>
+            />
           ))
         ) : !isLoading ? (
           <div

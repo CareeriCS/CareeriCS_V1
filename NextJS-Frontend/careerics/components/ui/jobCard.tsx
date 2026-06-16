@@ -217,7 +217,7 @@ const JobCard: React.FC<JobProps> = ({
               <svg
                 width="var(--icon-lg)"
                 viewBox="0 0 24 24"
-                fill="var(--form-grey)"
+                fill="var(--black)"
                 xmlns="http://www.w3.org/2000/svg"
               >
                 <path d="M5 3C5 2.44772 5.44772 2 6 2H18C18.5523 2 19 2.44772 19 3V21L12 17.5L5 21V3Z" />

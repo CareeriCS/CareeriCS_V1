@@ -891,26 +891,6 @@ def set_job_saved_state(db: Session, user_id: UUID, job_post_id: UUID, is_saved:
         .first()
     )
 
-    # Enforce max 3 unified bookmarks limit (roadmap + job bookmarks combined)
-    if is_saved and (not interaction or not interaction.is_saved):
-        # Only check limit when transitioning from unsaved to saved
-        from db.models import UserRoadmapBookmark
-        roadmap_bookmark_count = (
-            db.query(UserRoadmapBookmark)
-            .filter(UserRoadmapBookmark.user_id == user_id)
-            .count()
-        )
-        job_bookmark_count = (
-            db.query(JobUserInteraction)
-            .filter(
-                JobUserInteraction.user_id == user_id,
-                JobUserInteraction.is_saved == True,
-            )
-            .count()
-        )
-        if roadmap_bookmark_count + job_bookmark_count >= 3:
-            raise ValueError("Maximum 3 bookmarks allowed across all types")
-
     try:
         if interaction:
             interaction.is_saved = is_saved
