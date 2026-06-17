@@ -399,7 +399,7 @@ export default function CV() {
         }}
         >
           <div style={{ maxWidth: "var(--container-sm)" }}>
-            <Animation  />
+            <Animation message="" />
           </div>
         </div>
         }
