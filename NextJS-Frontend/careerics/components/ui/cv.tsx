@@ -391,9 +391,17 @@ export default function CV() {
 
         ) : null}
         {status === "enhancing" &&
+        <div
+        style={{
+          width:"100%",
+          display:"flex",
+          justifyContent:"center",
+        }}
+        >
           <div style={{ maxWidth: "var(--container-sm)" }}>
             <Animation  />
           </div>
+        </div>
         }
       </div>
     </div>
