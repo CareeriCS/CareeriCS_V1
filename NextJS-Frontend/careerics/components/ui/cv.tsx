@@ -177,299 +177,225 @@ export default function CV() {
     closeGoogleDriveWindow(driveTab);
   };
 
-return (
-  <div
-    style={{
-      width: "100%",
-      height: "100%",
-      display: "flex",
-      flexDirection: "column",
-      justifyContent: "flex-start",
-      alignItems: "flex-start",
-      gap: "var(--space-lg)",
-      padding: "var(--space-2xl)",
-    }}
-  >
-    <h1
-      style={{
-        fontSize: "var(--text-xl)",
-        fontWeight: "300",
-        lineHeight: "var(--line-tight)",
-        fontFamily: "var(--font-nova-square)",
-        color: "var(--text-primary)",
-      }}
-    >
-      Upload your CV and we&apos;ll do the rest!
-    </h1>
-
+  return (
     <div
       style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "var(--space-2xl)",
         width: "100%",
         height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "flex-center",
+        alignItems: "flex-start",
+        gap: "var(--space-lg)",
+        padding: "var(--space-2xl)",
       }}
     >
+      <h1
+        style={{
+          fontSize: "36px",
+          fontWeight: "300",
+          lineHeight: "1.1",
+          fontFamily: "var(--font-nova-square)",
+        }}
+      >
+        Upload your CV and we&apos;ll do the rest!
+      </h1>
+
       <div
         style={{
           display: "flex",
-          flexDirection: "column",
-          gap: "var(--space-xl)",
-          flexShrink: 0,
-          height: "var(--container-2xs)",
-          justifyContent: "space-between",
-          flexGrow: 0,
+          alignItems: "center",
+          gap: "var(--space-2xl)",
+          width: "100%",
+          height: "100%",
         }}
       >
         <div
-          onClick={() => status === "idle" && fileInputRef.current?.click()}
           style={{
-            width: "var(--container-3xs)",
-            minHeight: 0,
-            flex: 1,
-            backgroundColor: "var(--white)",
-            borderRadius: "var(--radius-2xl)",
             display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: status === "idle" ? "pointer" : "default",
-            transition: "all 0.3s ease",
-            overflow: "hidden",
+            flexDirection: "column",
+            gap: "var(--space-2xl)",
+            flexShrink: 0,
+            height: "var(--container-2xs)",
+            justifyContent: "space-between",
+            flexGrow:0,
           }}
         >
-          {selectedFile && selectedFile.type === "application/pdf" && selectedFilePreviewUrl ? (
-            <PdfPreviewFrame
-              src={selectedFilePreviewUrl}
-              title="Selected CV preview"
-            />
-          ) : selectedFile ? (
-            <img
-              src="/interview/analyzing.svg"
-              alt="Selected CV file"
-              style={{
-                width: "var(--icon-5xl)",
-                height: "var(--container-3xs)",
-                objectFit: "contain",
-              }}
-            />
-          ) : (
-            <svg
-              width="60"
-              height="60"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="var(--black)"
-              strokeWidth="1"
-            >
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" />
-            </svg>
-          )}
-        </div>
-
-        <Button
-          onClick={() => void handleAction()}
-          style={{
-            width: "100%",
-            flex: "none",
-            border: "none",
-            cursor: status === "enhancing" ? "default" : "pointer",
-            transition: "all 0.3s ease",
-          }}
-          disabled={status === "enhancing"}
-        >
-          {status === "enhancing"
-            ? "Enhancing..."
-            : status === "completed"
-              ? "Upload another CV"
-              : selectedFile
-                ? "Enhance Now"
-                : "Open Files"}
-        </Button>
-
-        {error ? (
-          <p
+          <div
+            onClick={() => status === "idle" && fileInputRef.current?.click()}
             style={{
-              color: "var(--light-red)",
-              maxWidth: "var(--container-3xs)",
-              marginTop: "calc(var(--space-sm) * -1)",
-              fontFamily: "var(--font-jura)",
+              width: "220px",
+              minHeight:0,
+              flex:1,
+              backgroundColor: "white",
+              borderRadius: "32px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: status === "idle" ? "pointer" : "default",
+              transition: "all 0.3s ease",
+              overflow: "hidden",
             }}
           >
-            {error}
-          </p>
-        ) : null}
-      </div>
+            {selectedFile && selectedFile.type === "application/pdf" && selectedFilePreviewUrl ? (
+              <PdfPreviewFrame
+                src={selectedFilePreviewUrl}
+                title="Selected CV preview"
+              />
+            ) : selectedFile ? (
+              <img
+                src="/interview/analyzing.svg"
+                alt="Selected CV file"
+                style={{ width: "84px", height: "125px", objectFit: "contain" }}
+              />
+            ) : (
+              <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="rgb(0, 0, 0)" strokeWidth="1">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" />
+              </svg>
+            )}
+          </div>
 
-      <input
-        type="file"
-        ref={fileInputRef}
-        style={{ display: "none" }}
-        onChange={handleFileChange}
-        accept=".pdf,.docx"
-      />
+          <Button
+            onClick={() => void handleAction()}
+            style={{
+              width: "100%",
+              flex: "none",
+              border: "none",
+              cursor: status === "enhancing" ? "default" : "pointer",
+              transition: "all 0.3s ease",
+            }}
+            disabled={status === "enhancing"}
+          >
+            {status === "enhancing"
+              ? "Enhancing..."
+              : status === "completed"
+                ? "Upload another CV"
+                : selectedFile
+                  ? "Enhance Now"
+                  : "Open Files"}
+          </Button>
 
-      <div
-        style={{
-          width: "1px",
-          height: "var(--container-sm)",
-          backgroundColor: "var(--border-strong)",
-           
-        }}
-      />
+          {error ? (
+            <p style={{ color: "#ffb4b4", maxWidth: "220px", marginTop: "-8px" }}>{error}</p>
+          ) : null}
+        </div>
 
-      {status === "completed" ? (
-        <InterviewContainer
-          questionTitle=""
-          videoBoxStyle={{
-            backgroundColor: "rgba(255, 255, 255, 0.41)",
-            boxShadow: "0 20px 50px rgba(0,0,0,0.3)",
-            justifyContent: "space-around",
-            alignItems: "right",
-            marginLeft: "var(--space-2xl)",
-          }}
-          videoContent={
-            <div
+        <input
+          type="file"
+          ref={fileInputRef}
+          style={{ display: "none" }}
+          onChange={handleFileChange}
+          accept=".pdf,.docx"
+        />
+
+        <div style={{ width: "1px", height: "300px", backgroundColor: "rgb(255, 255, 255)" }} />
+
+
+        {status === "completed" ? (
+
+          <InterviewContainer
+            questionTitle=""
+            videoBoxStyle={{
+              backgroundColor: "rgba(255, 255, 255, 0.41)",
+              boxShadow: "0 20px 50px rgba(0,0,0,0.3)",
+            }}
+            videoContent={
+              <div
               style={{
                 display: "flex",
                 height: "var(--container-xs)",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "var(--space-2xl)",
-                padding: "var(--space-xl)",
-                width: "100%",
-                boxSizing: "border-box",
-              }}
-            >
-              <div
-                style={{
-                  width: "min(34vw, 180px)",
-                  height: "min(46vw, 240px)",
-                  minWidth: "130px",
-                  minHeight: "170px",
-                  borderRadius: "var(--radius-xl)",
-                  flexShrink: 0,
-                  overflow: "hidden",
-                  display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
+                  gap: "20px",
+                  padding: "20px",
+                  width: "var(--container-md)"
                 }}
               >
-                <PdfPreviewFrame src={downloadUrl} title="CV preview" />
-              </div>
-
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "var(--space-lg)",
-                }}
-              >
-                <a
-                  href={downloadUrl ?? "#"}
-                  download={downloadName}
+                <div
                   style={{
-                    backgroundColor: "var(--primary-green)",
-                    color: "var(--text-inverted)",
-                    border: "none",
-                    padding: "var(--button-padding-y) var(--button-padding-x)",
-                    borderRadius: "var(--button-radius)",
-                    fontWeight: "bold",
-                    width: "var(--container-3xs)",
-                    minHeight: "var(--button-height-md)",
+                    width: "min(34vw, 180px)",
+                    height: "min(46vw, 240px)",
+                    minWidth: "130px",
+                    minHeight: "170px",
+                    borderRadius: "25px",
+                    flexShrink: 0,
+                    overflow: "hidden",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    textAlign: "center",
-                    textDecoration: "none",
-                    pointerEvents: downloadUrl ? "auto" : "none",
-                    opacity: downloadUrl ? 1 : 0.5,
                   }}
                 >
-                  Download
-                </a>
-
-                <span
-                  style={{
-                    color: "var(--text-primary)",
-                    textAlign: "center",
-                    opacity: 0.6,
-                  }}
-                >
-                  or
-                </span>
-
-                <button
-                  type="button"
-                  onClick={() => void handleSaveToGoogleDrive()}
-                  disabled={isSavingToDrive || !downloadBlob}
-                  style={{
-                    backgroundColor: "var(--white)",
-                    color: "var(--text-inverted)",
-                    border: "none",
-                    padding: "var(--button-padding-y) var(--button-padding-x)",
-                    borderRadius: "var(--radius-lg)",
-                    minHeight: "var(--button-height-md)",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "var(--space-sm)",
-                    width: "var(--container-3xs)",
-                    justifyContent: "center",
-                    cursor: isSavingToDrive || !downloadBlob ? "default" : "pointer",
-                    opacity: isSavingToDrive || !downloadBlob ? 0.7 : 1,
-                  }}
-                >
-                  <img
-                    src="/global/drive.svg"
-                    style={{ width: "var(--icon-sm)" }}
-                    alt="Drive"
-                  />
-                  {isSavingToDrive
-                    ? "Opening Drive..."
-                    : uploadedDriveFile
-                      ? "Saved to Google Drive"
-                      : "Save to Google Drive"}
-                </button>
-
-                {driveUploadError ? (
-                  <p
+                  <PdfPreviewFrame src={downloadUrl} title="CV preview" />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
+                  <a
+                    href={downloadUrl ?? "#"}
+                    download={downloadName}
                     style={{
-                      color: "var(--light-red)",
-                      width: "var(--container-3xs)",
-                      margin: 0,
+                      backgroundColor: "#d4ff47",
+                      color: "#1a1a1a",
+                      border: "none",
+                      padding: "14px 40px",
+                      borderRadius: "12px",
+                      fontWeight: "bold",
+                      width: "240px",
                       textAlign: "center",
-                      fontFamily: "var(--font-jura)",
+                      textDecoration: "none",
+                      pointerEvents: downloadUrl ? "auto" : "none",
+                      opacity: downloadUrl ? 1 : 0.5,
                     }}
                   >
-                    {driveUploadError}
-                  </p>
-                ) : null}
-
-                {uploadedDriveFile ? (
-                  <p
+                    Download
+                  </a>
+                  <span style={{ color: "white", textAlign: "center", opacity: 0.6 }}>or</span>
+                  <button
+                    type="button"
+                    onClick={() => void handleSaveToGoogleDrive()}
+                    disabled={isSavingToDrive || !downloadBlob}
                     style={{
-                      color: "var(--primary-green)",
-                      width: "var(--container-3xs)",
-                      margin: 0,
-                      textAlign: "center",
-                      fontFamily: "var(--font-jura)",
+                      backgroundColor: "white",
+                      color: "#1a1a1a",
+                      border: "none",
+                      padding: "12px 20px",
+                      borderRadius: "10px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "10px",
+                      width: "240px",
+                      justifyContent: "center",
+                      cursor: isSavingToDrive || !downloadBlob ? "default" : "pointer",
+                      opacity: isSavingToDrive || !downloadBlob ? 0.7 : 1,
                     }}
                   >
-                    Saved to Google Drive.
-                  </p>
-                ) : null}
+                    <img src="/global/drive.svg" style={{ width: "18px" }} alt="Drive" />
+                    {isSavingToDrive
+                      ? "Opening Drive..."
+                      : uploadedDriveFile
+                        ? "Saved to Google Drive"
+                        : "Save to Google Drive"}
+                  </button>
+                  {driveUploadError ? (
+                    <p style={{ color: "#ffb4b4", width: "240px", margin: 0, textAlign: "center" }}>
+                      {driveUploadError}
+                    </p>
+                  ) : null}
+                  {uploadedDriveFile ? (
+                    <p style={{ color: "#d4ff47", width: "240px", margin: 0, textAlign: "center" }}>
+                      Saved to Google Drive.
+                    </p>
+                  ) : null}
+                </div>
               </div>
-            </div>
-          }
-        />
-      ) : null}
+            }
+          />
 
-      {status === "enhancing" ? (
-        <div style={{ maxWidth: "var(--container-sm)" }}>
-          <Animation />
-        </div>
-      ) : null}
+        ) : null}
+        {status === "enhancing" &&
+          <div style={{ maxWidth: "var(--container-sm)" }}>
+            <Animation  />
+          </div>
+        }
+      </div>
     </div>
-  </div>
-);
+  );
 }

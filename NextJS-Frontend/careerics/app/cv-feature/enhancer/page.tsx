@@ -14,6 +14,7 @@ export default function Page() {
         justifyContent: "center",
         alignItems: "center",
         zIndex: 100,
+        width:"100%",
       }}
     >
       <CV />
