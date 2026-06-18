@@ -254,8 +254,17 @@ const Sidebar = () => {
           style={{
             fontSize: "var(--text-lg)",
             fontFamily: "var(--font-nova-square)",
+            display: "flex",
+            gap: "var(--space-md)",
+            alignItems: "center",
           }}
         >
+          <img
+            src={"/global/logo.svg"}
+            style={{
+              height: "var(--icon-md)",
+            }}
+          />
           CareeriCS
         </div>
 
@@ -400,8 +409,17 @@ const Sidebar = () => {
                   style={{
                     fontSize: "var(--text-lg)",
                     fontFamily: "var(--font-nova-square)",
+                    display: "flex",
+                    gap: "var(--space-md)",
+                    alignItems: "center",
                   }}
                 >
+                  <img
+                    src={"/global/logo.svg"}
+                    style={{
+                      height: "var(--icon-lg)",
+                    }}
+                  />
                   CareeriCS
                 </div>
 
@@ -526,8 +544,17 @@ const Sidebar = () => {
                 style={{
                   fontSize: "var(--text-lg)",
                   fontFamily: "var(--font-nova-square)",
+                  display: "flex",
+                  gap: "var(--space-md)",
+                  alignItems: "center",
                 }}
               >
+                <img
+                  src={"/global/logo.svg"}
+                  style={{
+                    height: "var(--icon-lg)",
+                  }}
+                />
                 CareeriCS
               </div>
 

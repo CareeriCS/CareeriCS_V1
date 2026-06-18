@@ -160,16 +160,24 @@ export default function LandingPage() {
           whiteSpace: "nowrap"
         }}
       >
-        {!isSmall &&
+       
           <div
             style={{
               fontSize: "var(--text-lg)",
               fontFamily: "var(--font-nova-square)",
+              display:"flex",
+              gap:"var(--space-md)",
+              alignItems:"center",
             }}
           >
-            CareeriCS
+            <img
+            src={"/global/logo.svg"}
+            style={{
+              height:"var(--icon-lg)",
+            }}
+            />
+            {!isSmall && "CareeriCS"}
           </div>
-        }
 
         <nav
           style={{
@@ -288,8 +296,9 @@ export default function LandingPage() {
           </svg>
 
           {/* Your Guide To Success */}
+          {!isSmall &&
           <div
-            style={{
+          style={{
               zIndex: 1,
               minWidth: "fit-content",
               marginLeft: "auto",
@@ -297,7 +306,7 @@ export default function LandingPage() {
               gridTemplateColumns: "1fr",
               gridTemplateRows: "1fr",
             }}
-          >
+            >
 
             <p
               style={{
@@ -306,7 +315,7 @@ export default function LandingPage() {
                 zIndex: "2",
                 gridArea: "1/1/2/2",
               }}
-            >
+              >
               Your Guide To Success
             </p>
             <svg
@@ -319,14 +328,15 @@ export default function LandingPage() {
                 zIndex: "1",
                 gridArea: "1/1/2/2",
               }}
-            >
+              >
               <path
                 d="M-8.15392e-05 54.3333C-8.15392e-05 57.2789 2.38773 59.6667 5.33325 59.6667C8.27877 59.6667 10.6666 57.2789 10.6666 54.3333C10.6666 51.3878 8.27877 49 5.33325 49C2.38773 49 -8.15392e-05 51.3878 -8.15392e-05 54.3333ZM567 5.33334C567 8.27886 569.388 10.6667 572.333 10.6667C575.279 10.6667 577.667 8.27886 577.667 5.33334C577.667 2.38782 575.279 1.00136e-05 572.333 1.00136e-05C569.388 1.00136e-05 567 2.38782 567 5.33334ZM399.833 5.33334V4.33334H399.577L399.353 4.4562L399.833 5.33334ZM310.333 54.3333V55.3333H310.589L310.813 55.2105L310.333 54.3333ZM399.833 5.33334V6.33334H572.333V5.33334V4.33334H399.833V5.33334ZM5.33325 54.3333V55.3333H310.333V54.3333V53.3333H5.33325V54.3333ZM310.333 54.3333L310.813 55.2105L400.313 6.21049L399.833 5.33334L399.353 4.4562L309.853 53.4562L310.333 54.3333Z"
                 fill="white"
-              />
+                />
             </svg>
 
           </div>
+              }
         </div>
 
         {/* Subtext + Register */}
