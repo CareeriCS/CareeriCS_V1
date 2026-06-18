@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import React, { CSSProperties, ReactNode } from "react";
 import { X } from "lucide-react";
 import { normalizeBackendAssetUrl } from "@/lib/asset-url";
+import { useResponsive } from "@/hooks/useResponsive";
 
 interface ChoiceCardProps {
   icon?: string;
@@ -49,6 +50,7 @@ export default function ChoiceCard({
 
   const isBookmark = type === "bookmark";
   const effectiveSelected = isSelected || isBookmark;
+  const {isMedium, isLarge} = useResponsive();
 
   return (
     <div
@@ -141,7 +143,7 @@ export default function ChoiceCard({
       </div>
 
       {/* img */}
-      {!isBookmark &&
+      {( !isBookmark&& !isMedium) &&
         <img
           src={displayImage}
           alt={title || "career icon"}
