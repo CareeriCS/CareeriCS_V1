@@ -6,6 +6,7 @@ import Animation from "@/components/ui/animation";
 import InterviewLayout from "@/components/ui/interview";
 import { interviewService } from "@/services/interview.service";
 import { buildInterviewAudioCandidates, normalizeInterviewAudioUrl } from "@/lib/interview-media";
+import { useNavigationLock } from "@/lib/navigation-lock";
 import type { APIFollowup } from "@/types";
 import { useInterviewFlow } from "@/hooks";
 import { Button } from "@/components/ui/button";
@@ -63,6 +64,11 @@ export default function AnalyzingPage() {
     () => buildInterviewAudioCandidates(followup?.audio || "", "followups"),
     [followup?.audio],
   );
+  const navigationLockOwner = useMemo(
+    () => `interview-analyzing:${sessionId || "pending"}`,
+    [sessionId],
+  );
+  useNavigationLock(navigationLockOwner, isEvaluating);
 
   const missingContext = !sessionId || !questionId;
   const isActionReady = missingContext || isFinished;
