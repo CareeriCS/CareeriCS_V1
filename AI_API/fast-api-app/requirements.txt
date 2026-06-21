@@ -35,5 +35,4 @@ reportlab==4.4.10
 
 cryptography==46.0.6
 openai-whisper==20250625
-torch==2.1.2
 ffmpeg-python==0.2.0
