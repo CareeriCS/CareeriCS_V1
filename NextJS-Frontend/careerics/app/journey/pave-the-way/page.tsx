@@ -3,15 +3,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { CourseCard } from "@/components/ui/courseCards";
 import CourseActionPopup from "@/components/ui/course-action-popup";
 import JourneyTree from "@/components/ui/journey-tree";
 import JourneyTreeVertical from "@/components/ui/journey-tree-vertical";
 import SkillConfirmPopup from "@/components/ui/skillConfirmPopup";
 import { StepFlow } from "@/components/ui/roadmap-flow";
 import RoadmapProgress from "@/components/ui/roadmapProgress";
-import RoadmapResourceCard from "@/components/ui/roadmapResourceCard";
-import StepCheckbox from "@/components/ui/roadmapStepCheckbox";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useJourneyPhase } from "@/hooks/use-journey-phase";
 import {
@@ -20,7 +17,6 @@ import {
   getLockedRoadmapStepIndexes,
   getNextUnlockedRoadmapSectionAfterCompletion,
   resolveRoadmapSectionSelection,
-  type RoadmapUiSection,
 } from "@/lib/roadmap-ui";
 import { useAuth } from "@/providers/auth-provider";
 import { buildJourneyPhaseHref, resolveRoadmapLevel } from "@/lib/journey";
@@ -103,8 +99,10 @@ export default function JourneyPaveTheWayPage() {
   const [assessmentSessions, setAssessmentSessions] = useState<APIAssessmentSessionSummary[]>([]);
   const [localStepCompletion, setLocalStepCompletion] = useState<Record<string, boolean>>({});
   const [selectedSectionPreferenceId, setSelectedSectionPreferenceId] = useState("");
-  const [pendingAssessmentSection, setPendingAssessmentSection] = useState<RoadmapUiSection | null>(null);
-  const [pendingNextSectionId, setPendingNextSectionId] = useState("");
+  const [pendingAssessmentStep, setPendingAssessmentStep] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
   const [sectionAccessMessage, setSectionAccessMessage] = useState<string | null>(null);
   const [isLoadingRoadmap, setIsLoadingRoadmap] = useState(false);
   const [roadmapError, setRoadmapError] = useState<string | null>(null);
@@ -117,8 +115,7 @@ export default function JourneyPaveTheWayPage() {
 
     const loadRoadmapData = async () => {
       setSelectedSectionPreferenceId("");
-      setPendingAssessmentSection(null);
-      setPendingNextSectionId("");
+      setPendingAssessmentStep(null);
       setSectionAccessMessage(null);
       setLocalStepCompletion({});
 
@@ -390,37 +387,37 @@ export default function JourneyPaveTheWayPage() {
   const steps = useMemo(() => buildRoadmapStepFlowItems(sections), [sections]);
   const lockedStepIndexes = useMemo(() => getLockedRoadmapStepIndexes(sections), [sections]);
 
-  const hasSubmittedSectionAssessment = useCallback(
-    (sectionId: string) =>
+  const hasSubmittedStepAssessment = useCallback(
+    (stepId: string) =>
       assessmentSessions.some((session) => {
         const type = normalizeSessionType(session.type);
         return (
           String(session.status || "").toLowerCase() === "submitted" &&
-          type === "section" &&
-          session.section_id === sectionId
+          type === "step" &&
+          session.step_id === stepId
         );
       }),
     [assessmentSessions],
   );
 
-  const assessedSectionIds = useMemo(() => {
-    return new Set(
-      assessmentSessions
-        .filter((session) => {
-          const type = normalizeSessionType(session.type);
-          return (
-            String(session.status || "").toLowerCase() === "submitted" &&
-            type === "section" &&
-            session.section_id
-          );
-        })
-        .map((session) => session.section_id as string),
-    );
-  }, [assessmentSessions]);
+  const journeySkillAssessmentsCount = useMemo(() => {
+    return assessmentSessions.filter((session) => {
+      if (String(session.status || "").toLowerCase() !== "submitted") {
+        return false;
+      }
 
-  const assessedSectionsCount = useMemo(() => {
-    return sections.filter((section) => assessedSectionIds.has(section.id)).length;
-  }, [assessedSectionIds, sections]);
+      const type = normalizeSessionType(session.type);
+      if (type !== "step" && type !== "skills") {
+        return false;
+      }
+
+      if (selectedTrack?.roadmapId) {
+        return session.roadmap_id === selectedTrack.roadmapId;
+      }
+
+      return true;
+    }).length;
+  }, [assessmentSessions, selectedTrack?.roadmapId]);
 
   const nextTestCode = useMemo(() => {
     const submitted = assessmentSessions.filter(
@@ -432,7 +429,8 @@ export default function JourneyPaveTheWayPage() {
 
   const completionPercent = clampPercent(roadmapProgress?.completion_percent || 0);
   const completedTopics = roadmapProgress?.completed_steps || 0;
-  const totalTopics = roadmapProgress?.total_steps || sections.reduce((sum, section) => sum + section.skills.length, 0);
+  const totalRoadmapSteps = sections.reduce((sum, section) => sum + section.skills.length, 0);
+  const totalTopics = roadmapProgress?.total_steps || totalRoadmapSteps;
   const remainingTopics = Math.max(0, totalTopics - completedTopics);
   const currentLevel = resolveRoadmapLevel(completionPercent);
   const nextPhase = maxReached < 5 ? maxReached + 1 : maxReached;
@@ -491,11 +489,18 @@ export default function JourneyPaveTheWayPage() {
     const optimisticCurrentSection = optimisticSections.find(
       (section) => section.id === selectedSection.id,
     );
-    let openedAssessmentSectionId = "";
-    let openedPendingNextSectionId = "";
+    let openedAssessmentStepId = "";
 
     setSectionAccessMessage(null);
     setLocalStepCompletion(optimisticLocalCompletion);
+
+    if (nextChecked && !hasSubmittedStepAssessment(step.id)) {
+      setPendingAssessmentStep({
+        id: step.id,
+        title: step.text,
+      });
+      openedAssessmentStepId = step.id;
+    }
 
     if (nextChecked && optimisticCurrentSection?.completionStatus === "completed") {
       const nextSection = getNextUnlockedRoadmapSectionAfterCompletion(
@@ -503,13 +508,7 @@ export default function JourneyPaveTheWayPage() {
         selectedSection.id,
       );
 
-      if (!hasSubmittedSectionAssessment(optimisticCurrentSection.id)) {
-        setPendingAssessmentSection(optimisticCurrentSection);
-        const nextSectionId = nextSection?.id || "";
-        setPendingNextSectionId(nextSectionId);
-        openedAssessmentSectionId = optimisticCurrentSection.id;
-        openedPendingNextSectionId = nextSectionId;
-      } else if (nextSection) {
+      if (nextSection) {
         setSelectedSectionPreferenceId(nextSection.id);
       }
     }
@@ -531,12 +530,9 @@ export default function JourneyPaveTheWayPage() {
           [step.id]: previousChecked,
         }));
         setSectionAccessMessage(response.message || "Unable to update progress right now.");
-        if (openedAssessmentSectionId) {
-          setPendingAssessmentSection((previous) =>
-            previous?.id === openedAssessmentSectionId ? null : previous,
-          );
-          setPendingNextSectionId((previous) =>
-            previous === openedPendingNextSectionId ? "" : previous,
+        if (openedAssessmentStepId) {
+          setPendingAssessmentStep((previous) =>
+            previous?.id === openedAssessmentStepId ? null : previous,
           );
         }
         return;
@@ -571,12 +567,9 @@ export default function JourneyPaveTheWayPage() {
         [step.id]: previousChecked,
       }));
       setSectionAccessMessage("Unable to update progress right now.");
-      if (openedAssessmentSectionId) {
-        setPendingAssessmentSection((previous) =>
-          previous?.id === openedAssessmentSectionId ? null : previous,
-        );
-        setPendingNextSectionId((previous) =>
-          previous === openedPendingNextSectionId ? "" : previous,
+      if (openedAssessmentStepId) {
+        setPendingAssessmentStep((previous) =>
+          previous?.id === openedAssessmentStepId ? null : previous,
         );
       }
     } finally {
@@ -664,6 +657,7 @@ export default function JourneyPaveTheWayPage() {
       <Orientation
         current={2}
         maxReached={2}
+        naturalMaxReached={2}
         renderContent={() => (
           <div
             style={{
@@ -709,6 +703,7 @@ export default function JourneyPaveTheWayPage() {
       <Orientation
         current={2}
         maxReached={2}
+        naturalMaxReached={2}
         renderContent={() => (
           <div
             style={{
@@ -754,6 +749,7 @@ export default function JourneyPaveTheWayPage() {
       <Orientation
         current={2}
         maxReached={nextPhase}
+        naturalMaxReached={maxReached}
         resolvePhasePath={(phase) => buildJourneyPhaseHref(phase, selectedTrack.id)}
         renderContent={() => (
           <div
@@ -828,8 +824,7 @@ export default function JourneyPaveTheWayPage() {
 
                 <RoadmapProgress
                   text="Skills Assessed"
-                  done={String(assessedSectionsCount)}
-                  total={String(sections.length)}
+                  done={String(journeySkillAssessmentsCount)}
                   color="var(--light-orange)"
                 />
               </div>
@@ -1020,39 +1015,28 @@ export default function JourneyPaveTheWayPage() {
         />
       ) : null}
 
-      {pendingAssessmentSection ? (
+      {pendingAssessmentStep ? (
         <SkillConfirmPopup
-          skillName={pendingAssessmentSection.title}
+          skillName={pendingAssessmentStep.title}
           testCode={nextTestCode}
           onCancel={() => {
-            const nextId = pendingNextSectionId;
-            setPendingAssessmentSection(null);
-            setPendingNextSectionId("");
-
-            if (nextId) {
-              setSelectedSectionPreferenceId(nextId);
-            }
+            setPendingAssessmentStep(null);
           }}
           onConfirm={(questions) => {
-            const section = pendingAssessmentSection;
-            const nextId = pendingNextSectionId;
+            const step = pendingAssessmentStep;
+            setPendingAssessmentStep(null);
 
-            setPendingAssessmentSection(null);
-            setPendingNextSectionId("");
-
-            if (!section) {
-              if (nextId) {
-                setSelectedSectionPreferenceId(nextId);
-              }
+            if (!step) {
               return;
             }
 
             const params = new URLSearchParams({
-              targetId: section.id,
-              targetName: section.title,
-              sessionType: "section",
+              targetId: step.id,
+              targetName: step.title,
+              sessionType: "step",
               numQuestions: String(questions),
             });
+            params.set("returnTo", buildJourneyPhaseHref(2, selectedTrack.id));
 
             router.push(`/skill-feature/questions?${params.toString()}`);
           }}

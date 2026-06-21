@@ -7,14 +7,18 @@ import { useRouter } from "next/navigation";
 type JourneyTreeVerticalProps = {
   current: number;
   maxReached: number;
+  naturalMaxReached?: number;
   resolvePhasePath?: (phase: number) => string;
   renderContent?: () => React.ReactNode;
+  closeHref?: string;
+  onClose?: () => void;
 };
 
 function renderChain(
   phases: number[],
   current: number,
   maxReached: number,
+  naturalMaxReached: number,
   resolvePhasePath?: (phase: number) => string,
   renderContent?: () => React.ReactNode
 ): React.ReactNode {
@@ -33,6 +37,8 @@ function renderChain(
       current={isCurrent}
       locked={isLocked}
       path={targetPath}
+      currentPhase={current}
+      naturalMaxReached={naturalMaxReached}
     >
       {isCurrent && (
         <div
@@ -63,6 +69,7 @@ function renderChain(
               rest,
               current,
               maxReached,
+              naturalMaxReached,
               resolvePhasePath,
               renderContent
             )}
@@ -72,6 +79,7 @@ function renderChain(
             rest,
             current,
             maxReached,
+            naturalMaxReached,
             resolvePhasePath,
             renderContent
           )
@@ -83,10 +91,14 @@ function renderChain(
 export default function JourneyTreeVertical({
   current,
   maxReached,
+  naturalMaxReached,
   resolvePhasePath,
   renderContent,
+  closeHref = "/features/home",
+  onClose,
 }: JourneyTreeVerticalProps) {
   const router = useRouter();
+  const effectiveNaturalMaxReached = naturalMaxReached ?? maxReached;
 
   // ONLY: previous + current + all next
   const phases: number[] = [];
@@ -118,7 +130,13 @@ export default function JourneyTreeVertical({
       <img
         src={"/global/close.svg"}
         alt="Close journey"
-        onClick={() => router.push("/features/home")}
+        onClick={() => {
+          if (onClose) {
+            onClose();
+            return;
+          }
+          router.push(closeHref);
+        }}
         style={{
           position: "absolute",
           width: "var(--icon-lg)",
@@ -139,6 +157,7 @@ export default function JourneyTreeVertical({
           phases,
           current,
           maxReached,
+          effectiveNaturalMaxReached,
           resolvePhasePath,
           renderContent
         )}

@@ -150,6 +150,7 @@ export default function JourneyDocumentItPage() {
       <Orientation
         current={3}
         maxReached={3}
+        naturalMaxReached={3}
         renderContent={() => (
           <div
             style={{
@@ -195,6 +196,7 @@ export default function JourneyDocumentItPage() {
       <Orientation
         current={3}
         maxReached={3}
+        naturalMaxReached={3}
         renderContent={() => (
           <div
             style={{
@@ -245,6 +247,7 @@ export default function JourneyDocumentItPage() {
     <Orientation
       current={3}
       maxReached={nextPhase}
+      naturalMaxReached={maxReached}
       resolvePhasePath={(phase) => buildJourneyPhaseHref(phase, selectedTrack?.id)}
       renderContent={() => (
         <>

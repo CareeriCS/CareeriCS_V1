@@ -230,6 +230,9 @@ export default function JourneyJobHuntPage() {
       sessionType: "roadmap",
       numQuestions: String(questions),
     });
+    if (selectedTrack?.id) {
+      params.set("returnTo", buildJourneyPhaseHref(5, selectedTrack.id));
+    }
 
     setIsConfirmOpen(false);
     router.push(`/skill-feature/questions?${params.toString()}`);
@@ -255,6 +258,7 @@ export default function JourneyJobHuntPage() {
       <Orientation
         current={5}
         maxReached={5}
+        naturalMaxReached={5}
         renderContent={() => (
           <div
             style={{
@@ -300,6 +304,7 @@ export default function JourneyJobHuntPage() {
       <Orientation
         current={5}
         maxReached={5}
+        naturalMaxReached={5}
         renderContent={() => (
           <div
             style={{
@@ -345,6 +350,7 @@ export default function JourneyJobHuntPage() {
     <Orientation
       current={5}
       maxReached={5}
+      naturalMaxReached={maxReached}
       resolvePhasePath={(phase) => buildJourneyPhaseHref(phase, selectedTrack?.id)}
       renderContent={() => (
         <div
