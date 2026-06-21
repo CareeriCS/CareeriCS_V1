@@ -5,6 +5,7 @@ from core.config import settings
 from ai.completion import transcribe
 from uuid import UUID
 import logging
+from fastapi.concurrency import run_in_threadpool
 
 from utils.util import (
     save_uploaded_file,
@@ -72,13 +73,10 @@ async def submit_answer_service(
 
     try:
         uploaded_path = await save_uploaded_file(audio)
-
-        mp4_path, wav_path = convert_audio_and_video(uploaded_path)
-
+        mp4_path, wav_path = await run_in_threadpool(convert_audio_and_video, uploaded_path)
         delete_files(uploaded_path)
         uploaded_path = None
-
-        transcript = transcribe(wav_path)
+        transcript = await run_in_threadpool(transcribe, wav_path)
     except HTTPException:
         delete_files(uploaded_path, wav_path, mp4_path)
         raise
@@ -132,7 +130,7 @@ async def submit_answer_service(
 # EVALUATION
 # ============================================================
 
-async def evaluate_answer_service_wrapper(
+def evaluate_answer_service_wrapper(
     db: DBSession,
     session_id: UUID,
     question_id: UUID,

@@ -39,19 +39,15 @@ async def submit_answer(
 # EVALUATE ANSWER
 # ============================================================
 @router.post("/evaluate/")
-async def evaluate_answer(
+def evaluate_answer(
     session_id: UUID = Form(...),
     question_id: UUID = Form(...),
     is_followup: bool = Form(False),
     answer_id: UUID | None = Form(None),
     db: Session = Depends(get_db),
 ):
-    return await evaluate_answer_service_wrapper(
-        db,
-        session_id,
-        question_id,
-        is_followup,
-        answer_id,
+    return evaluate_answer_service_wrapper(
+        db, session_id, question_id, is_followup, answer_id,
     )
 
 @router.get("/by_question_session/", response_model=AnswerRead | None)
