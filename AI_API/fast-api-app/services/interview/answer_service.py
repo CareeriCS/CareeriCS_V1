@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session as DBSession
-from fastapi import HTTPException, UploadFile
+from fastapi import BackgroundTasks, HTTPException, UploadFile
 import db.models as models
 from core.config import settings
 from ai.completion import transcribe
@@ -138,6 +138,7 @@ async def evaluate_answer_service_wrapper(
     question_id: UUID,
     is_followup: bool = False,
     answer_id: UUID | None = None,
+    background_tasks: BackgroundTasks | None = None,
 ):
     answer = _resolve_answer_for_evaluation(
         db,
@@ -185,7 +186,23 @@ async def evaluate_answer_service_wrapper(
     # store feedback and score immediately
     _store_evaluation(db, answer, feedback, score)
 
-    _run_final_media_analysis(db, answer)
+    # Schedule heavy ML analysis as a background task so it does not block
+    # the HTTP response. Results are persisted to the DB asynchronously.
+    def _safe_media_analysis():
+        try:
+            _run_final_media_analysis(db, answer)
+        except Exception as exc:
+            logger.error(
+                "Background media analysis failed for answer %s: %s",
+                answer.id,
+                exc,
+            )
+
+    if background_tasks is not None:
+        background_tasks.add_task(_safe_media_analysis)
+    else:
+        # Fallback: run synchronously when no BackgroundTasks context is available
+        _safe_media_analysis()
 
     if is_followup:
         return {
@@ -193,8 +210,9 @@ async def evaluate_answer_service_wrapper(
             "grade": score,
             "followup_recommended": False,
             "followup": None,
-            "emotion_evaluation": answer.emotion_evaluation,
-            "tone_evaluation": answer.tone_evaluation,
+            "emotion_evaluation": None,
+            "tone_evaluation": None,
+            "sentiment_evaluation": None,
         }
 
     if existing_followup:
@@ -203,10 +221,10 @@ async def evaluate_answer_service_wrapper(
             "grade": score,
             "followup_recommended": True,
             "followup": _serialize_followup(existing_followup),
-            "emotion_evaluation": answer.emotion_evaluation,
-            "tone_evaluation": answer.tone_evaluation,
+            "emotion_evaluation": None,
+            "tone_evaluation": None,
+            "sentiment_evaluation": None,
         }
-
 
     if is_followup_allowed and followup_required:
         followup_info = _handle_followup(db, answer.id, improvement)
@@ -216,18 +234,19 @@ async def evaluate_answer_service_wrapper(
             "grade": score,
             "followup_recommended": True,
             "followup": followup_info,
-            "emotion_evaluation": answer.emotion_evaluation,
-            "tone_evaluation": answer.tone_evaluation,
+            "emotion_evaluation": None,
+            "tone_evaluation": None,
+            "sentiment_evaluation": None,
         }
-
 
     return {
         "evaluation": feedback,
         "grade": score,
         "followup_recommended": False,
         "followup": None,
-        "emotion_evaluation": answer.emotion_evaluation,
-        "tone_evaluation": answer.tone_evaluation,
+        "emotion_evaluation": None,
+        "tone_evaluation": None,
+        "sentiment_evaluation": None,
     }
 
 

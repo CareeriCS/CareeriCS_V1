@@ -1,5 +1,5 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, Form, File, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, Form, File, UploadFile
 from sqlalchemy.orm import Session
 from dependencies import get_db
 from schemas import AnswerRead 
@@ -40,6 +40,7 @@ async def submit_answer(
 # ============================================================
 @router.post("/evaluate/")
 async def evaluate_answer(
+    background_tasks: BackgroundTasks,
     session_id: UUID = Form(...),
     question_id: UUID = Form(...),
     is_followup: bool = Form(False),
@@ -52,6 +53,7 @@ async def evaluate_answer(
         question_id,
         is_followup,
         answer_id,
+        background_tasks,
     )
 
 @router.get("/by_question_session/", response_model=AnswerRead | None)
