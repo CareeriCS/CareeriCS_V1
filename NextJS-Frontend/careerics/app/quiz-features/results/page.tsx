@@ -12,6 +12,7 @@ import {
   buildCareerQuizSelectionHref,
   buildCareerTrackDetailsHref,
 } from "@/lib/career-quiz";
+import { buildJourneyPhaseHref, syncSelectedJourneyTrackProgress } from "@/lib/journey";
 import { createRoadmapUnifiedBookmark } from "@/lib/bookmark-targets";
 import {
   normalizeRoadmapListPayload,
@@ -37,6 +38,8 @@ export default function CareerQuizResultsPage() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("sessionId") || "";
   const requestedTrackId = searchParams.get("trackId") || "";
+  const origin = searchParams.get("origin") || "";
+  const returnTo = searchParams.get("returnTo") || "";
   const { user, isLoading: isAuthLoading } = useAuth();
   const userId = user?.id ?? null;
 
@@ -217,6 +220,22 @@ export default function CareerQuizResultsPage() {
     setReplaceCandidates([]);
   }, [isReplacingBookmark]);
 
+  const ensureTrackJourneyStartsAtPhaseTwo = useCallback(
+    async (trackId: string, roadmapId?: string | null) => {
+      if (!trackId) {
+        return;
+      }
+
+      await syncSelectedJourneyTrackProgress({
+        trackId,
+        userId,
+        roadmapId: roadmapId ?? null,
+        maxReached: 2,
+      });
+    },
+    [userId],
+  );
+
   const handleToggleBookmark = async (trackId: string) => {
     const selectedTrack = results?.track_scores.find((item) => item.track_id === trackId);
 
@@ -284,6 +303,7 @@ export default function CareerQuizResultsPage() {
 
     const next = addOrMoveUnifiedBookmark(candidate, userId);
     applyUnifiedBookmarks(next);
+    await ensureTrackJourneyStartsAtPhaseTwo(selectedTrack.track_id, selectedTrack.roadmap_id);
   };
 
   const handleReplaceBookmark = useCallback(
@@ -323,11 +343,15 @@ export default function CareerQuizResultsPage() {
 
       const next = addOrMoveUnifiedBookmark(pendingCareerBookmark, userId);
       applyUnifiedBookmarks(next);
+      await ensureTrackJourneyStartsAtPhaseTwo(
+        pendingCareerBookmark.metadata?.track_id || "",
+        pendingCareerBookmark.entity_id,
+      );
       setPendingCareerBookmark(null);
       setReplaceCandidates([]);
       setIsReplacingBookmark(false);
     },
-    [applyUnifiedBookmarks, pendingCareerBookmark, userId],
+    [applyUnifiedBookmarks, ensureTrackJourneyStartsAtPhaseTwo, pendingCareerBookmark, userId],
   );
 
   if (isLoadingResults) {
@@ -421,11 +445,15 @@ export default function CareerQuizResultsPage() {
                   </p>
 
                   <Link
-                    href={buildCareerTrackDetailsHref(track.track_name, track.track_id)}
+                    href={
+                      isBookmarked
+                        ? buildJourneyPhaseHref(2, track.track_id)
+                        : buildCareerTrackDetailsHref(track.track_name, track.track_id)
+                    }
                     className="mt-[var(--space-lg)] block"
                   >
                     <Button variant="secondary" size="md" className="w-full rounded-[var(--radius-lg)]">
-                      Learn More
+                      {isBookmarked ? "Continue to Journey" : "Learn More"}
                     </Button>
                   </Link>
                 </article>
@@ -445,7 +473,12 @@ export default function CareerQuizResultsPage() {
           size="md"
           onClick={() => {
             if (sessionId) {
-              router.push(buildCareerQuizSelectionHref(sessionId));
+              router.push(
+                buildCareerQuizSelectionHref(sessionId, {
+                  origin,
+                  returnTo,
+                }),
+              );
             } else {
               router.push("/features/career");
             }

@@ -5,6 +5,23 @@ import { useState, type ReactNode } from "react";
 import { isActiveSessionStatus, runCloseStatusUpdate } from "@/lib/session-close";
 import { careerService } from "@/services";
 
+function resolveQuizReturnHref(returnTo: string | null, origin: string | null): string {
+  const normalizedReturnTo = (returnTo || "").trim();
+  if (
+    normalizedReturnTo &&
+    normalizedReturnTo.startsWith("/") &&
+    !normalizedReturnTo.startsWith("//")
+  ) {
+    return normalizedReturnTo;
+  }
+
+  if ((origin || "").trim().toLowerCase() === "home") {
+    return "/features/home";
+  }
+
+  return "/features/career";
+}
+
 export default function JourneyLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -18,6 +35,8 @@ export default function JourneyLayout({ children }: { children: ReactNode }) {
     setIsClosing(true);
 
     const sessionId = searchParams.get("sessionId") || "";
+    const origin = searchParams.get("origin");
+    const returnTo = searchParams.get("returnTo");
 
     if (sessionId) {
       await runCloseStatusUpdate("career quiz", async () => {
@@ -45,7 +64,7 @@ export default function JourneyLayout({ children }: { children: ReactNode }) {
       });
     }
 
-    router.replace("/features/career");
+    router.replace(resolveQuizReturnHref(returnTo, origin));
   };
 
   return (

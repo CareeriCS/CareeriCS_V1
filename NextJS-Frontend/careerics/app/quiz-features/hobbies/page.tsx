@@ -15,6 +15,8 @@ export default function HobbiesGrid() {
   const { isLarge, isMedium, isSmall } = useResponsive();
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("sessionId") || "";
+  const origin = searchParams.get("origin") || "";
+  const returnTo = searchParams.get("returnTo") || "";
 
   const [step, setStep] = useState<0 | 1>(0);
   const [hobbyCards, setHobbyCards] = useState<APICareerCardRead[]>([]);
@@ -24,6 +26,13 @@ export default function HobbiesGrid() {
   const [isLoadingCards, setIsLoadingCards] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const resolvedReturnHref = useMemo(() => {
+    if (returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//")) {
+      return returnTo;
+    }
+    return origin.toLowerCase() === "home" ? "/features/home" : "/features/career";
+  }, [origin, returnTo]);
 
   useEffect(() => {
     let cancelled = false;
@@ -132,7 +141,7 @@ export default function HobbiesGrid() {
       return;
     }
 
-    router.push("/features/career");
+    router.push(resolvedReturnHref);
   };
 
   const submitSelections = async () => {
@@ -167,7 +176,16 @@ export default function HobbiesGrid() {
       return;
     }
 
-    router.push(`/quiz-features/questions?sessionId=${encodeURIComponent(sessionId)}`);
+    const params = new URLSearchParams({
+      sessionId,
+    });
+    if (origin) {
+      params.set("origin", origin);
+    }
+    if (returnTo) {
+      params.set("returnTo", returnTo);
+    }
+    router.push(`/quiz-features/questions?${params.toString()}`);
   };
 
   const handleNext = () => {
