@@ -18,7 +18,7 @@ def _get_deepface():
 
     return DeepFace
 
-def extract_frames_per_second(video_path: str, target_fps: int = 2):
+def extract_frames_per_second(video_path: str, target_fps: int = 0.5):
     import cv2
 
     cap = cv2.VideoCapture(video_path)
@@ -72,7 +72,7 @@ def fer(mp4_path: str) -> list[str]:
         images = extract_frames_per_second(mp4_path)
         emotions_list = []
 
-        for img in images:
+        for img in images[:20]:
             try:
                 result = deepface_client.analyze(
                     img_path=img,
@@ -82,6 +82,10 @@ def fer(mp4_path: str) -> list[str]:
                 emotions_list.append(result[0]['dominant_emotion'])
             except Exception:
                 emotions_list.append(None)
+        # CLEAN UP HERE (VERY IMPORTANT)
+        del images
+        import gc
+        gc.collect()
 
         return emotions_list
     except Exception as e:
