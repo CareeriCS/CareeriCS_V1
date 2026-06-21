@@ -17,6 +17,6 @@ def fetch_followup(answer_id: UUID, db: Session = Depends(get_db)):
         return None
 
     if followup.fquestion_audio and not followup.fquestion_audio.startswith("/"):
-        followup.fquestion_audio = f"/{settings.AUDIO_PATHS['followups']}/{followup.fquestion_audio}"
+        followup.fquestion_audio = f"/{settings.AUDIO_URL_PATHS['followups']}/{followup.fquestion_audio}"
 
     return followup

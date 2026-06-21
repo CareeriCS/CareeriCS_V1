@@ -7,6 +7,7 @@ psycopg2-binary==2.9.11
 alembic==1.18.1
 python-multipart==0.0.20
 pydantic[email]==2.12.5
+python-dotenv==1.2.2
 
 numpy==1.26.4
 scipy==1.11.4
@@ -22,6 +23,7 @@ retina-face==0.0.17
 mtcnn==1.0.0
 
 gTTS==2.5.4
+imageio-ffmpeg
 openai==2.8.1
 
 httpx==0.28.1

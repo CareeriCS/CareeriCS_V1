@@ -1,11 +1,11 @@
 import os
 import uuid
-import tempfile
 import subprocess
 import shutil
 
 from fastapi import HTTPException, UploadFile
 from gtts import gTTS
+from core.config import settings
 
 
 def _resolve_ffmpeg_executable() -> str:
@@ -47,16 +47,25 @@ def _generate_tts(text: str, directory: str) -> str:
 
 
 # ---------------------------------------------
-# Save Uploaded File (temp directory)
+# Persistent answer media helpers
+# ---------------------------------------------
+def _new_answer_media_path(suffix: str) -> str:
+    answers_dir = settings.AUDIO_PATHS["answers"]
+    os.makedirs(answers_dir, exist_ok=True)
+    return os.path.join(answers_dir, f"{uuid.uuid4()}{suffix}")
+
+
+# ---------------------------------------------
+# Save Uploaded File
 # ---------------------------------------------
 async def save_uploaded_file(file: UploadFile) -> str:
     if not file.filename:
         raise ValueError("Uploaded file has no filename")
 
-    file_ext = file.filename.split(".")[-1].lower()
+    file_ext = os.path.splitext(file.filename)[1].lower() or ".webm"
+    file_path = _new_answer_media_path(file_ext)
 
-    fd, file_path = tempfile.mkstemp(suffix=f".{file_ext}")
-    with os.fdopen(fd, "wb") as buffer:
+    with open(file_path, "wb") as buffer:
         buffer.write(await file.read())
 
     return file_path
@@ -75,11 +84,12 @@ def delete_files(*paths: str) -> None:
 
 
 # ---------------------------------------------
-# Media Conversion (outputs to temp directory)
+# Media Conversion
 # ---------------------------------------------
 def convert_webm_to_wav(input_path: str) -> str:
-    fd, output_path = tempfile.mkstemp(suffix=".wav")
-    os.close(fd)
+    # Submit and evaluate happen in separate requests, so the converted assets
+    # need to survive beyond the current request instead of living in tempfile.
+    output_path = _new_answer_media_path(".wav")
     ffmpeg_cmd = _resolve_ffmpeg_executable()
     try:
         result = subprocess.run(
@@ -97,8 +107,7 @@ def convert_webm_to_wav(input_path: str) -> str:
     return output_path
 
 def convert_webm_to_mp4(input_path: str) -> str:
-    fd, output_path = tempfile.mkstemp(suffix=".mp4")
-    os.close(fd)
+    output_path = _new_answer_media_path(".mp4")
     ffmpeg_cmd = _resolve_ffmpeg_executable()
     try:
         result = subprocess.run(

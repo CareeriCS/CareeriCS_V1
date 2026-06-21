@@ -360,7 +360,7 @@ def _serialize_followup(followup: models.Followup):
 
     audio_path = ""
     if followup.fquestion_audio:
-        audio_path = f"/{settings.AUDIO_PATHS['followups']}/{followup.fquestion_audio}"
+        audio_path = f"/{settings.AUDIO_URL_PATHS['followups']}/{followup.fquestion_audio}"
 
     return {
         "id": followup.id,

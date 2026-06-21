@@ -25,6 +25,14 @@ from routers.profile import router as profile_router
 logger = logging.getLogger("careerics.startup")
 
 
+def _csv_env(name: str) -> list[str]:
+    return [
+        item.strip().rstrip("/")
+        for item in os.getenv(name, "").split(",")
+        if item.strip()
+    ]
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
@@ -46,16 +54,26 @@ app.mount("/audio", StaticFiles(directory=settings.AUDIO_BASE), name="audio")
 
 allowed_origins = [
     "http://localhost:3000",
+    *_csv_env("CORS_ALLOWED_ORIGINS"),
 ]
+allow_origin_regex = os.getenv(
+    "CORS_ALLOWED_ORIGIN_REGEX",
+    r"^https://.*\.vercel\.app$",
+)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-    allow_origin_regex=r"^https://.*\.vercel\.app$",
+    allow_origin_regex=allow_origin_regex,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 
 for router in interview_routers:
     app.include_router(router)

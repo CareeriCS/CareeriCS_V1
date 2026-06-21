@@ -211,7 +211,7 @@ export const interviewService = {
     form.append("question_id", questionId);
     form.append("audio", audio, "answer.webm");
     form.append("is_followup", isFollowup ? "true" : "false");
-    return fastapiApi.post<APISubmitAnswerResponse>("/answers/", form);
+    return fastapiApi.post<APISubmitAnswerResponse>("/answers/", form, { noRetry: true });
   },
 
   /**
@@ -232,7 +232,7 @@ export const interviewService = {
       form.append("answer_id", answerId);
     }
     return fastapiApi
-      .post<unknown>("/answers/evaluate/", form)
+      .post<unknown>("/answers/evaluate/", form, { noRetry: true })
       .then((response) => {
         if (!response.success) {
           return {

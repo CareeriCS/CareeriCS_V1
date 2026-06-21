@@ -23,7 +23,7 @@ def _normalize_question_audio_path(audio_value: str | None) -> str | None:
     if audio_value.startswith("audio/"):
         return f"/{audio_value}"
 
-    return f"/{settings.AUDIO_PATHS['questions']}/{audio_value}"
+    return f"/{settings.AUDIO_URL_PATHS['questions']}/{audio_value}"
 
 
 def _apply_question_audio_path(question: models.Question) -> models.Question:

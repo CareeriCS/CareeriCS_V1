@@ -13,6 +13,23 @@ import {
 import { Button } from "@/components/ui/button";
 import { useResponsive } from "@/hooks/useResponsive";
 
+const DEFAULT_VIDEO_BPS = 600_000;
+const DEFAULT_AUDIO_BPS = 64_000;
+
+function parsePositiveInt(value: string | undefined, fallback: number): number {
+  const parsed = Number.parseInt(value ?? "", 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+const INTERVIEW_VIDEO_BPS = parsePositiveInt(
+  process.env.NEXT_PUBLIC_INTERVIEW_VIDEO_BPS,
+  DEFAULT_VIDEO_BPS,
+);
+const INTERVIEW_AUDIO_BPS = parsePositiveInt(
+  process.env.NEXT_PUBLIC_INTERVIEW_AUDIO_BPS,
+  DEFAULT_AUDIO_BPS,
+);
+
 export default function RecordingPage() {
   const router = useRouter();
   const { user } = useAuth();
@@ -138,7 +155,11 @@ export default function RecordingPage() {
     ];
 
     const supportedType = preferredTypes.find((type) => MediaRecorder.isTypeSupported(type));
-    return supportedType ? { mimeType: supportedType } : undefined;
+    return {
+      ...(supportedType ? { mimeType: supportedType } : {}),
+      videoBitsPerSecond: INTERVIEW_VIDEO_BPS,
+      audioBitsPerSecond: INTERVIEW_AUDIO_BPS,
+    };
   };
 
   // 4. Action Handlers
@@ -152,7 +173,18 @@ export default function RecordingPage() {
 
     try {
       setActionError("");
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+        },
+        video: {
+          width: { ideal: 640, max: 640 },
+          height: { ideal: 480, max: 480 },
+          frameRate: { ideal: 15, max: 20 },
+          facingMode: "user",
+        },
+      });
       streamRef.current = stream;
 
       if (previewVideoRef.current) {

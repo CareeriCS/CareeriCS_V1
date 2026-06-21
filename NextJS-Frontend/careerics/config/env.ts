@@ -38,8 +38,9 @@ function toFastApiGraphqlUrl(baseUrl: string): string {
 // Public (client-safe) config
 // ──────────────────────────────────────────────
 export const publicConfig = {
-  fastapiUrl: "/api/fastapi",
-  fastapiGraphqlUrl: "/api/fastapi/graphql",
+  fastapiUrl: process.env.NEXT_PUBLIC_FASTAPI_URL ?? "/api/fastapi",
+  fastapiGraphqlUrl:
+    process.env.NEXT_PUBLIC_FASTAPI_GRAPHQL_URL ?? "/api/fastapi/graphql",
   enableGraphql: process.env.NEXT_PUBLIC_ENABLE_GRAPHQL === "true",
 
   // ── Supabase (client-safe — protected by RLS on the server) ──

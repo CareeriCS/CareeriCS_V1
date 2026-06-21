@@ -7,10 +7,12 @@
  * outgoing call automatically includes the current auth token.
  */
 
-import { publicConfig, serverConfig } from "@/config";
+import { publicConfig } from "@/config";
 import { HttpClient } from "./http-client";
 import { GraphQLClient } from "./graphql-client";
 import { getAuthToken } from "@/lib/auth/token";
+
+const DEFAULT_FASTAPI_TIMEOUT_MS = 300_000;
 
 function getAppOrigin(): string {
   if (typeof window !== "undefined") {
@@ -30,8 +32,25 @@ function getAppOrigin(): string {
   return "http://localhost:3000";
 }
 
-function resolveFastApiBaseUrl(proxyPath: string): string {
-  return `${getAppOrigin()}${proxyPath}`;
+function isAbsoluteUrl(value: string): boolean {
+  return /^https?:\/\//i.test(value);
+}
+
+function parseFastApiTimeoutMs(): number {
+  const value = Number.parseInt(process.env.NEXT_PUBLIC_FASTAPI_TIMEOUT_MS ?? "", 10);
+  return Number.isFinite(value) && value > 0 ? value : DEFAULT_FASTAPI_TIMEOUT_MS;
+}
+
+function resolveFastApiBaseUrl(value: string): string {
+  if (isAbsoluteUrl(value)) {
+    return value.replace(/\/+$/, "");
+  }
+
+  return `${getAppOrigin()}${value}`;
+}
+
+function isUsingFastApiProxy(baseUrl: string): boolean {
+  return !isAbsoluteUrl(baseUrl);
 }
 
 // Shared interceptor that injects the bearer token.
@@ -46,26 +65,27 @@ async function withAuth(init: RequestInit): Promise<RequestInit> {
   return init;
 }
 
-async function withFastApiProxyAuth(init: RequestInit): Promise<RequestInit> {
-  // Client-side FastAPI calls go through the same-origin `/api/fastapi` proxy,
-  // so the browser already sends the auth cookie to Next.js. Let the proxy
-  // translate that cookie into the upstream Authorization header to avoid
-  // duplicating a large JWT in both Cookie and Authorization.
-  if (typeof window !== "undefined") {
-    return init;
-  }
+function createFastApiAuthHandler(baseUrl: string) {
+  return async (init: RequestInit): Promise<RequestInit> => {
+    // In proxy mode the browser talks to same-origin Next.js, so cookies are
+    // enough and the proxy adds Authorization upstream. Direct-to-FastAPI mode
+    // needs an explicit bearer token because the browser is now cross-origin.
+    if (typeof window !== "undefined" && isUsingFastApiProxy(baseUrl)) {
+      return init;
+    }
 
-  return withAuth(init);
+    return withAuth(init);
+  };
 }
 
 export const fastapiApi = new HttpClient({
   baseUrl: resolveFastApiBaseUrl(publicConfig.fastapiUrl),
-  onRequest: withFastApiProxyAuth,
-  timeout: 150000, // 150s timeout for ML calls
+  onRequest: createFastApiAuthHandler(publicConfig.fastapiUrl),
+  timeout: parseFastApiTimeoutMs(),
   next: { revalidate: 0 },
 });
 
 export const fastapiGraphql = new GraphQLClient({
   baseUrl: resolveFastApiBaseUrl(publicConfig.fastapiGraphqlUrl),
-  onRequest: withFastApiProxyAuth,
+  onRequest: createFastApiAuthHandler(publicConfig.fastapiGraphqlUrl),
 });
