@@ -9,7 +9,9 @@ def _make_engine(url: str):
     connect_args = {}
     if url.startswith("sqlite"):
         connect_args = {"check_same_thread": False}
-    return create_engine(url, connect_args=connect_args, pool_pre_ping=True)
+    else:
+        connect_args = {"connect_timeout": 8, "sslmode": "require"}
+    return create_engine(url, connect_args=connect_args, pool_pre_ping=True, pool_recycle=1800)
 
 
 database_url = (settings.DATABASE_URL or "").strip()

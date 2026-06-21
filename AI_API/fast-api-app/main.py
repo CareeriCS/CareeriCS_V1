@@ -1,9 +1,15 @@
 import os
+import logging
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import text
+
 from core.config import settings
 from core.observability import install_request_timing_middleware
+from db.session import engine
 from routers.interview.interview import routers as interview_routers
 from routers.cv.cv import routers as cv_routers
 from routers.skills.skill import routers as skill_routers
@@ -16,7 +22,21 @@ from routers.job.job import router as job_router
 from routers.course import router as course_router
 from routers.profile import router as profile_router
 
-app = FastAPI()
+logger = logging.getLogger("careerics.startup")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        logger.info("✅ Database connection verified at startup")
+    except Exception as exc:
+        logger.error("❌ Database connection FAILED at startup: %s", exc, exc_info=True)
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 install_request_timing_middleware(app)
 
 for path in settings.AUDIO_PATHS.values():
@@ -39,19 +59,14 @@ app.add_middleware(
 
 for router in interview_routers:
     app.include_router(router)
-
 for router in cv_routers:
     app.include_router(router)
-
 for router in skill_routers:
     app.include_router(router)
-
 for router in skill_assessment_routers:
     app.include_router(router)
-
 for router in roadmap_routers:
     app.include_router(router)
-
 for router in journey_routers:
     app.include_router(router)
 
