@@ -8,6 +8,7 @@ import { useAuth } from "@/providers/auth-provider";
 import { useResponsive } from "@/hooks/useResponsive";
 import { profileService } from "@/services/profile.service";
 import { supabase } from "@/lib/supabase";
+import { useNavigationLockState } from "@/lib/navigation-lock";
 
 const PROFILE_PHOTO_BUCKET = "profile-pictures";
 const PROFILE_PHOTO_SIGNED_URL_TTL_SECONDS = 60 * 60 * 24 * 7;
@@ -17,6 +18,7 @@ const Sidebar = () => {
   const pathname = usePathname();
   const router = useRouter();
   const { user, isLoading } = useAuth();
+  const { locked: isNavigationLocked } = useNavigationLockState();
 
   const { isLarge, isMedium, isSmall } = useResponsive();
 
@@ -25,6 +27,19 @@ const Sidebar = () => {
   const [profileNameOverride, setProfileNameOverride] = useState<string | null>(null);
   const [profileAvatarUrl, setProfileAvatarUrl] = useState("");
   const [profileImageUseFallback, setProfileImageUseFallback] = useState(false);
+
+  useEffect(() => {
+    if (isNavigationLocked) {
+      const timer = window.setTimeout(() => {
+        setIsOpen(false);
+        setHoveredNav(null);
+      }, 0);
+
+      return () => {
+        window.clearTimeout(timer);
+      };
+    }
+  }, [isNavigationLocked]);
 
   const profileImageSrc = profileImageUseFallback
     ? DEFAULT_PROFILE_IMAGE
@@ -189,27 +204,45 @@ const Sidebar = () => {
   ) =>
     navItems.map((item, i) => {
       const isActive = pathname === item.path;
-      const isHovered = hoveredNav === i;
+      const isHovered = !isNavigationLocked && hoveredNav === i;
       const activeState = isActive || isHovered;
 
       return (
         <Link
           key={item.path}
           href={item.path}
-          style={{ textDecoration: "none" }}
+          onClick={(event) => {
+            if (isNavigationLocked) {
+              event.preventDefault();
+              event.stopPropagation();
+              return;
+            }
+
+            if (isSmall) {
+              setIsOpen(false);
+            }
+          }}
+          aria-disabled={isNavigationLocked}
+          style={{
+            textDecoration: "none",
+            opacity: isNavigationLocked ? 0.6 : 1,
+          }}
         >
           <div
             title={item.text}
-            onMouseEnter={() => setHoveredNav(i)}
+            onMouseEnter={() => {
+              if (!isNavigationLocked) {
+                setHoveredNav(i);
+              }
+            }}
             onMouseLeave={() => setHoveredNav(null)}
-            onClick={() => isSmall && setIsOpen(false)}
             style={{
               display: "flex",
               alignItems: "center",
               gap: "var(--space-md)",
               padding: !isSmall ? "var(--space-sm)" : "var(--space-lg)",
               borderRadius: "var(--radius-lg)",
-              cursor: "pointer",
+              cursor: isNavigationLocked ? "not-allowed" : "pointer",
               transition: "0.2s ease-in-out",
               backgroundColor: isActive
                 ? "var(--primary-green)"
@@ -279,7 +312,12 @@ const Sidebar = () => {
         </nav>
 
         <div
-          onClick={() => { router.push("/profile") }}
+          onClick={() => {
+            if (isNavigationLocked) {
+              return;
+            }
+            router.push("/profile");
+          }}
           style={{
             marginTop: "auto",
             display: "flex",
@@ -287,6 +325,8 @@ const Sidebar = () => {
             gap: "var(--space-md)",
             paddingBlock: "var(--space-sm)",
             borderTop: "2px solid #fff",
+            cursor: isNavigationLocked ? "not-allowed" : "pointer",
+            opacity: isNavigationLocked ? 0.6 : 1,
           }}
         >
           <img
@@ -302,7 +342,7 @@ const Sidebar = () => {
             }}
           />
 
-          <div style={{ cursor: "pointer" }}>
+          <div style={{ cursor: isNavigationLocked ? "not-allowed" : "pointer" }}>
             {profileName}
           </div>
         </div>
@@ -334,11 +374,17 @@ const Sidebar = () => {
             }}
           >
             <div
-              onClick={() => setIsOpen(true)}
+              onClick={() => {
+                if (isNavigationLocked) {
+                  return;
+                }
+                setIsOpen(true);
+              }}
               style={{
                 fontSize: "var(--icon-lg)",
                 fontFamily: "var(--font-nova-square)",
-                cursor: "pointer",
+                cursor: isNavigationLocked ? "not-allowed" : "pointer",
+                opacity: isNavigationLocked ? 0.6 : 1,
               }}
 
             >
@@ -356,7 +402,12 @@ const Sidebar = () => {
             </nav>
 
             <img
-              onClick={() => { router.push("/profile") }}
+              onClick={() => {
+                if (isNavigationLocked) {
+                  return;
+                }
+                router.push("/profile");
+              }}
               src={profileImageSrc}
               alt=""
               onError={handleProfileImageError}
@@ -366,7 +417,8 @@ const Sidebar = () => {
                 borderRadius: "999px",
                 objectFit: "cover",
                 backgroundColor: "transparent",
-                cursor: "pointer",
+                cursor: isNavigationLocked ? "not-allowed" : "pointer",
+                opacity: isNavigationLocked ? 0.6 : 1,
               }}
             />
           </aside>
@@ -446,7 +498,12 @@ const Sidebar = () => {
               </nav>
 
               <div
-                onClick={() => { router.push("/profile") }}
+                onClick={() => {
+                  if (isNavigationLocked) {
+                    return;
+                  }
+                  router.push("/profile");
+                }}
                 style={{
                   marginTop: "auto",
                   display: "flex",
@@ -454,6 +511,8 @@ const Sidebar = () => {
                   gap: "var(--space-md)",
                   borderTop: "2px solid #fff",
                   padding: "var(--space-md)",
+                  cursor: isNavigationLocked ? "not-allowed" : "pointer",
+                  opacity: isNavigationLocked ? 0.6 : 1,
                 }}
               >
                 <img
@@ -466,11 +525,11 @@ const Sidebar = () => {
                     borderRadius: "999px",
                     objectFit: "cover",
                     backgroundColor: "transparent",
-                    cursor: "pointer",
+                    cursor: isNavigationLocked ? "not-allowed" : "pointer",
                   }}
                 />
 
-                <div style={{ cursor: "pointer" }}>
+                <div style={{ cursor: isNavigationLocked ? "not-allowed" : "pointer" }}>
                   {profileName}
                 </div>
               </div>
@@ -486,7 +545,12 @@ const Sidebar = () => {
     <>
       {!isOpen && (
         <button
-          onClick={() => setIsOpen(true)}
+          onClick={() => {
+            if (isNavigationLocked) {
+              return;
+            }
+            setIsOpen(true);
+          }}
           style={{
             position: "fixed",
             top: "var(--space-md)",
@@ -494,11 +558,12 @@ const Sidebar = () => {
             zIndex: 2000,
             background: "transparent",
             border: "none",
-            cursor: "pointer",
+            cursor: isNavigationLocked ? "not-allowed" : "pointer",
             color: "black",
             fontSize: "var(--text-xl)",
             fontWeight: "bold",
             fontFamily: "var(--font-nova-square)",
+            opacity: isNavigationLocked ? 0.6 : 1,
           }}
         >
           ☰
@@ -581,7 +646,12 @@ const Sidebar = () => {
             </nav>
 
             <div
-              onClick={() => { router.push("/profile") }}
+              onClick={() => {
+                if (isNavigationLocked) {
+                  return;
+                }
+                router.push("/profile");
+              }}
               style={{
                 marginTop: "auto",
                 display: "flex",
@@ -589,6 +659,8 @@ const Sidebar = () => {
                 gap: "var(--space-md)",
                 borderTop: "2px solid #fff",
                 padding: "var(--space-md)",
+                cursor: isNavigationLocked ? "not-allowed" : "pointer",
+                opacity: isNavigationLocked ? 0.6 : 1,
               }}
             >
               <img
@@ -601,11 +673,11 @@ const Sidebar = () => {
                   borderRadius: "999px",
                   objectFit: "cover",
                   backgroundColor: "transparent",
-                  cursor: "pointer",
+                  cursor: isNavigationLocked ? "not-allowed" : "pointer",
                 }}
               />
 
-              <div style={{ cursor: "pointer", whiteSpace: "nowrap" }}>
+              <div style={{ cursor: isNavigationLocked ? "not-allowed" : "pointer", whiteSpace: "nowrap" }}>
                 {profileName}
               </div>
             </div>

@@ -125,6 +125,8 @@ export default function CareerQuestionsPage() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("sessionId") || "";
   const requestedTrackId = searchParams.get("trackId") || "";
+  const origin = searchParams.get("origin") || "";
+  const returnTo = searchParams.get("returnTo") || "";
   const isLegacyResultsView = searchParams.get("view") === "results";
 
   const [questionGroups, setQuestionGroups] = useState<QuestionGroup[]>([]);
@@ -140,8 +142,13 @@ export default function CareerQuestionsPage() {
       return;
     }
 
-    router.replace(buildCareerQuizResultsHref(sessionId, requestedTrackId || null));
-  }, [isLegacyResultsView, requestedTrackId, router, sessionId]);
+    router.replace(
+      buildCareerQuizResultsHref(sessionId, requestedTrackId || null, {
+        origin,
+        returnTo,
+      }),
+    );
+  }, [isLegacyResultsView, origin, requestedTrackId, returnTo, router, sessionId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -268,7 +275,12 @@ export default function CareerQuestionsPage() {
 
       if (evaluateResponse.success && evaluateResponse.data) {
         registerTrackRoadmapLinksFromRecommendations(evaluateResponse.data.track_scores);
-        router.push(buildCareerQuizResultsHref(sessionId, requestedTrackId || null));
+        router.push(
+          buildCareerQuizResultsHref(sessionId, requestedTrackId || null, {
+            origin,
+            returnTo,
+          }),
+        );
         return;
       }
 
@@ -276,7 +288,12 @@ export default function CareerQuestionsPage() {
 
       if (cachedResponse.success && cachedResponse.data) {
         registerTrackRoadmapLinksFromRecommendations(cachedResponse.data.track_scores);
-        router.push(buildCareerQuizResultsHref(sessionId, requestedTrackId || null));
+        router.push(
+          buildCareerQuizResultsHref(sessionId, requestedTrackId || null, {
+            origin,
+            returnTo,
+          }),
+        );
         return;
       }
 

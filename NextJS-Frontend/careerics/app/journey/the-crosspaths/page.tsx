@@ -269,6 +269,7 @@ export default function JourneyCrosspathsPage() {
       <Orientation
         current={1}
         maxReached={1}
+        naturalMaxReached={1}
         renderContent={renderLoadingState}
       />
     );
@@ -279,6 +280,7 @@ export default function JourneyCrosspathsPage() {
       <Orientation
         current={1}
         maxReached={1}
+        naturalMaxReached={1}
         renderContent={() => (
           <div
             style={{
@@ -326,6 +328,7 @@ export default function JourneyCrosspathsPage() {
     <Orientation
       current={1}
       maxReached={nextPhase}
+      naturalMaxReached={maxReached}
       resolvePhasePath={(phase) => buildJourneyPhaseHref(phase, selectedTrack.id)}
       renderContent={() => (
         <div

@@ -31,7 +31,6 @@ import {
 import { UNIFIED_BOOKMARKS_UPDATED_EVENT } from "@/lib/unified-bookmarks";
 import { removeTrackBookmarksFromUnifiedList } from "@/lib/unified-bookmark-actions";
 import {
-  CAREER_FEATURE_ROUTE,
   buildCareerQuizResultsHref,
   buildCareerQuizSelectionHref,
   startCareerQuizSession,
@@ -48,6 +47,7 @@ import {
   invalidateJourneyTrackCardsCache,
   loadJourneyProgressSnapshot,
   loadJourneyTrackCards,
+  normalizeJourneyPhaseNumber,
   persistSelectedJourneyTrackId,
   readSelectedJourneyTrackId,
   syncSelectedJourneyTrackProgress,
@@ -272,7 +272,7 @@ export default function HomePage() {
         );
 
         const missingRoadmapIds = requiredRoadmapIds.filter(id => !sessionRoadmapsById[id]);
-        let activeRoadmapsMap = { ...sessionRoadmapsById };
+        const activeRoadmapsMap = { ...sessionRoadmapsById };
 
         if (missingRoadmapIds.length > 0) {
           const fetchedRoadmaps = await Promise.all(
@@ -463,6 +463,23 @@ export default function HomePage() {
 
         setSelectedTrackId(defaultFallback?.id || null);
         persistSelectedJourneyTrackId(defaultFallback?.id || null, userId);
+        if (defaultFallback) {
+          const fallbackPhaseState = getJourneyPhaseStateFromSnapshot(
+            snapshot,
+            defaultFallback.id,
+            userId,
+          );
+          const fallbackPhase = normalizeJourneyPhaseNumber(
+            Math.max(defaultFallback.roadmapId ? 2 : 1, fallbackPhaseState.maxReached),
+          );
+
+          void syncSelectedJourneyTrackProgress({
+            trackId: defaultFallback.id,
+            userId,
+            roadmapId: defaultFallback.roadmapId,
+            maxReached: fallbackPhase,
+          });
+        }
       } catch {
         if (!alive) return;
         setJourneyTracks([]);
@@ -503,9 +520,24 @@ export default function HomePage() {
 
   // Active Journey Progress Aggregator
   const activePhaseState = useMemo(() => {
-    return activeTrack?.id
-      ? getJourneyPhaseStateFromSnapshot(journeyProgressSnapshot, activeTrack.id, userId)
-      : { maxReached: 1 as const, hasStarted: false };
+    if (!activeTrack?.id) {
+      return { maxReached: 1 as const, hasStarted: false };
+    }
+
+    const baseState = getJourneyPhaseStateFromSnapshot(
+      journeyProgressSnapshot,
+      activeTrack.id,
+      userId,
+    );
+    const minimumPhase = activeTrack.roadmapId ? 2 : 1;
+    const maxReached = normalizeJourneyPhaseNumber(
+      Math.max(minimumPhase, baseState.maxReached),
+    );
+
+    return {
+      maxReached,
+      hasStarted: baseState.hasStarted || maxReached > 1,
+    };
   }, [journeyProgressSnapshot, activeTrack?.id, userId]);
 
   // Complete Content Dashboard Aggregator
@@ -549,7 +581,12 @@ export default function HomePage() {
       trackId,
       userId,
       roadmapId: match.roadmapId,
-      maxReached: getJourneyPhaseStateFromSnapshot(journeyProgressSnapshot, trackId, userId).maxReached,
+      maxReached: normalizeJourneyPhaseNumber(
+        Math.max(
+          match.roadmapId ? 2 : 1,
+          getJourneyPhaseStateFromSnapshot(journeyProgressSnapshot, trackId, userId).maxReached,
+        ),
+      ),
     });
   };
 
@@ -557,14 +594,19 @@ export default function HomePage() {
     setBookmarkActionError(null);
     persistSelectedJourneyTrackId(track.id, userId);
     setSelectedTrackId(track.id);
+    const currentPhaseTarget = normalizeJourneyPhaseNumber(
+      Math.max(
+        track.roadmapId ? 2 : 1,
+        getJourneyPhaseStateFromSnapshot(journeyProgressSnapshot, track.id, userId).maxReached,
+      ),
+    );
     void syncSelectedJourneyTrackProgress({
       trackId: track.id,
       userId,
       roadmapId: track.roadmapId,
-      maxReached: getJourneyPhaseStateFromSnapshot(journeyProgressSnapshot, track.id, userId).maxReached,
+      maxReached: currentPhaseTarget,
     });
 
-    const currentPhaseTarget = getJourneyPhaseStateFromSnapshot(journeyProgressSnapshot, track.id, userId).maxReached;
     router.push(buildJourneyPhaseHref(currentPhaseTarget, track.id));
   };
 
@@ -600,7 +642,16 @@ export default function HomePage() {
             trackId: nextFallback.id,
             userId,
             roadmapId: nextFallback.roadmapId,
-            maxReached: getJourneyPhaseStateFromSnapshot(journeyProgressSnapshot, nextFallback.id, userId).maxReached,
+            maxReached: normalizeJourneyPhaseNumber(
+              Math.max(
+                nextFallback.roadmapId ? 2 : 1,
+                getJourneyPhaseStateFromSnapshot(
+                  journeyProgressSnapshot,
+                  nextFallback.id,
+                  userId,
+                ).maxReached,
+              ),
+            ),
           });
         }
       }
@@ -618,7 +669,7 @@ export default function HomePage() {
 
     if (!userId) {
       setCareerQuizError("Please sign in first to start the career quiz.");
-      router.push(`/auth/login?redirect=${encodeURIComponent(CAREER_FEATURE_ROUTE)}`);
+      router.push(`/auth/login?redirect=${encodeURIComponent("/features/home")}`);
       return;
     }
 
@@ -627,7 +678,12 @@ export default function HomePage() {
 
     try {
       const quizId = await startCareerQuizSession(userId);
-      router.push(buildCareerQuizSelectionHref(quizId));
+      router.push(
+        buildCareerQuizSelectionHref(quizId, {
+          origin: "home",
+          returnTo: "/features/home",
+        }),
+      );
     } catch (err) {
       setCareerQuizError(err instanceof Error ? err.message : "Unable to start the career quiz right now. Please try again.");
       setIsStartingCareerQuiz(false);

@@ -643,15 +643,19 @@ export async function syncSelectedJourneyTrackProgress(options: {
 
   const localState = readJourneyPhaseState(trackId, normalizedUserId);
   const hadLocalState = hasJourneyPhaseState(trackId, normalizedUserId);
+  const minimumMaxReached = roadmapId ? 2 : 1;
   const nextMaxReached = maxReached
-    ? normalizeJourneyPhaseNumber(Math.max(localState.maxReached, maxReached))
-    : localState.maxReached;
+    ? normalizeJourneyPhaseNumber(
+        Math.max(localState.maxReached, maxReached, minimumMaxReached),
+      )
+    : normalizeJourneyPhaseNumber(Math.max(localState.maxReached, minimumMaxReached));
+  const nextHasStarted = localState.hasStarted || nextMaxReached > 1;
 
   persistSelectedJourneyTrackId(trackId, normalizedUserId);
-  if (hadLocalState || localState.hasStarted) {
+  if (hadLocalState || localState.hasStarted || nextHasStarted) {
     persistJourneyPhaseState(trackId, {
       maxReached: nextMaxReached,
-      hasStarted: localState.hasStarted,
+      hasStarted: nextHasStarted,
     }, normalizedUserId);
   }
 
@@ -659,7 +663,7 @@ export async function syncSelectedJourneyTrackProgress(options: {
     roadmap_id: roadmapId ?? null,
     current_phase: nextMaxReached,
     max_reached_phase: nextMaxReached,
-    has_started: localState.hasStarted,
+    has_started: nextHasStarted,
     is_selected: true,
   });
 
@@ -668,9 +672,11 @@ export async function syncSelectedJourneyTrackProgress(options: {
   }
 
   invalidateJourneyProgressCache(normalizedUserId);
+  const responseMaxReached = normalizeJourneyPhaseNumber(response.data.max_reached_phase);
+  const responseHasStarted = Boolean(response.data.has_started) || responseMaxReached > 1;
   persistJourneyPhaseState(trackId, {
-    maxReached: normalizeJourneyPhaseNumber(response.data.max_reached_phase),
-    hasStarted: Boolean(response.data.has_started),
+    maxReached: responseMaxReached,
+    hasStarted: responseHasStarted,
   }, normalizedUserId);
 }
 
@@ -681,10 +687,15 @@ export async function visitJourneyPhase(
   roadmapId?: string | null,
 ): Promise<JourneyPhaseState> {
   const currentState = readJourneyPhaseState(trackId, userId);
+  const requestedPhase = normalizeJourneyPhaseNumber(phase);
+  const maxSequentialUnlock = normalizeJourneyPhaseNumber(currentState.maxReached + 1);
+  const nextCurrentPhase = requestedPhase > currentState.maxReached
+    ? normalizeJourneyPhaseNumber(Math.min(requestedPhase, maxSequentialUnlock))
+    : requestedPhase;
 
   const nextMaxReached: JourneyPhaseNumber = Math.max(
     currentState.maxReached,
-    phase
+    nextCurrentPhase,
   ) as JourneyPhaseNumber;
 
   const nextState = persistJourneyPhaseState(
@@ -700,7 +711,7 @@ export async function visitJourneyPhase(
 
   const response = await journeyService.upsertTrackProgress(normalizedUserId, trackId, {
     roadmap_id: roadmapId ?? null,
-    current_phase: phase,
+    current_phase: nextCurrentPhase,
     max_reached_phase: nextMaxReached,
     has_started: true,
     is_selected: true,

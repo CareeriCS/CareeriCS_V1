@@ -200,6 +200,7 @@ export default function JourneyTrialRoundPage() {
       <Orientation
         current={4}
         maxReached={4}
+        naturalMaxReached={4}
         renderContent={() => (
           <div
             style={{
@@ -245,6 +246,7 @@ export default function JourneyTrialRoundPage() {
       <Orientation
         current={4}
         maxReached={4}
+        naturalMaxReached={4}
         renderContent={() => (
           <div
             style={{
@@ -293,6 +295,7 @@ export default function JourneyTrialRoundPage() {
     <Orientation
       current={4}
       maxReached={nextPhase}
+      naturalMaxReached={maxReached}
       resolvePhasePath={(phase) => buildJourneyPhaseHref(phase, selectedTrack?.id)}
       renderContent={() => (
         <>

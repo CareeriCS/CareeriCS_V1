@@ -11,6 +11,7 @@ import {
   getJourneyPhaseStateFromSnapshot,
   loadJourneyProgressSnapshot,
   loadJourneyTrackCards,
+  normalizeJourneyPhaseNumber,
   persistSelectedJourneyTrackId,
   readSelectedJourneyTrackId,
   syncSelectedJourneyTrackProgress,
@@ -68,27 +69,28 @@ export default function JourneyPage() {
           tracks.find((track) => track.id === persistedTrackId) || tracks[0];
 
         persistSelectedJourneyTrackId(activeTrack.id, userId);
+        const phaseState = getJourneyPhaseStateFromSnapshot(
+          journeySnapshot,
+          activeTrack.id,
+          userId,
+        );
+        const minimumPhase = activeTrack.roadmapId ? 2 : 1;
+        const startPhase = normalizeJourneyPhaseNumber(
+          Math.max(minimumPhase, phaseState.maxReached),
+        );
+
         void syncSelectedJourneyTrackProgress({
           trackId: activeTrack.id,
           userId,
           roadmapId: activeTrack.roadmapId,
-          maxReached: getJourneyPhaseStateFromSnapshot(
-            journeySnapshot,
-            activeTrack.id,
-            userId,
-          ).maxReached,
+          maxReached: startPhase,
         });
 
         if (!alive) {
           return;
         }
 
-        const phaseState = getJourneyPhaseStateFromSnapshot(
-          journeySnapshot,
-          activeTrack.id,
-          userId,
-        );
-        router.replace(buildJourneyPhaseHref(phaseState.maxReached, activeTrack.id));
+        router.replace(buildJourneyPhaseHref(startPhase, activeTrack.id));
       } catch {
         if (!alive) {
           return;

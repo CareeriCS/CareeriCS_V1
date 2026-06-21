@@ -25,6 +25,19 @@ function normalizeSessionType(rawType: string | null): APIAssessmentSessionType 
   return rawType === "roadmap" || rawType === "section" || rawType === "step" ? rawType : "skills";
 }
 
+function resolveSafeReturnTo(rawReturnTo: string | null): string | null {
+  const candidate = (rawReturnTo || "").trim();
+  if (!candidate) {
+    return null;
+  }
+
+  if (!candidate.startsWith("/") || candidate.startsWith("//")) {
+    return null;
+  }
+
+  return candidate;
+}
+
 export default function JourneyLayout({
   children,
 }: {
@@ -39,6 +52,10 @@ export default function JourneyLayout({
   const targetId = searchParams.get("targetId") || searchParams.get("skillId") || "";
   const targetName = searchParams.get("targetName") || searchParams.get("skillName") || "Skill Assessment";
   const sessionType = normalizeSessionType(searchParams.get("sessionType"));
+  const safeReturnTo = useMemo(
+    () => resolveSafeReturnTo(searchParams.get("returnTo")),
+    [searchParams],
+  );
   const resumeSessionId = searchParams.get("sessionId") || "";
   const parsedNumQuestions = Number(searchParams.get("numQuestions") || "7");
   const numQuestions =
@@ -213,7 +230,7 @@ export default function JourneyLayout({
       });
     }
 
-    router.replace("/features/skill");
+    router.replace(safeReturnTo || "/features/skill");
   };
 
   const contextValue: AssessmentContextType = {

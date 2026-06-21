@@ -15,10 +15,10 @@ interface Skill {
   id: string;
   text: string;
   checked: boolean;
+  resources: Resource[];
 }
 
 interface Section {
-  resources: Resource[];
   skills: Skill[];
   locked?: boolean;
 }
@@ -301,7 +301,7 @@ export default function RoadmapPanelContent({
                         void toggleSkill(index);
                       }}
                     >
-                      {selectedSection?.resources.map((resource: Resource) => {
+                      {skill.resources.map((resource: Resource) => {
                         const key = `${resource.url}|${resource.title}|${resource.resourceType}`;
 
                         return (

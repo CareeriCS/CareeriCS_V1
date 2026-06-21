@@ -7,14 +7,18 @@ import { useRouter } from "next/navigation";
 type JourneyTreeProps = {
   current: number;
   maxReached: number;
+  naturalMaxReached?: number;
   resolvePhasePath?: (phase: number) => string;
   renderContent?: () => React.ReactNode;
+  closeHref?: string;
+  onClose?: () => void;
 };
 
 function renderChain(
   phases: number[],
   current: number,
   maxReached: number,
+  naturalMaxReached: number,
   resolvePhasePath?: (phase: number) => string,
   renderContent?: () => React.ReactNode
 ): React.ReactNode {
@@ -33,6 +37,8 @@ function renderChain(
       current={isCurrent}
       locked={isLocked}
       path={targetPath}
+      currentPhase={current}
+      naturalMaxReached={naturalMaxReached}
     >
       {isCurrent && (
         <div
@@ -53,10 +59,17 @@ function renderChain(
               flexShrink: 0,
             }}
           >
-            {renderChain(rest, current, maxReached, resolvePhasePath, renderContent)}
+            {renderChain(
+              rest,
+              current,
+              maxReached,
+              naturalMaxReached,
+              resolvePhasePath,
+              renderContent,
+            )}
           </div>
         ) : (
-          renderChain(rest, current, maxReached, resolvePhasePath, renderContent)
+          renderChain(rest, current, maxReached, naturalMaxReached, resolvePhasePath, renderContent)
         ))}
 
     </JourneyFolder>
@@ -66,11 +79,15 @@ function renderChain(
 export default function JourneyTree({
   current,
   maxReached,
+  naturalMaxReached,
   resolvePhasePath,
   renderContent,
+  closeHref = "/features/home",
+  onClose,
 }: JourneyTreeProps) {
   const phases = Array.from({ length: maxReached }, (_, i) => i + 1);
   const router = useRouter();
+  const effectiveNaturalMaxReached = naturalMaxReached ?? maxReached;
 
   return (
     <div
@@ -96,7 +113,13 @@ export default function JourneyTree({
         <img
           src={"/global/close.svg"}
           alt="Close journey"
-          onClick={() => router.push("/features/home")}
+          onClick={() => {
+            if (onClose) {
+              onClose();
+              return;
+            }
+            router.push(closeHref);
+          }}
           style={{
             width: "1.5rem",
             height: "1.5rem",
@@ -111,7 +134,14 @@ export default function JourneyTree({
           width: "100%",
         }}
       >
-        {renderChain(phases, current, maxReached, resolvePhasePath, renderContent)}
+        {renderChain(
+          phases,
+          current,
+          maxReached,
+          effectiveNaturalMaxReached,
+          resolvePhasePath,
+          renderContent,
+        )}
       </div>
     </div>
   );

@@ -2,13 +2,39 @@ import { careerService } from "@/services";
 
 export const CAREER_FEATURE_ROUTE = "/features/career";
 
-export function buildCareerQuizSelectionHref(sessionId: string): string {
-  return `/quiz-features/hobbies?sessionId=${encodeURIComponent(sessionId)}`;
+export type CareerQuizFlowContext = {
+  origin?: string | null;
+  returnTo?: string | null;
+};
+
+function appendCareerQuizFlowContext(
+  params: URLSearchParams,
+  context?: CareerQuizFlowContext,
+): void {
+  const origin = context?.origin?.trim();
+  if (origin) {
+    params.set("origin", origin);
+  }
+
+  const returnTo = context?.returnTo?.trim();
+  if (returnTo) {
+    params.set("returnTo", returnTo);
+  }
+}
+
+export function buildCareerQuizSelectionHref(
+  sessionId: string,
+  context?: CareerQuizFlowContext,
+): string {
+  const params = new URLSearchParams({ sessionId });
+  appendCareerQuizFlowContext(params, context);
+  return `/quiz-features/hobbies?${params.toString()}`;
 }
 
 export function buildCareerQuizResultsHref(
   sessionId: string,
   trackId?: string | null,
+  context?: CareerQuizFlowContext,
 ): string {
   const params = new URLSearchParams({
     sessionId,
@@ -17,6 +43,7 @@ export function buildCareerQuizResultsHref(
   if (trackId) {
     params.set("trackId", trackId);
   }
+  appendCareerQuizFlowContext(params, context);
 
   return `/quiz-features/results?${params.toString()}`;
 }
