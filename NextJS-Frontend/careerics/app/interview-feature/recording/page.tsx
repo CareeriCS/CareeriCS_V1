@@ -455,7 +455,7 @@ export default function RecordingPage() {
       pointerEvents: isPeeking ? "none" : "auto"
     }}>
       <img
-        src={status === "idle" ? "/interview/record.svg" : status === "recording" ? "/interview/pause.svg" : "/interview/Play.svg"}
+        src={status === "idle" ? "/interview/record.svg" : status === "recording" ? "/interview/pause.svg" : "/interview/play.svg"}
         alt="Control"
         style={{ height: "var(--icon-2xl)", cursor: isQuestionsLoading ? "not-allowed" : "pointer", opacity: isQuestionsLoading ? 0.5 : 1 }}
         onClick={handleCameraToggle}
