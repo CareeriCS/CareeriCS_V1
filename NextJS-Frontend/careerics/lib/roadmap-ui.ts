@@ -17,13 +17,13 @@ export type RoadmapUiSkill = {
   text: string;
   checked: boolean;
   completionStatus: RoadmapCompletionStatus;
+  resources: RoadmapUiResource[];
 };
 
 export type RoadmapUiSection = {
   id: string;
   title: string;
   href: string;
-  resources: RoadmapUiResource[];
   skills: RoadmapUiSkill[];
   locked: boolean;
   lockReason: string | null;
@@ -58,6 +58,45 @@ function getCompletionStatus(completed: number, total: number): RoadmapCompletio
   return "in_progress";
 }
 
+type RawRoadmapResource = {
+  title?: string | null;
+  url?: string | null;
+  resourceType?: string | null;
+};
+
+function normalizeRoadmapUiResources(
+  resources: RawRoadmapResource[] | null | undefined,
+): RoadmapUiResource[] {
+  const normalizedResources = (resources || [])
+    .map((resource) => {
+      const title = String(resource.title || "").trim();
+      const url = String(resource.url || "").trim();
+      const resourceType = String(resource.resourceType || "resource").trim();
+
+      return {
+        title: title || (url ? "Resource Link" : "Resource"),
+        url,
+        resourceType: resourceType || "resource",
+      };
+    })
+    .filter((resource) => resource.title || resource.url);
+
+  const dedupedResources: RoadmapUiResource[] = [];
+  const seenResourceKeys = new Set<string>();
+
+  for (const resource of normalizedResources) {
+    const key = `${resource.url}|${resource.title}`;
+    if (seenResourceKeys.has(key)) {
+      continue;
+    }
+
+    seenResourceKeys.add(key);
+    dedupedResources.push(resource);
+  }
+
+  return dedupedResources;
+}
+
 export function buildRoadmapUiSections(options: {
   roadmap: RoadmapRead | null;
   progress: RoadmapProgressSummary | null;
@@ -77,36 +116,6 @@ export function buildRoadmapUiSections(options: {
   }
 
   const sectionsWithSkills = orderedSections.map((section) => {
-    const rawResources = section.steps
-      .slice()
-      .sort((a, b) => a.order - b.order)
-      .flatMap((step) => step.resources || [])
-      .map((resource) => {
-        const title = String(resource.title || "").trim();
-        const url = String(resource.url || "").trim();
-        const resourceType = String(resource.resourceType || "resource").trim();
-
-        return {
-          title: title || (url ? "Resource Link" : "Resource"),
-          url,
-          resourceType: resourceType || "resource",
-        };
-      })
-      .filter((resource) => resource.title || resource.url);
-
-    const resources: RoadmapUiResource[] = [];
-    const seenResourceKeys = new Set<string>();
-
-    for (const resource of rawResources) {
-      const key = `${resource.url}|${resource.title}`;
-      if (seenResourceKeys.has(key)) {
-        continue;
-      }
-
-      seenResourceKeys.add(key);
-      resources.push(resource);
-    }
-
     const sectionProgress = progressSectionsById.get(section.id);
     const skills = section.steps
       .slice()
@@ -116,12 +125,14 @@ export function buildRoadmapUiSections(options: {
         const checked = step.id in localStepCompletion
           ? localStepCompletion[step.id]
           : backendStatus === "completed";
+        const resources = normalizeRoadmapUiResources(step.resources);
 
         return {
           id: step.id,
           text: step.title,
           checked,
           completionStatus: checked ? "completed" : backendStatus,
+          resources,
         };
       });
 
@@ -144,7 +155,6 @@ export function buildRoadmapUiSections(options: {
       id: section.id,
       title: section.title,
       href: section.id,
-      resources,
       skills,
       completionStatus,
       completionPercent,
