@@ -52,13 +52,16 @@ for path in settings.AUDIO_PATHS.values():
 
 app.mount("/audio", StaticFiles(directory=settings.AUDIO_BASE), name="audio")
 
-allowed_origins = [
+allowed_origins = sorted({
     "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://careeri-cs.vercel.app",
     *_csv_env("CORS_ALLOWED_ORIGINS"),
-]
-allow_origin_regex = os.getenv(
-    "CORS_ALLOWED_ORIGIN_REGEX",
-    r"^https://.*\.vercel\.app$",
+})
+
+allow_origin_regex = (
+    os.getenv("CORS_ALLOWED_ORIGIN_REGEX")
+    or r"^https://.*\.vercel\.app$"
 )
 
 app.add_middleware(
@@ -66,7 +69,7 @@ app.add_middleware(
     allow_origins=allowed_origins,
     allow_origin_regex=allow_origin_regex,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
