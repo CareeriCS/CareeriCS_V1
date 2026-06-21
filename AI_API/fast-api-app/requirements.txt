@@ -1,58 +1,52 @@
-# -----------------------
-# Core API
-# -----------------------
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+# -------------------
+# Core Backend
+# -------------------
 fastapi==0.121.2
 uvicorn[standard]==0.38.0
-python-multipart==0.0.20
-pydantic[email]==2.12.4
-
-# -----------------------
-# Database
-# -----------------------
 SQLAlchemy==2.0.44
 psycopg2-binary==2.9.11
 alembic==1.18.1
+python-multipart==0.0.20
+pydantic[email]==2.12.5
 
-# -----------------------
-# HTTP / utils
-# -----------------------
-httpx==0.28.1
-requests==2.32.5
-beautifulsoup4==4.14.3
-rapidfuzz==3.14.3
-
-# -----------------------
-# ML CORE (ONLY IF REQUIRED IN API)
-# -----------------------
+# -------------------
+# ML CORE (STABLE SET)
+# -------------------
 numpy==1.26.4
 scipy==1.11.4
 opencv-python-headless==4.8.1.78
 
-# PyTorch (CPU)
+# Deep Learning (CPU)
 torch==2.9.1+cpu
 transformers==4.57.6
 huggingface-hub==0.36.0
 
-# Face / vision (only if you actually use it in API)
+# DeepFace (keep but stable dependencies)
 deepface==0.0.97
 gdown==5.2.1
 retina-face==0.0.17
 mtcnn==1.0.0
 
-# -----------------------
-# Audio (ONLY IF USED IN API)
-# -----------------------
+# -------------------
+# Audio / NLP
+# -------------------
 gTTS==2.5.4
 openai==2.8.1
 
-# -----------------------
-# File processing
-# -----------------------
+# -------------------
+# Utilities
+# -------------------
+httpx==0.28.1
+requests==2.33.0
+beautifulsoup4==4.14.3
+rapidfuzz==3.14.3
 pdfplumber==0.11.9
 python-docx==1.2.0
 reportlab==4.4.10
 
-# -----------------------
-# Security
-# -----------------------
-cryptography==46.0.3
+# -------------------
+# Database / Security
+# -------------------
+cryptography==46.0.6
