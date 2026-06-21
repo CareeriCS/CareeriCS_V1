@@ -1,7 +1,7 @@
 const BEHAVIORAL_INTERVIEW_TYPE = "HR";
-export const MIN_INTERVIEW_QUESTION_COUNT = 5;
+export const MIN_INTERVIEW_QUESTION_COUNT = 1;
 export const MAX_INTERVIEW_QUESTION_COUNT = 15;
-export const DEFAULT_INTERVIEW_QUESTION_COUNT = 5;
+export const DEFAULT_INTERVIEW_QUESTION_COUNT = 1;
 
 export function isBehavioralInterviewType(value: string | null | undefined): boolean {
   return (value || "").trim().toLowerCase() === "hr";
