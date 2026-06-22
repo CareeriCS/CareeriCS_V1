@@ -1,8 +1,11 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import { ReactNode } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import type { ReactNode } from "react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button"
+import {
+  buildAuthRedirectHref,
+  resolvePostAuthPath,
+} from "@/lib/auth/post-auth-redirect";
 import { useResponsive } from "@/hooks/useResponsive";
 
 interface AuthLayoutProps {
@@ -13,6 +16,16 @@ interface AuthLayoutProps {
 export default function AuthLayout({ children }: AuthLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const hasPostAuthRedirect = Boolean(
+    searchParams.get("redirect") || searchParams.get("callbackUrl"),
+  );
+  const preservedPostAuthPath = hasPostAuthRedirect
+    ? resolvePostAuthPath({
+      redirect: searchParams.get("redirect"),
+      callbackUrl: searchParams.get("callbackUrl"),
+    })
+    : null;
 
   // Default values
   let CardTitle = "";
@@ -70,7 +83,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
   }
 
 
-  const { isLarge, isMedium, isSmall } = useResponsive();
+  const { isLarge, isMedium } = useResponsive();
 
   type Layout = {
     gridTemplateColumns: string;
@@ -95,6 +108,10 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
   };
 
   const layout = getLayout();
+  const linkHref = buildAuthRedirectHref(Link, preservedPostAuthPath);
+  const backHref = BackPath?.startsWith("/auth/")
+    ? buildAuthRedirectHref(BackPath, preservedPostAuthPath)
+    : BackPath ?? "/";
 
 
   return (
@@ -214,14 +231,14 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
                       before: Message ?? "",
                       buttonText: LinkText ?? "",
                     }}
-                    onClick={() => router.push(Link ?? "/")}
+                    onClick={() => router.push(linkHref)}
                   />
                 </div>
               )}
             </div>
 
             <button
-              onClick={() => router.push(BackPath ?? "/")}
+              onClick={() => router.push(backHref)}
               style={{
                 position: "absolute",
                 top: "clamp(0.75rem, 2vw, 1.25rem)",
@@ -337,14 +354,14 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
                     before: Message ?? "",
                     buttonText: LinkText ?? "",
                   }}
-                  onClick={() => router.push(Link ?? "/")}
+                  onClick={() => router.push(linkHref)}
                 />
               </div>
             )}
           </div>
 
           <button
-            onClick={() => router.push(BackPath ?? "/")}
+            onClick={() => router.push(backHref)}
             style={{
               position: "absolute",
               top: "clamp(0.75rem, 2vw, 1.25rem)",

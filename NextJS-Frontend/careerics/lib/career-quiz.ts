@@ -1,6 +1,7 @@
 import { careerService } from "@/services";
 
 export const CAREER_FEATURE_ROUTE = "/features/career";
+export const CAREER_QUIZ_START_ROUTE = "/features/start-career-quiz";
 
 export type CareerQuizFlowContext = {
   origin?: string | null;
@@ -46,6 +47,20 @@ export function buildCareerQuizResultsHref(
   appendCareerQuizFlowContext(params, context);
 
   return `/quiz-features/results?${params.toString()}`;
+}
+
+export function buildCareerQuizStartHref(
+  context?: CareerQuizFlowContext,
+): string {
+  const params = new URLSearchParams();
+
+  appendCareerQuizFlowContext(params, {
+    origin: context?.origin ?? "home",
+    returnTo: context?.returnTo ?? "/features/home",
+  });
+
+  const query = params.toString();
+  return `${CAREER_QUIZ_START_ROUTE}${query ? `?${query}` : ""}`;
 }
 
 export function buildCareerTrackDetailsHref(
