@@ -15,7 +15,6 @@ import { ActivityCard } from "@/components/ui/activity-card";
 
 // Services
 import {
-  careerService,
   interviewService,
   jobService,
   skillAssessmentService,
@@ -31,7 +30,6 @@ import {
 import { UNIFIED_BOOKMARKS_UPDATED_EVENT } from "@/lib/unified-bookmarks";
 import { removeTrackBookmarksFromUnifiedList } from "@/lib/unified-bookmark-actions";
 import {
-  buildCareerQuizResultsHref,
   buildCareerQuizSelectionHref,
   startCareerQuizSession,
 } from "@/lib/career-quiz";
@@ -85,7 +83,7 @@ const RECENT_ACTIVITY_PLACEHOLDER: RecentActivityItem[] = [
   {
     key: "placeholder",
     id: "No activity yet",
-    date: "Complete a quiz, assessment, interview, course, or job application to see activity here",
+    date: "Complete an assessment, interview, course, or job application to see activity here",
     type: "file",
     timestamp: 0,
   },
@@ -247,12 +245,10 @@ export default function HomePage() {
         const [
           assessmentSessionsResp,
           interviewSessionsResp,
-          careerSessionsResp,
           jobApplicationsResp,
         ] = await Promise.all([
           skillAssessmentService.getUserSessions(userId),
           interviewService.getUserSessions(userId),
-          careerService.getUserSessions(userId),
           jobService.getUserApplications(userId, { limit: RECENT_ACTIVITY_LIMIT, sort: "date" }),
         ]);
 
@@ -318,32 +314,6 @@ export default function HomePage() {
           stepTitleById: localStepTitleById,
         };
 
-        // Standardize Career Submissions mapping
-        const careerSessions = (careerSessionsResp.success ? careerSessionsResp.data ?? [] : [])
-          .filter((session) => session.status?.toLowerCase() === "submitted")
-          .sort((a, b) => toTimestamp(b.submitted_at ?? b.started_at) - toTimestamp(a.submitted_at ?? a.started_at));
-
-        const recentCareerSessions = careerSessions.slice(0, RECENT_ACTIVITY_LIMIT);
-        const careerResults = await Promise.all(
-          recentCareerSessions.map((session) => careerService.getCareerResults(session.id))
-        );
-
-        const careerActivities = recentCareerSessions.map((session, index) => {
-          const activityDate = session.submitted_at ?? session.started_at ?? "";
-          const scoreData = careerResults[index];
-          const topTrack = scoreData.success && scoreData.data?.track_scores?.length ? scoreData.data.track_scores[0] : null;
-
-          return {
-            id: `career:${session.id}`,
-            key: topTrack ? `${topTrack.track_name}` : "Career Quiz Completed",
-            date: formatActivityDate(activityDate, "Completed on"),
-            type: "career" as const,
-            score: typeof topTrack?.score === "number" ? Math.min(Math.max(Math.round(topTrack.score), 0), 100) : undefined,
-            timestamp: toTimestamp(activityDate),
-            href: buildCareerQuizResultsHref(session.id, topTrack?.track_id),
-          };
-        });
-
         // Safe Assessment parsing with validated lookup values
         const assessmentActivities = submittedSessions
           .sort((a, b) => toTimestamp(b.submitted_at ?? b.started_at) - toTimestamp(a.submitted_at ?? a.started_at))
@@ -406,7 +376,6 @@ export default function HomePage() {
           }));
 
         const unifiedTimeline = dedupeActivities([
-          ...careerActivities,
           ...assessmentActivities,
           ...interviewActivities,
           ...courseActivities,

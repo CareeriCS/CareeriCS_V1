@@ -51,7 +51,7 @@ export default function ChoiceCard({
     <div
       style={{
         position: "relative",
-        backgroundColor: "#16213e",
+        backgroundColor: "var(--dark-blue)",
         borderRadius: "var(--radius-md)",
         display: "flex",
         flexDirection: "column",

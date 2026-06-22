@@ -37,7 +37,8 @@ export default function BookmarkedJobs() {
   // ── Close modal when viewport grows to large (side panel takes over) ──
   useEffect(() => {
     if (isLarge) {
-      setIsDetailsModalOpen(false);
+      const timeoutId = window.setTimeout(() => setIsDetailsModalOpen(false), 0);
+      return () => window.clearTimeout(timeoutId);
     }
   }, [isLarge]);
 

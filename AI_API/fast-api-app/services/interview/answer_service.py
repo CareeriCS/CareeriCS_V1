@@ -1,8 +1,15 @@
 from uuid import UUID
+import json
 import logging
+import os
+import subprocess
+import sys
+from concurrent.futures import Future, ThreadPoolExecutor
+from threading import Lock
+from typing import Any
 
 from sqlalchemy.orm import Session as DBSession
-from fastapi import HTTPException, UploadFile, BackgroundTasks
+from fastapi import BackgroundTasks, HTTPException, UploadFile
 from fastapi.concurrency import run_in_threadpool
 
 import db.models as models
@@ -16,14 +23,23 @@ from utils.util import (
     convert_audio_and_video,
     delete_files,
     evaluate_answer_service,
-    ser,
-    fer,
-    emotion_evaluation,
-    sentiment_analysis
 )
 
 
 logger = logging.getLogger(__name__)
+MEDIA_ANALYSIS_TIMEOUT_SECONDS = 120
+MEDIA_ANALYSIS_EXECUTOR = ThreadPoolExecutor(
+    max_workers=1,
+    thread_name_prefix="careerics-media-analysis",
+)
+TTS_EXECUTOR = ThreadPoolExecutor(
+    max_workers=1,
+    thread_name_prefix="careerics-followup-tts",
+)
+_media_analysis_lock = Lock()
+_tts_lock = Lock()
+_media_analysis_queued_answer_ids: set[str] = set()
+_tts_queued_followup_ids: set[str] = set()
 
 
 # ============================================================
@@ -184,15 +200,11 @@ def evaluate_answer_service_wrapper(
     improvement = evaluation["improvement"]
     followup_required = evaluation["followup_required"]
 
-    # store feedback and score immediately
+    # Store text feedback immediately so the endpoint can return even if media
+    # analysis is slow or native ML libraries crash in a child process.
     _store_evaluation(db, answer, feedback, score)
 
-    # Heavy work (FER/SER/sentiment) moved off the request path so the
-    # response doesn't block on model inference / cold-start downloads.
-    if background_tasks is not None:
-        background_tasks.add_task(_run_final_media_analysis_background, answer.id)
-    else:
-        _run_final_media_analysis(db, answer)
+    _queue_or_run_media_analysis(db, answer, background_tasks)
 
     if is_followup:
         return {
@@ -331,29 +343,64 @@ def _handle_followup(
     answer_id: UUID,
     followup_text: str
 ):
-
-    audio_filename = None
-    try:
-        audio_filename = _generate_tts(
-            followup_text,
-            settings.AUDIO_PATHS["followups"]
-        )
-    except Exception as exc:
-        # Keep the follow-up text flow working even when TTS fails.
-        logger.warning("Failed to generate follow-up audio: %s", exc)
-
     followup = models.Followup(
         fquestion_text=followup_text,
-        fquestion_audio=audio_filename,
+        fquestion_audio=None,
         answer_id=answer_id,
     )
 
     db.add(followup)
-
     db.commit()
     db.refresh(followup)
 
+    _queue_followup_tts(str(followup.id))
+
     return _serialize_followup(followup)
+
+
+def _queue_followup_tts(followup_id: str):
+    with _tts_lock:
+        if followup_id in _tts_queued_followup_ids:
+            return
+        _tts_queued_followup_ids.add(followup_id)
+
+    try:
+        future = TTS_EXECUTOR.submit(_generate_followup_audio_by_id, followup_id)
+        future.add_done_callback(lambda completed: _finalize_tts_task(followup_id, completed))
+    except Exception:
+        with _tts_lock:
+            _tts_queued_followup_ids.discard(followup_id)
+        logger.exception("Could not queue follow-up TTS for %s", followup_id)
+
+
+def _finalize_tts_task(followup_id: str, completed: Future):
+    with _tts_lock:
+        _tts_queued_followup_ids.discard(followup_id)
+
+    try:
+        completed.result()
+    except Exception:
+        logger.exception("Queued follow-up TTS task failed for %s", followup_id)
+
+
+def _generate_followup_audio_by_id(followup_id: str):
+    db = SessionLocal()
+    try:
+        followup = db.get(models.Followup, UUID(followup_id))
+        if not followup:
+            return
+
+        audio_filename = _generate_tts(
+            followup.fquestion_text,
+            settings.AUDIO_PATHS["followups"]
+        )
+        followup.fquestion_audio = audio_filename
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("Failed to generate follow-up audio for %s", followup_id)
+    finally:
+        db.close()
 
 
 def _serialize_followup(followup: models.Followup):
@@ -370,58 +417,146 @@ def _serialize_followup(followup: models.Followup):
 
 
 # ======================================================
-# FINAL MEDIA ANALYSIS — synchronous fallback
-# (only used if no background_tasks was passed in)
+# FINAL MEDIA ANALYSIS
 # ======================================================
+
+def _queue_or_run_media_analysis(
+    db: DBSession,
+    answer,
+    background_tasks: BackgroundTasks | None,
+):
+    """Queue media analysis without tying it to FastAPI BackgroundTasks."""
+
+    del db, background_tasks  # Analysis reloads its own DB session by answer id.
+
+    answer_id = str(answer.id)
+    with _media_analysis_lock:
+        if answer_id in _media_analysis_queued_answer_ids:
+            logger.info("Media analysis already queued for answer %s", answer_id)
+            return
+        _media_analysis_queued_answer_ids.add(answer_id)
+
+    try:
+        future = MEDIA_ANALYSIS_EXECUTOR.submit(_run_final_media_analysis_by_answer_id, answer_id)
+        future.add_done_callback(lambda completed: _finalize_media_analysis_task(answer_id, completed))
+    except Exception:
+        with _media_analysis_lock:
+            _media_analysis_queued_answer_ids.discard(answer_id)
+        logger.exception("Could not queue media analysis for answer %s", answer_id)
+
+
+def _finalize_media_analysis_task(answer_id: str, completed: Future):
+    with _media_analysis_lock:
+        _media_analysis_queued_answer_ids.discard(answer_id)
+
+    try:
+        completed.result()
+    except Exception:
+        logger.exception("Queued media analysis task failed for answer %s", answer_id)
+
+
+def _run_final_media_analysis_by_answer_id(answer_id: str):
+    db = SessionLocal()
+    try:
+        answer = db.get(models.Answer, UUID(answer_id))
+        if not answer:
+            logger.warning("Skipping media analysis because answer %s was not found", answer_id)
+            return
+
+        _run_final_media_analysis(db, answer)
+    except Exception:
+        db.rollback()
+        logger.exception("Final media analysis failed for answer %s", answer_id)
+    finally:
+        db.close()
+
 
 def _run_final_media_analysis(
     db: DBSession,
     answer
 ):
-
-    emotions = []
+    emotion_result = {}
     tone_result = None
+    sentiment_result = None
 
     if answer.answer_video:
-        emotions = fer(answer.answer_video)
+        emotion_result = _run_isolated_media_analysis(
+            "fer",
+            {"path": answer.answer_video},
+            default={},
+        )
 
     if answer.answer_audio:
-        tone_result = ser(answer.answer_audio)
+        tone_result = _run_isolated_media_analysis(
+            "ser",
+            {"path": answer.answer_audio},
+            default=None,
+        )
 
-    sentiments = sentiment_analysis(answer.answer_text)
+    if answer.answer_text:
+        sentiment_result = _run_isolated_media_analysis(
+            "sentiment",
+            {"text": answer.answer_text},
+            default=None,
+        )
 
-
-    answer.emotion_evaluation = emotion_evaluation(emotions)
-    answer.sentiment_evaluation = sentiments
+    answer.emotion_evaluation = emotion_result
+    answer.sentiment_evaluation = sentiment_result
     answer.tone_evaluation = tone_result
 
     db.commit()
 
 
-# ======================================================
-# FINAL MEDIA ANALYSIS — background task
-# Runs after the HTTP response has already been sent.
-# Opens its own DB session since the request's session
-# closes as soon as the response goes out.
-# ======================================================
+def _run_isolated_media_analysis(
+    analysis_type: str,
+    payload: dict[str, Any],
+    default: Any,
+):
+    env = {
+        **os.environ,
+        "TRANSFORMERS_NO_TF": "1",
+        "USE_TF": "0",
+        "USE_FLAX": "0",
+        "TF_CPP_MIN_LOG_LEVEL": "3",
+        "OMP_NUM_THREADS": "1",
+        "MKL_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "NUMEXPR_NUM_THREADS": "1",
+    }
 
-def _run_final_media_analysis_background(answer_id: UUID):
-    db = SessionLocal()
     try:
-        answer = db.get(models.Answer, answer_id)
-        if not answer:
-            return
-
-        emotions = fer(answer.answer_video) if answer.answer_video else []
-        tone_result = ser(answer.answer_audio) if answer.answer_audio else None
-        sentiments = sentiment_analysis(answer.answer_text)
-
-        answer.emotion_evaluation = emotion_evaluation(emotions)
-        answer.sentiment_evaluation = sentiments
-        answer.tone_evaluation = tone_result
-        db.commit()
+        completed = subprocess.run(
+            [sys.executable, "-m", "services.interview.media_analysis_runner"],
+            input=json.dumps({"analysis_type": analysis_type, "payload": payload}),
+            text=True,
+            capture_output=True,
+            timeout=MEDIA_ANALYSIS_TIMEOUT_SECONDS,
+            check=False,
+            env=env,
+        )
+    except subprocess.TimeoutExpired:
+        logger.warning("%s media analysis timed out", analysis_type)
+        return default
     except Exception:
-        db.rollback()
-        logger.exception("Background media analysis failed for answer_id=%s", answer_id)
-    finally:
-        db.close()
+        logger.exception("%s media analysis subprocess failed to start", analysis_type)
+        return default
+
+    if completed.returncode != 0:
+        logger.warning(
+            "%s media analysis exited with code %s. stderr=%s",
+            analysis_type,
+            completed.returncode,
+            completed.stderr[-1000:],
+        )
+        return default
+
+    try:
+        return json.loads(completed.stdout)["result"]
+    except Exception:
+        logger.exception(
+            "Could not parse %s media analysis output. stdout=%s stderr=%s",
+            analysis_type,
+            completed.stdout[-1000:],
+            completed.stderr[-1000:],
+        )
+        return default
