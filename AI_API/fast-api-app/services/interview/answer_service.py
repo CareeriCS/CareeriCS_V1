@@ -2,13 +2,12 @@ from uuid import UUID
 import logging
 
 from sqlalchemy.orm import Session as DBSession
-from fastapi import HTTPException, UploadFile, BackgroundTasks
+from fastapi import HTTPException, UploadFile
 from fastapi.concurrency import run_in_threadpool
 
 import db.models as models
 from core.config import settings
 from ai.completion import transcribe
-from db.session import SessionLocal
 
 from utils.util import (
     save_uploaded_file,
@@ -139,7 +138,6 @@ def evaluate_answer_service_wrapper(
     question_id: UUID,
     is_followup: bool = False,
     answer_id: UUID | None = None,
-    background_tasks: BackgroundTasks | None = None,
 ):
     answer = _resolve_answer_for_evaluation(
         db,
@@ -187,12 +185,7 @@ def evaluate_answer_service_wrapper(
     # store feedback and score immediately
     _store_evaluation(db, answer, feedback, score)
 
-    # Heavy work (FER/SER/sentiment) moved off the request path so the
-    # response doesn't block on model inference / cold-start downloads.
-    if background_tasks is not None:
-        background_tasks.add_task(_run_final_media_analysis_background, answer.id)
-    else:
-        _run_final_media_analysis(db, answer)
+    _run_final_media_analysis(db, answer)
 
     if is_followup:
         return {
@@ -370,8 +363,7 @@ def _serialize_followup(followup: models.Followup):
 
 
 # ======================================================
-# FINAL MEDIA ANALYSIS — synchronous fallback
-# (only used if no background_tasks was passed in)
+# FINAL MEDIA ANALYSIS
 # ======================================================
 
 def _run_final_media_analysis(
@@ -396,32 +388,3 @@ def _run_final_media_analysis(
     answer.tone_evaluation = tone_result
 
     db.commit()
-
-
-# ======================================================
-# FINAL MEDIA ANALYSIS — background task
-# Runs after the HTTP response has already been sent.
-# Opens its own DB session since the request's session
-# closes as soon as the response goes out.
-# ======================================================
-
-def _run_final_media_analysis_background(answer_id: UUID):
-    db = SessionLocal()
-    try:
-        answer = db.get(models.Answer, answer_id)
-        if not answer:
-            return
-
-        emotions = fer(answer.answer_video) if answer.answer_video else []
-        tone_result = ser(answer.answer_audio) if answer.answer_audio else None
-        sentiments = sentiment_analysis(answer.answer_text)
-
-        answer.emotion_evaluation = emotion_evaluation(emotions)
-        answer.sentiment_evaluation = sentiments
-        answer.tone_evaluation = tone_result
-        db.commit()
-    except Exception:
-        db.rollback()
-        logger.exception("Background media analysis failed for answer_id=%s", answer_id)
-    finally:
-        db.close()
