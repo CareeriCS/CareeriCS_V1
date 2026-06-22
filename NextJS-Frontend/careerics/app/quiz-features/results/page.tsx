@@ -378,7 +378,7 @@ export default function CareerQuizResultsPage() {
     <section className="grid h-full min-h-0 w-full grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden px-[var(--space-xl)] pb-[var(--space-xl)] pt-[calc(var(--icon-lg)+var(--space-2xl))] sm:px-[var(--space-2xl)]">
       <header className="mx-auto flex w-full max-w-[72rem] shrink-0 flex-col items-center text-center">
         <h1
-          className="m-0 text-center text-[length:var(--text-2xl)] font-semibold leading-[var(--line-tight)] text-[var(--text-primary)]"
+          className="m-0 text-center text-[length:var(--text-2xl)] leading-[var(--line-tight)] text-[var(--text-primary)]"
           style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
         >
           Your Best Matches Are
@@ -402,7 +402,17 @@ export default function CareerQuizResultsPage() {
               return (
                 <article
                   key={track.track_id}
-                  className="relative flex min-h-[20rem] w-full max-w-[19.5rem] flex-col rounded-[var(--radius-2xl)] bg-[var(--medium-blue)] px-[var(--space-lg)] py-[var(--space-lg)] shadow-sm sm:min-h-[23rem] sm:max-w-[20rem] sm:px-[var(--space-xl)] sm:py-[var(--space-xl)]"
+                  style={{
+                    position: "relative",
+                    display: "flex",
+                    flexDirection: "column",
+                    minHeight: "20rem",
+                    width: "100%",
+                    maxWidth: "17.5rem",
+                    borderRadius: "var(--radius-2xl)",
+                    backgroundColor: "var(--medium-blue)",
+                    padding: "var(--space-lg)",
+                  }}
                 >
                   <button
                     type="button"
@@ -420,16 +430,18 @@ export default function CareerQuizResultsPage() {
                     />
                   </button>
 
-                  <Image
+                  <img
                     src={`/tracks/${track.track_id}.svg`}
                     alt=""
-                    width={118}
-                    height={118}
-                    className="h-auto w-[7.4rem] shrink-0"
+                    style={{
+                      height: "var(--icon-2xl)",
+                      marginRight: "auto",
+                    }}
                   />
 
+
                   <h2
-                    className="m-0 mt-[var(--space-md)] pr-[var(--space-xl)] text-[length:var(--text-lg)] font-semibold leading-[var(--line-tight)] text-[var(--text-primary)]"
+                    className="m-0 mt-[var(--space-md)] pr-[var(--space-xl)] text-[length:var(--text-lg)] leading-[var(--line-tight)] text-[var(--text-primary)]"
                     style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
                   >
                     {track.track_name}

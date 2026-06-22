@@ -86,30 +86,30 @@ function getRatingButtonClass(value: RatingValue, isSelected: boolean) {
     value === 1 || value === 5
       ? "h-9 w-9 sm:h-10 sm:w-10"
       : value === 2 || value === 4
-      ? "h-8 w-8 sm:h-9 sm:w-9"
-      : "h-7 w-7 sm:h-8 sm:w-8";
+        ? "h-8 w-8 sm:h-9 sm:w-9"
+        : "h-7 w-7 sm:h-8 sm:w-8";
 
   const selectedColorClass =
     value === 1
       ? "bg-[var(--light-red)]"
       : value === 2
-      ? "bg-[#FFD0D0]"
-      : value === 3
-      ? "bg-[var(--light-blue)]"
-      : value === 4
-      ? "bg-[var(--light-green)]"
-      : "bg-[var(--primary-green)]";
+        ? "bg-[#FFD0D0]"
+        : value === 3
+          ? "bg-[var(--light-blue)]"
+          : value === 4
+            ? "bg-[var(--light-green)]"
+            : "bg-[var(--primary-green)]";
 
   const hoverColorClass =
     value === 1
       ? "hover:bg-[var(--light-red)]"
       : value === 2
-      ? "hover:bg-[#FFD0D0]"
-      : value === 3
-      ? "hover:bg-[var(--light-blue)]"
-      : value === 4
-      ? "hover:bg-[var(--light-green)]"
-      : "hover:bg-[var(--primary-green)]";
+        ? "hover:bg-[#FFD0D0]"
+        : value === 3
+          ? "hover:bg-[var(--light-blue)]"
+          : value === 4
+            ? "hover:bg-[var(--light-green)]"
+            : "hover:bg-[var(--primary-green)]";
 
   return cn(
     sizeClass,
@@ -337,7 +337,7 @@ export default function CareerQuestionsPage() {
 
   const { isSmall } = useResponsive();
 
-return (
+  return (
     <Interview
       questions={sidebarSteps}
       currentActiveId={currentStepId}
@@ -352,7 +352,7 @@ return (
       label=""
     >
 
-      <section 
+      <section
         className="mx-auto flex w-full min-w-0 max-w-[52rem] flex-col items-center gap-[var(--space-md)] md:gap-[var(--space-xl)]"
         style={{
           height: "auto",
@@ -473,7 +473,7 @@ return (
                     paddingBlock: "0",
                     paddingLeft: "0",
                     gap: isSmall ? "8px" : "12px",
-                    height: isSmall ? "36px" : "42px",
+                    height: "fit-content",
                     width: "fit-content",
                     maxWidth: isSmall ? "100%" : "fit-content",
                     flex: isSmall ? 1 : "none",
@@ -486,7 +486,7 @@ return (
                     src={"/global/next.svg"}
                     alt=""
                     style={{
-                      height: isSmall ? "14px" : "16px",
+                      height: "var(--icon-md)",
                       transform: "rotate(180deg)",
                       backgroundColor: "white",
                       padding: "4px",
@@ -512,7 +512,7 @@ return (
                     paddingBlock: "0",
                     paddingRight: "0",
                     gap: isSmall ? "8px" : "12px",
-                    height: isSmall ? "36px" : "42px",
+                    height: "fit-content",
                     width: "fit-content",
                     maxWidth: isSmall ? "100%" : "fit-content",
                     flex: isSmall ? 1 : "none",
@@ -526,7 +526,7 @@ return (
                     src={"/global/next.svg"}
                     alt=""
                     style={{
-                      height: isSmall ? "14px" : "16px",
+                      height: "var(--icon-md)",
                       backgroundColor: "white",
                       padding: "4px",
                       boxSizing: "content-box",
@@ -545,7 +545,6 @@ return (
                   isLoading={isSubmitting}
                   style={{
                     paddingInline: "var(--space-2xl)",
-                    height: isSmall ? "36px" : "42px",
                     fontSize: isSmall ? "13px" : "14px",
                     width: isSmall ? "100%" : "fit-content",
                     marginLeft: isSmall ? 0 : "auto",

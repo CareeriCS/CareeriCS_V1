@@ -312,7 +312,6 @@ def career_quiz_evaluation_prompt(
         "- Recommendations must be sorted from highest score to lowest score.\n"
         "- Scores must be realistic and differentiated.\n"
         "- Do NOT assign identical scores unless absolutely necessary.\n"
-        "- Do NOT recommend unrelated tracks.\n"
         "- Use ONLY the provided track IDs.\n"
         "- Never invent new tracks.\n"
         "- Output must be valid JSON only.\n"
