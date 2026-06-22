@@ -123,7 +123,7 @@ export default function QuestionsPage() {
     router.push(`/skill-feature/results?${searchParams.toString()}`);
   };
 
-return (
+  return (
     <div
       style={{
         marginLeft: "auto",
@@ -146,7 +146,7 @@ return (
         style={{
           margin: 0,
           width: "100%",
-          textAlign: "left", 
+          textAlign: "left",
           fontSize: isSmall ? "15px" : isMedium ? "var(--text-md)" : "18px",
           fontFamily: "var(--font-nova-square)",
           color: "white",
@@ -211,10 +211,10 @@ return (
                 alignItems: "center",
                 justifyContent: "space-between",
                 borderRadius: "var(--radius-lg)",
-                padding: isSmall 
-                  ? "12px 16px" 
-                  : isMedium 
-                    ? "14px 20px" 
+                padding: isSmall
+                  ? "12px 16px"
+                  : isMedium
+                    ? "14px 20px"
                     : "16px 24px",
                 color: "var(--dark-blue)",
                 backgroundColor: bg,
@@ -294,24 +294,25 @@ return (
             onClick={() => navigateTo(currentQuestion - 1)}
             disabled={currentQuestion === 1}
             style={{
-              paddingInline: isSmall ? "var(--space-lg)" : "var(--space-2xl)",
-              gap: isSmall ? "8px" : "12px",
-              height: isSmall ? "36px" : "42px",
+              paddingInline: "var(--space-2xl)",
+              paddingBlock: "0",
+              paddingLeft: "0",
+              gap: "var(--space-xl)",
+              height: "fit-content",
               width: "fit-content",
               maxWidth: isSmall ? "100%" : "fit-content",
               flex: isSmall ? 1 : "none",
               justifyContent: "space-between",
               borderRadius: "999px",
-              fontSize: isSmall ? "13px" : "14px",
             }}
           >
             <img
               src={"/global/next.svg"}
               style={{
-                height: isSmall ? "14px" : "16px",
+                height: "var(--icon-md)",
                 transform: "rotate(180deg)",
                 backgroundColor: "white",
-                padding: "4px",
+                padding: "var(--space-xxs)",
                 boxSizing: "content-box",
                 borderRadius: "999px",
               }}
@@ -319,30 +320,32 @@ return (
             Previous
           </Button>
 
+
           <Button
             variant={"primary-inverted"}
             type="button"
             onClick={() => navigateTo(currentQuestion + 1)}
             disabled={!isAnswered || !(currentQuestion < questions.length)}
             style={{
-              paddingInline: isSmall ? "var(--space-lg)" : "var(--space-2xl)",
-              gap: isSmall ? "8px" : "12px",
-              height: isSmall ? "36px" : "42px",
+              paddingInline: "var(--space-2xl)",
+              paddingBlock: "0",
+              paddingRight: "0",
+              gap: "var(--space-xl)",
+              height: "fit-content",
               width: "fit-content",
               maxWidth: isSmall ? "100%" : "fit-content",
               flex: isSmall ? 1 : "none",
               justifyContent: "space-between",
               borderRadius: "999px",
-              fontSize: isSmall ? "13px" : "14px",
             }}
           >
             Next
             <img
               src={"/global/next.svg"}
               style={{
-                height: isSmall ? "14px" : "16px",
+                height: "var(--icon-md)",
                 backgroundColor: "white",
-                padding: "4px",
+                padding: "var(--space-xxs)",
                 boxSizing: "content-box",
                 borderRadius: "999px",
               }}

@@ -165,6 +165,13 @@ export default function ResultsPage() {
                 ? "Intermediate"
                 : "Beginner";
 
+    const levelColor =
+    lvl === "Advanced"
+        ? "var(--primary-green)"
+        : lvl === "Intermediate"
+            ? "var(--light-orange)"
+            : "var(--light-red)";
+
     if (isCalculating) {
         return (
             <section
@@ -310,7 +317,7 @@ export default function ResultsPage() {
                             cy="100"
                             r="90"
                             fill="none"
-                            stroke="var(--primary-green)"
+                            stroke={levelColor}
                             strokeWidth="15"
                             strokeDasharray={565.4}
                             strokeDashoffset={
@@ -388,10 +395,11 @@ export default function ResultsPage() {
                 </h2>
 
                 <p
-                    className="m-0 mt-[var(--space-md)] text-[length:var(--text-xl)] font-normal leading-[var(--line-tight)] text-[var(--primary-green)]"
+                    className="m-0 mt-[var(--space-md)] text-[length:var(--text-xl)] font-normal leading-[var(--line-tight)] "
                     style={{ 
                         fontFamily: "var(--font-nova-square), sans-serif",
-                        fontSize: isSmall ? "20px" : "var(--text-xl)"
+                        fontSize: isSmall ? "20px" : "var(--text-xl)",
+                        color:levelColor
                     }}
                 >
                     {lvl}
