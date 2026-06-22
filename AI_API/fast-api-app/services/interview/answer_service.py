@@ -32,8 +32,14 @@ MEDIA_ANALYSIS_EXECUTOR = ThreadPoolExecutor(
     max_workers=1,
     thread_name_prefix="careerics-media-analysis",
 )
+TTS_EXECUTOR = ThreadPoolExecutor(
+    max_workers=1,
+    thread_name_prefix="careerics-followup-tts",
+)
 _media_analysis_lock = Lock()
+_tts_lock = Lock()
 _media_analysis_queued_answer_ids: set[str] = set()
+_tts_queued_followup_ids: set[str] = set()
 
 
 # ============================================================
@@ -337,29 +343,64 @@ def _handle_followup(
     answer_id: UUID,
     followup_text: str
 ):
-
-    audio_filename = None
-    try:
-        audio_filename = _generate_tts(
-            followup_text,
-            settings.AUDIO_PATHS["followups"]
-        )
-    except Exception as exc:
-        # Keep the follow-up text flow working even when TTS fails.
-        logger.warning("Failed to generate follow-up audio: %s", exc)
-
     followup = models.Followup(
         fquestion_text=followup_text,
-        fquestion_audio=audio_filename,
+        fquestion_audio=None,
         answer_id=answer_id,
     )
 
     db.add(followup)
-
     db.commit()
     db.refresh(followup)
 
+    _queue_followup_tts(str(followup.id))
+
     return _serialize_followup(followup)
+
+
+def _queue_followup_tts(followup_id: str):
+    with _tts_lock:
+        if followup_id in _tts_queued_followup_ids:
+            return
+        _tts_queued_followup_ids.add(followup_id)
+
+    try:
+        future = TTS_EXECUTOR.submit(_generate_followup_audio_by_id, followup_id)
+        future.add_done_callback(lambda completed: _finalize_tts_task(followup_id, completed))
+    except Exception:
+        with _tts_lock:
+            _tts_queued_followup_ids.discard(followup_id)
+        logger.exception("Could not queue follow-up TTS for %s", followup_id)
+
+
+def _finalize_tts_task(followup_id: str, completed: Future):
+    with _tts_lock:
+        _tts_queued_followup_ids.discard(followup_id)
+
+    try:
+        completed.result()
+    except Exception:
+        logger.exception("Queued follow-up TTS task failed for %s", followup_id)
+
+
+def _generate_followup_audio_by_id(followup_id: str):
+    db = SessionLocal()
+    try:
+        followup = db.get(models.Followup, UUID(followup_id))
+        if not followup:
+            return
+
+        audio_filename = _generate_tts(
+            followup.fquestion_text,
+            settings.AUDIO_PATHS["followups"]
+        )
+        followup.fquestion_audio = audio_filename
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("Failed to generate follow-up audio for %s", followup_id)
+    finally:
+        db.close()
 
 
 def _serialize_followup(followup: models.Followup):
@@ -384,13 +425,7 @@ def _queue_or_run_media_analysis(
     answer,
     background_tasks: BackgroundTasks | None,
 ):
-    """Queue media analysis without tying it to FastAPI BackgroundTasks.
-
-    FastAPI background tasks still run in the web process after a response, and
-    multiple interview questions can overlap heavy FER/SER/sentiment subprocesses.
-    A single executor serializes analysis so Railway does not run out of memory
-    and return intermittent 502 responses while the user continues the interview.
-    """
+    """Queue media analysis without tying it to FastAPI BackgroundTasks."""
 
     del db, background_tasks  # Analysis reloads its own DB session by answer id.
 
@@ -477,13 +512,6 @@ def _run_isolated_media_analysis(
     payload: dict[str, Any],
     default: Any,
 ):
-    """Run optional ML media analysis in a child process.
-
-    DeepFace/TensorFlow can segfault on small CPU Railway containers. Running each
-    analyzer in its own process keeps the Uvicorn worker alive; a failed analyzer
-    returns its default value and the text evaluation still succeeds.
-    """
-
     env = {
         **os.environ,
         "TRANSFORMERS_NO_TF": "1",
