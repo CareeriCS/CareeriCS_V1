@@ -1,13 +1,18 @@
 from uuid import UUID
+import json
 import logging
+import subprocess
+import sys
+from typing import Any
 
 from sqlalchemy.orm import Session as DBSession
-from fastapi import HTTPException, UploadFile
+from fastapi import BackgroundTasks, HTTPException, UploadFile
 from fastapi.concurrency import run_in_threadpool
 
 import db.models as models
 from core.config import settings
 from ai.completion import transcribe
+from db.session import SessionLocal
 
 from utils.util import (
     save_uploaded_file,
@@ -23,6 +28,7 @@ from utils.util import (
 
 
 logger = logging.getLogger(__name__)
+MEDIA_ANALYSIS_TIMEOUT_SECONDS = 120
 
 
 # ============================================================
@@ -138,6 +144,7 @@ def evaluate_answer_service_wrapper(
     question_id: UUID,
     is_followup: bool = False,
     answer_id: UUID | None = None,
+    background_tasks: BackgroundTasks | None = None,
 ):
     answer = _resolve_answer_for_evaluation(
         db,
@@ -182,10 +189,11 @@ def evaluate_answer_service_wrapper(
     improvement = evaluation["improvement"]
     followup_required = evaluation["followup_required"]
 
-    # store feedback and score immediately
+    # Store text feedback immediately so the endpoint can return even if media
+    # analysis is slow or native ML libraries crash in a child process.
     _store_evaluation(db, answer, feedback, score)
 
-    _run_final_media_analysis(db, answer)
+    _queue_or_run_media_analysis(db, answer, background_tasks)
 
     if is_followup:
         return {
@@ -366,25 +374,137 @@ def _serialize_followup(followup: models.Followup):
 # FINAL MEDIA ANALYSIS
 # ======================================================
 
+def _queue_or_run_media_analysis(
+    db: DBSession,
+    answer,
+    background_tasks: BackgroundTasks | None,
+):
+    if background_tasks is not None:
+        background_tasks.add_task(_run_final_media_analysis_by_answer_id, str(answer.id))
+        return
+
+    # Fallback for tests or internal calls outside FastAPI BackgroundTasks.
+    _run_final_media_analysis(db, answer)
+
+
+def _run_final_media_analysis_by_answer_id(answer_id: str):
+    db = SessionLocal()
+    try:
+        answer = db.get(models.Answer, UUID(answer_id))
+        if not answer:
+            logger.warning("Skipping media analysis because answer %s was not found", answer_id)
+            return
+
+        _run_final_media_analysis(db, answer)
+    except Exception:
+        db.rollback()
+        logger.exception("Final media analysis failed for answer %s", answer_id)
+    finally:
+        db.close()
+
+
 def _run_final_media_analysis(
     db: DBSession,
     answer
 ):
-
-    emotions = []
+    emotion_result = {}
     tone_result = None
+    sentiment_result = None
 
     if answer.answer_video:
-        emotions = fer(answer.answer_video)
+        emotion_result = _run_isolated_media_analysis(
+            "fer",
+            {"path": answer.answer_video},
+            default={},
+        )
 
     if answer.answer_audio:
-        tone_result = ser(answer.answer_audio)
+        tone_result = _run_isolated_media_analysis(
+            "ser",
+            {"path": answer.answer_audio},
+            default=None,
+        )
 
-    sentiments = sentiment_analysis(answer.answer_text)
+    if answer.answer_text:
+        sentiment_result = _run_isolated_media_analysis(
+            "sentiment",
+            {"text": answer.answer_text},
+            default=None,
+        )
 
-
-    answer.emotion_evaluation = emotion_evaluation(emotions)
-    answer.sentiment_evaluation = sentiments
+    answer.emotion_evaluation = emotion_result
+    answer.sentiment_evaluation = sentiment_result
     answer.tone_evaluation = tone_result
 
     db.commit()
+
+
+def _run_isolated_media_analysis(
+    analysis_type: str,
+    payload: dict[str, Any],
+    default: Any,
+):
+    """Run optional ML media analysis in a child process.
+
+    DeepFace/TensorFlow can segfault on small CPU Railway containers. Running each
+    analyzer in its own process keeps the Uvicorn worker alive; a failed analyzer
+    returns its default value and the text evaluation still succeeds.
+    """
+
+    command = r'''
+import json
+import sys
+
+from utils.util import fer, ser, emotion_evaluation, sentiment_analysis
+
+request = json.loads(sys.stdin.read())
+analysis_type = request["analysis_type"]
+payload = request["payload"]
+
+if analysis_type == "fer":
+    result = emotion_evaluation(fer(payload["path"]))
+elif analysis_type == "ser":
+    result = ser(payload["path"])
+elif analysis_type == "sentiment":
+    result = sentiment_analysis(payload["text"])
+else:
+    raise ValueError(f"Unsupported analysis type: {analysis_type}")
+
+print(json.dumps({"result": result}))
+'''
+
+    try:
+        completed = subprocess.run(
+            [sys.executable, "-c", command],
+            input=json.dumps({"analysis_type": analysis_type, "payload": payload}),
+            text=True,
+            capture_output=True,
+            timeout=MEDIA_ANALYSIS_TIMEOUT_SECONDS,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        logger.warning("%s media analysis timed out", analysis_type)
+        return default
+    except Exception:
+        logger.exception("%s media analysis subprocess failed to start", analysis_type)
+        return default
+
+    if completed.returncode != 0:
+        logger.warning(
+            "%s media analysis exited with code %s. stderr=%s",
+            analysis_type,
+            completed.returncode,
+            completed.stderr[-1000:],
+        )
+        return default
+
+    try:
+        return json.loads(completed.stdout)["result"]
+    except Exception:
+        logger.exception(
+            "Could not parse %s media analysis output. stdout=%s stderr=%s",
+            analysis_type,
+            completed.stdout[-1000:],
+            completed.stderr[-1000:],
+        )
+        return default
