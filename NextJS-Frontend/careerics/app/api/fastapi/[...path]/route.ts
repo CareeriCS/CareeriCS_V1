@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
-const DEFAULT_HEADERS_TIMEOUT_MS = 180_000;
+const DEFAULT_HEADERS_TIMEOUT_MS = 15_000;
 const TOKEN_COOKIE = "careerics_token";
 
 function parseMs(value: string | undefined, fallback: number): number {

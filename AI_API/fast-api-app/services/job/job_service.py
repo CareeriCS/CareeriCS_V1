@@ -1,9 +1,9 @@
 import logging
 from datetime import UTC, date, datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 from uuid import UUID
 
-from sqlalchemy import func, inspect, or_, select
+from sqlalchemy import case, func, inspect, null, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -32,7 +32,8 @@ def _has_table(db: Session, table_name: str) -> bool:
 
 
 def _job_applications_table_exists(db: Session) -> bool:
-    return _has_table(db, JobApplication.__tablename__)
+    # Production stores job application state in job_user_interactions.
+    return False
 
 
 def get_job_skills(db: Session, job_post_id: UUID) -> List[str]:
@@ -253,14 +254,16 @@ def _build_scoped_job_query(
     scope: str,
     user_id: Optional[UUID],
     query: Optional[str] = None,
+    has_application_records: Optional[bool] = None,
 ):
+    has_application_records = _job_applications_table_exists(db) if has_application_records is None else has_application_records
     query_obj = db.query(JobPost)
 
     if scope == "applications":
         if not user_id:
             raise ValueError("A user ID is required when browsing job applications")
 
-        if _job_applications_table_exists(db):
+        if has_application_records:
             query_obj = (
                 db.query(JobPost)
                 .join(JobApplication, JobApplication.job_post_id == JobPost.id)
@@ -283,28 +286,72 @@ def _build_scoped_job_query(
     elif scope != "all":
         raise ValueError(f"Unsupported job browse scope: {scope}")
 
+    query_obj = query_obj.filter(_visible_job_post_expression())
+
     if query:
         search_pattern = f"%{query}%"
+        skill_match = _skill_name_match_exists(search_pattern)
         query_obj = (
             query_obj
-            .outerjoin(JobPostSkill, JobPostSkill.job_post_id == JobPost.id)
-            .outerjoin(Skill, Skill.id == JobPostSkill.skill_id)
             .filter(
                 or_(
                     JobPost.job_title.ilike(search_pattern),
                     JobPost.company_name.ilike(search_pattern),
                     JobPost.location.ilike(search_pattern),
-                    JobPost.description_about_role.ilike(search_pattern),
-                    JobPost.description_key_responsibilities.ilike(search_pattern),
-                    JobPost.description_requirements.ilike(search_pattern),
-                    JobPost.description_nice_to_have.ilike(search_pattern),
-                    Skill.skill_name.ilike(search_pattern),
+                    _description_match_expression(search_pattern),
+                    skill_match,
                 )
             )
-            .distinct()
         )
 
     return query_obj
+
+
+def _visible_job_post_expression():
+    return or_(
+        JobPost.employment_type.is_(None),
+        func.lower(func.trim(JobPost.employment_type)) != "temporary",
+    )
+
+
+def _skill_name_match_exists(search_pattern: str):
+    return (
+        select(JobPostSkill.job_post_id)
+        .join(Skill, Skill.id == JobPostSkill.skill_id)
+        .where(
+            JobPostSkill.job_post_id == JobPost.id,
+            Skill.skill_name.ilike(search_pattern),
+        )
+        .exists()
+    )
+
+
+def _description_match_expression(search_pattern: str):
+    return or_(
+        JobPost.description_about_role.ilike(search_pattern),
+        JobPost.description_key_responsibilities.ilike(search_pattern),
+        JobPost.description_requirements.ilike(search_pattern),
+        JobPost.description_nice_to_have.ilike(search_pattern),
+    )
+
+
+def _job_relevance_score_expression(query: str):
+    cleaned_query = (query or "").strip()
+    search_pattern = f"%{cleaned_query}%"
+    prefix_pattern = f"{cleaned_query}%"
+    normalized_query = cleaned_query.lower()
+    normalized_title = func.lower(func.trim(JobPost.job_title))
+
+    return case(
+        (normalized_title == normalized_query, 100),
+        (JobPost.job_title.ilike(prefix_pattern), 90),
+        (JobPost.job_title.ilike(search_pattern), 80),
+        (_skill_name_match_exists(search_pattern), 70),
+        (JobPost.company_name.ilike(search_pattern), 50),
+        (JobPost.location.ilike(search_pattern), 40),
+        (_description_match_expression(search_pattern), 10),
+        else_=0,
+    )
 
 
 def _normalize_selected_values(values: Optional[List[str]]) -> set[str]:
@@ -351,6 +398,255 @@ def _should_hide_job_post(job_post: JobPost, metadata: Optional[Any] = None) -> 
         career_level=job_post.career_level,
     )
     return normalized_metadata.employment_type == "Temporary"
+
+
+def _has_selected_metadata_filters(
+    *,
+    countries: Optional[List[str]] = None,
+    cities: Optional[List[str]] = None,
+    job_types: Optional[List[str]] = None,
+    work_types: Optional[List[str]] = None,
+    career_levels: Optional[List[str]] = None,
+) -> bool:
+    return any((
+        bool(countries),
+        bool(cities),
+        bool(job_types),
+        bool(work_types),
+        bool(career_levels),
+    ))
+
+
+def _normalize_metadata_row(row: Any):
+    return normalize_job_metadata(
+        location=row.location,
+        work_type=row.work_type,
+        employment_type=row.employment_type,
+        career_level=row.career_level,
+    )
+
+
+def _build_job_filter_payload_from_metadata(metadata_items: Iterable[Any]) -> Dict[str, List[Dict[str, Any]]]:
+    metadata_list = list(metadata_items)
+    return {
+        "countries": build_filter_option_items(metadata.country for metadata in metadata_list),
+        "cities": build_filter_option_items(metadata.city for metadata in metadata_list),
+        "job_types": build_filter_option_items(
+            (metadata.employment_type for metadata in metadata_list),
+            excluded_values={"Other"},
+        ),
+        "work_types": build_filter_option_items(metadata.work_type for metadata in metadata_list),
+        "career_levels": build_filter_option_items(metadata.career_level for metadata in metadata_list),
+    }
+
+
+def _load_filter_payload_for_query(query_obj) -> Dict[str, List[Dict[str, Any]]]:
+    location_rows = (
+        query_obj
+        .order_by(None)
+        .with_entities(JobPost.location.label("location"))
+        .filter(JobPost.location.is_not(None))
+        .distinct()
+        .all()
+    )
+    work_type_rows = (
+        query_obj
+        .order_by(None)
+        .with_entities(JobPost.work_type.label("work_type"))
+        .filter(JobPost.work_type.is_not(None))
+        .distinct()
+        .all()
+    )
+    employment_type_rows = (
+        query_obj
+        .order_by(None)
+        .with_entities(JobPost.employment_type.label("employment_type"))
+        .filter(JobPost.employment_type.is_not(None))
+        .distinct()
+        .all()
+    )
+    career_level_rows = (
+        query_obj
+        .order_by(None)
+        .with_entities(JobPost.career_level.label("career_level"))
+        .filter(JobPost.career_level.is_not(None))
+        .distinct()
+        .all()
+    )
+
+    location_metadata = [
+        normalize_job_metadata(
+            location=row.location,
+            work_type=None,
+            employment_type=None,
+            career_level=None,
+        )
+        for row in location_rows
+    ]
+    employment_types = [
+        normalized
+        for normalized in (
+            normalize_employment_type(row.employment_type)
+            for row in employment_type_rows
+        )
+        if normalized and normalized != "Temporary"
+    ]
+
+    return {
+        "countries": build_filter_option_items(metadata.country for metadata in location_metadata),
+        "cities": build_filter_option_items(metadata.city for metadata in location_metadata),
+        "job_types": build_filter_option_items(employment_types, excluded_values={"Other"}),
+        "work_types": build_filter_option_items(
+            normalize_work_type(row.work_type)
+            for row in work_type_rows
+        ),
+        "career_levels": build_filter_option_items(
+            normalize_career_level(row.career_level)
+            for row in career_level_rows
+        ),
+    }
+
+
+def _count_job_query(query_obj) -> int:
+    return int(query_obj.order_by(None).with_entities(func.count(JobPost.id)).scalar() or 0)
+
+
+def _apply_sql_job_relevance_sort(query_obj, query: str, *, scope: str):
+    relevance_score = _job_relevance_score_expression(query)
+    order_by = [
+        relevance_score.desc(),
+        JobPost.posted_date.desc().nullslast(),
+        JobPost.created_at.desc().nullslast(),
+    ]
+    if scope == "applications":
+        order_by.append(JobUserInteraction.viewed_at.desc().nullslast())
+    return query_obj.order_by(*order_by)
+
+
+def _apply_sql_job_sort(
+    query_obj,
+    *,
+    scope: str,
+    sort: str,
+    has_application_records: bool,
+    query: Optional[str] = None,
+):
+    normalized_sort = (sort or "relevance").strip().lower()
+    cleaned_query = (query or "").strip()
+
+    if normalized_sort == "relevance" and cleaned_query:
+        return _apply_sql_job_relevance_sort(query_obj, cleaned_query, scope=scope)
+
+    if normalized_sort == "date":
+        order_by = [
+            JobPost.posted_date.desc().nullslast(),
+        ]
+        if scope == "applications" and has_application_records:
+            order_by.append(JobApplication.applied_at.desc().nullslast())
+        order_by.append(JobPost.created_at.desc().nullslast())
+        return query_obj.order_by(*order_by)
+
+    if scope == "applications" and has_application_records:
+        return query_obj.order_by(
+            JobApplication.applied_at.desc().nullslast(),
+            JobApplication.updated_at.desc().nullslast(),
+            JobPost.created_at.desc().nullslast(),
+        )
+
+    if scope == "applications":
+        return query_obj.order_by(
+            JobUserInteraction.viewed_at.desc().nullslast(),
+            JobUserInteraction.updated_at.desc().nullslast(),
+            JobPost.created_at.desc().nullslast(),
+        )
+
+    return query_obj.order_by(
+        JobPost.created_at.desc().nullslast(),
+        JobPost.posted_date.desc().nullslast(),
+    )
+
+
+def _timestamp(value: Any) -> float:
+    if not value:
+        return 0.0
+    if isinstance(value, date) and not isinstance(value, datetime):
+        return float(value.toordinal())
+    if isinstance(value, datetime):
+        return value.timestamp()
+    return 0.0
+
+
+def _row_sort_timestamp(row: Any) -> float:
+    posted_timestamp = _timestamp(row.posted_date)
+    if posted_timestamp:
+        return posted_timestamp
+
+    applied_timestamp = _timestamp(getattr(row, "application_applied_at", None))
+    if applied_timestamp:
+        return applied_timestamp
+
+    return _timestamp(row.created_at)
+
+
+def _sort_metadata_rows(
+    rows: List[Any],
+    *,
+    scope: str,
+    sort: str,
+    query: Optional[str] = None,
+    match_scores: Dict[UUID, float],
+) -> List[Any]:
+    normalized_sort = (sort or "relevance").strip().lower()
+    cleaned_query = (query or "").strip()
+
+    if normalized_sort == "match":
+        return sorted(
+            rows,
+            key=lambda row: (
+                -(match_scores.get(row.id, -1.0)),
+                -_row_sort_timestamp(row),
+            ),
+        )
+
+    if normalized_sort == "date":
+        return sorted(rows, key=lambda row: -_row_sort_timestamp(row))
+
+    if normalized_sort == "relevance" and cleaned_query:
+        return sorted(
+            rows,
+            key=lambda row: (
+                -(getattr(row, "relevance_score", 0) or 0),
+                -_timestamp(row.posted_date),
+                -_timestamp(row.created_at),
+            ),
+        )
+
+    if scope == "applications":
+        return sorted(
+            rows,
+            key=lambda row: (
+                -_timestamp(getattr(row, "application_applied_at", None)),
+                -_timestamp(getattr(row, "application_updated_at", None)),
+                -_timestamp(row.created_at),
+            ),
+        )
+
+    return sorted(
+        rows,
+        key=lambda row: (
+            -_timestamp(row.created_at),
+            -_timestamp(row.posted_date),
+        ),
+    )
+
+
+def _load_jobs_for_ordered_ids(db: Session, job_ids: List[UUID]) -> List[JobPost]:
+    if not job_ids:
+        return []
+
+    jobs = db.query(JobPost).filter(JobPost.id.in_(job_ids)).all()
+    jobs_by_id = {job.id: job for job in jobs}
+    return [jobs_by_id[job_id] for job_id in job_ids if job_id in jobs_by_id]
 
 
 def _job_sort_timestamp(job_post: JobPost, application: Optional[JobApplication] = None) -> float:
@@ -449,24 +745,70 @@ def browse_job_posts(
     career_levels: Optional[List[str]] = None,
     sort: str = "relevance",
 ) -> Tuple[List[JobPost], int, Dict[str, List[Dict[str, Any]]]]:
-    limit = min(limit, 100)
+    skip = max(skip, 0)
+    limit = min(max(limit, 1), 100)
+    has_application_records = False
+    cleaned_query = (query or "").strip()
+    normalized_sort = (sort or "relevance").strip().lower()
+    has_metadata_filters = _has_selected_metadata_filters(
+        countries=countries,
+        cities=cities,
+        job_types=job_types,
+        work_types=work_types,
+        career_levels=career_levels,
+    )
 
-    candidate_jobs = _build_scoped_job_query(
+    base_query = _build_scoped_job_query(
         db,
         scope=scope,
         user_id=user_id,
-        query=(query or "").strip() or None,
-    ).all()
+        query=cleaned_query or None,
+        has_application_records=has_application_records,
+    )
 
-    metadata_map = {
-        job_post.id: normalize_job_metadata(
-            location=job_post.location,
-            work_type=job_post.work_type,
-            employment_type=job_post.employment_type,
-            career_level=job_post.career_level,
+    if not has_metadata_filters and normalized_sort != "match":
+        total_count = _count_job_query(base_query)
+        paginated_jobs = (
+            _apply_sql_job_sort(
+                base_query,
+                scope=scope,
+                sort=sort,
+                has_application_records=has_application_records,
+                query=cleaned_query,
+            )
+            .offset(skip)
+            .limit(limit)
+            .all()
         )
-        for job_post in candidate_jobs
-    }
+        filter_payload = _load_filter_payload_for_query(base_query)
+        return paginated_jobs, total_count, filter_payload
+
+    metadata_query = base_query.with_entities(
+        JobPost.id.label("id"),
+        JobPost.location.label("location"),
+        JobPost.work_type.label("work_type"),
+        JobPost.employment_type.label("employment_type"),
+        JobPost.career_level.label("career_level"),
+        JobPost.created_at.label("created_at"),
+        JobPost.posted_date.label("posted_date"),
+        (
+            _job_relevance_score_expression(cleaned_query)
+            if cleaned_query
+            else null()
+        ).label("relevance_score"),
+        (
+            JobApplication.applied_at
+            if scope == "applications" and has_application_records
+            else null()
+        ).label("application_applied_at"),
+        (
+            JobApplication.updated_at
+            if scope == "applications" and has_application_records
+            else null()
+        ).label("application_updated_at"),
+    )
+
+    candidate_rows = metadata_query.all()
 
     selected_countries = _normalize_selected_values(countries)
     selected_cities = _normalize_selected_values(cities)
@@ -474,11 +816,12 @@ def browse_job_posts(
     selected_work_types = _normalize_selected_work_types(work_types)
     selected_career_levels = _normalize_selected_career_levels(career_levels)
 
-    filtered_jobs: List[JobPost] = []
-    for job_post in candidate_jobs:
-        metadata = metadata_map[job_post.id]
+    filtered_rows: List[Any] = []
+    filtered_metadata: List[Any] = []
+    for row in candidate_rows:
+        metadata = _normalize_metadata_row(row)
 
-        if _should_hide_job_post(job_post, metadata):
+        if metadata.employment_type == "Temporary":
             continue
         if selected_countries and metadata.country not in selected_countries:
             continue
@@ -491,34 +834,32 @@ def browse_job_posts(
         if selected_career_levels and metadata.career_level not in selected_career_levels:
             continue
 
-        filtered_jobs.append(job_post)
+        filtered_rows.append(row)
+        filtered_metadata.append(metadata)
 
-    job_ids = [job_post.id for job_post in filtered_jobs]
-    application_map: Dict[UUID, JobApplication] = {}
     match_scores: Dict[UUID, float] = {}
 
-    if user_id and job_ids:
-        application_map = _load_latest_applications_map(db, user_id, job_ids)
+    if user_id and normalized_sort == "match":
+        filtered_job_ids = [row.id for row in filtered_rows]
+        job_skills_map = _load_job_skills_map(db, filtered_job_ids)
+        user_skills = set(get_user_skills(db, user_id))
+        match_scores = {
+            job_id: _calculate_match_percentage(set(job_skills_map.get(job_id, [])), user_skills)
+            for job_id in filtered_job_ids
+        }
 
-        if sort.strip().lower() == "match":
-            job_skills_map = _load_job_skills_map(db, job_ids)
-            user_skills = set(get_user_skills(db, user_id))
-            match_scores = {
-                job_id: _calculate_match_percentage(set(job_skills_map.get(job_id, [])), user_skills)
-                for job_id in job_ids
-            }
-
-    sorted_jobs = _sort_filtered_jobs(
-        filtered_jobs,
+    sorted_rows = _sort_metadata_rows(
+        filtered_rows,
         scope=scope,
         sort=sort,
-        application_map=application_map,
+        query=cleaned_query,
         match_scores=match_scores,
     )
 
-    total_count = len(sorted_jobs)
-    paginated_jobs = sorted_jobs[skip: skip + limit]
-    filter_payload = _build_job_filter_payload(sorted_jobs, metadata_map)
+    total_count = len(sorted_rows)
+    paginated_job_ids = [row.id for row in sorted_rows[skip: skip + limit]]
+    paginated_jobs = _load_jobs_for_ordered_ids(db, paginated_job_ids)
+    filter_payload = _build_job_filter_payload_from_metadata(filtered_metadata)
 
     return paginated_jobs, total_count, filter_payload
 
@@ -1073,24 +1414,31 @@ def fetch_user_saved_jobs(
     skip: int = 0,
     limit: int = 20,
 ) -> Tuple[List[JobPost], int]:
-    limit = min(limit, 100)
+    skip = max(skip, 0)
+    limit = min(max(limit, 1), 100)
     _validate_user_exists(db, user_id)
 
-    interactions = (
-        db.query(JobUserInteraction)
+    query_obj = (
+        db.query(JobPost)
+        .join(JobUserInteraction, JobUserInteraction.job_post_id == JobPost.id)
         .filter(
             JobUserInteraction.user_id == user_id,
             JobUserInteraction.is_saved.is_(True),
+            _visible_job_post_expression(),
         )
+    )
+    total_count = _count_job_query(query_obj)
+    jobs = (
+        query_obj
         .order_by(
             JobUserInteraction.saved_at.desc().nullslast(),
             JobUserInteraction.updated_at.desc(),
         )
+        .offset(skip)
+        .limit(limit)
         .all()
     )
-
-    ordered_job_ids = _ordered_unique_job_ids_from_interactions(interactions)
-    return _load_jobs_by_ordered_ids(db, ordered_job_ids, skip, limit)
+    return jobs, total_count
 
 
 def fetch_user_recently_viewed_jobs(
@@ -1099,63 +1447,31 @@ def fetch_user_recently_viewed_jobs(
     skip: int = 0,
     limit: int = 20,
 ) -> Tuple[List[JobPost], int]:
-    limit = min(limit, 100)
+    skip = max(skip, 0)
+    limit = min(max(limit, 1), 100)
     _validate_user_exists(db, user_id)
 
-    if _job_applications_table_exists(db):
-        applications = (
-            db.query(JobApplication)
-            .filter(
-                JobApplication.user_id == user_id,
-                JobApplication.status != "saved",
-            )
-            .order_by(
-                JobApplication.updated_at.desc(),
-                JobApplication.applied_at.desc().nullslast(),
-            )
-            .all()
-        )
-
-        ordered_job_ids = _ordered_unique_job_ids_from_applications(applications)
-        interactions_map = _load_latest_interactions_map(db, user_id, ordered_job_ids)
-        applications_map = _load_latest_applications_map(db, user_id, ordered_job_ids)
-        ordered_job_ids = sorted(
-            ordered_job_ids,
-            key=lambda job_id: (
-                (
-                    interactions_map[job_id].last_interaction_at.timestamp()
-                    if job_id in interactions_map and interactions_map[job_id].last_interaction_at
-                    else 0.0
-                ),
-                (
-                    applications_map[job_id].updated_at.timestamp()
-                    if job_id in applications_map and applications_map[job_id].updated_at
-                    else 0.0
-                ),
-                (
-                    applications_map[job_id].applied_at.timestamp()
-                    if job_id in applications_map and applications_map[job_id].applied_at
-                    else 0.0
-                ),
-            ),
-            reverse=True,
-        )
-        return _load_jobs_by_ordered_ids(db, ordered_job_ids, skip, limit)
-
-    interactions = (
-        db.query(JobUserInteraction)
+    query_obj = (
+        db.query(JobPost)
+        .join(JobUserInteraction, JobUserInteraction.job_post_id == JobPost.id)
         .filter(
             JobUserInteraction.user_id == user_id,
             JobUserInteraction.viewed_at.is_not(None),
+            _visible_job_post_expression(),
         )
+    )
+    total_count = _count_job_query(query_obj)
+    jobs = (
+        query_obj
         .order_by(
             JobUserInteraction.viewed_at.desc().nullslast(),
             JobUserInteraction.updated_at.desc(),
         )
+        .offset(skip)
+        .limit(limit)
         .all()
     )
-    ordered_job_ids = _ordered_unique_job_ids_from_interactions(interactions)
-    return _load_jobs_by_ordered_ids(db, ordered_job_ids, skip, limit)
+    return jobs, total_count
 
 
 def fetch_user_applied_jobs(
@@ -1164,38 +1480,29 @@ def fetch_user_applied_jobs(
     skip: int = 0,
     limit: int = 20,
 ) -> Tuple[List[JobPost], int]:
-    limit = min(limit, 100)
+    skip = max(skip, 0)
+    limit = min(max(limit, 1), 100)
     _validate_user_exists(db, user_id)
 
-    if _job_applications_table_exists(db):
-        applications = (
-            db.query(JobApplication)
-            .filter(
-                JobApplication.user_id == user_id,
-                JobApplication.status != "saved",
-            )
-            .order_by(
-                JobApplication.applied_at.desc().nullslast(),
-                JobApplication.updated_at.desc(),
-            )
-            .all()
-        )
-
-        ordered_job_ids = _ordered_unique_job_ids_from_applications(applications)
-        return _load_jobs_by_ordered_ids(db, ordered_job_ids, skip, limit)
-
-    interactions = (
-        db.query(JobUserInteraction)
+    query_obj = (
+        db.query(JobPost)
+        .join(JobUserInteraction, JobUserInteraction.job_post_id == JobPost.id)
         .filter(
             JobUserInteraction.user_id == user_id,
             JobUserInteraction.viewed_at.is_not(None),
+            _visible_job_post_expression(),
         )
+    )
+    total_count = _count_job_query(query_obj)
+    jobs = (
+        query_obj
         .order_by(
             JobUserInteraction.viewed_at.desc().nullslast(),
             JobUserInteraction.updated_at.desc(),
         )
+        .offset(skip)
+        .limit(limit)
         .all()
     )
-    ordered_job_ids = _ordered_unique_job_ids_from_interactions(interactions)
-    return _load_jobs_by_ordered_ids(db, ordered_job_ids, skip, limit)
+    return jobs, total_count
 

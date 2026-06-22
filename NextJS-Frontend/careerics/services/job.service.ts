@@ -24,6 +24,7 @@ type JobBrowseParams = {
   workTypes?: string[];
   careerLevels?: string[];
   sort?: "relevance" | "date" | "match";
+  signal?: AbortSignal;
 };
 
 function getJobCacheKey(userId?: string | null): string {
@@ -58,6 +59,7 @@ function listJobsPage(
 ): Promise<ApiResponse<APIJobListResponse>> {
   return fastapiApi.get<APIJobListResponse>("/jobs/", {
     params: buildJobBrowseQueryParams(params),
+    signal: params.signal,
   });
 }
 
@@ -80,6 +82,7 @@ function listUserApplicationsPage(
 ): Promise<ApiResponse<APIJobListResponse>> {
   return fastapiApi.get<APIJobListResponse>(`/jobs/user/${userId}/applications`, {
     params: buildJobBrowseQueryParams(params),
+    signal: params.signal,
   });
 }
 
@@ -137,6 +140,7 @@ export const jobService = {
     workTypes?: string[];
     careerLevels?: string[];
     sort?: "relevance" | "date" | "match";
+    signal?: AbortSignal;
   }): Promise<ApiResponse<APIJobListResponse>> {
     const {
       query,
@@ -149,6 +153,7 @@ export const jobService = {
       workTypes,
       careerLevels,
       sort = "relevance",
+      signal,
     } = params;
     return fastapiApi.get<APIJobListResponse>("/jobs/search/query", {
       params: {
@@ -163,6 +168,7 @@ export const jobService = {
         sort,
         user_id: userId ?? undefined,
       },
+      signal,
     });
   },
 
@@ -279,6 +285,7 @@ export const jobService = {
       workTypes?: string[];
       careerLevels?: string[];
       sort?: "relevance" | "date" | "match";
+      signal?: AbortSignal;
     } = {},
   ): Promise<ApiResponse<APIJobListResponse>> {
     const {
@@ -291,6 +298,7 @@ export const jobService = {
       workTypes,
       careerLevels,
       sort = "relevance",
+      signal,
     } = params;
     return listUserApplicationsPage(userId, {
       skip,
@@ -302,6 +310,7 @@ export const jobService = {
       workTypes,
       careerLevels,
       sort,
+      signal,
     });
   },
 

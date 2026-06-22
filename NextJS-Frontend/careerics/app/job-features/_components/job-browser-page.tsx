@@ -1,6 +1,6 @@
 "use client";
 import { Button } from "@/components/ui/button";
-import React, { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import JobCard from "@/components/ui/jobCard";
 import JobDetailsCard from "@/components/ui/JobDetailsCard";
@@ -32,6 +32,7 @@ type JobBrowserMode = "all" | "applications";
 interface JobBrowserPageProps {
   mode: JobBrowserMode;
   syncSelectionToUrl?: boolean;
+  showSortControls?: boolean;
 }
 
 interface MultiSelectDropdownProps {
@@ -44,6 +45,7 @@ interface MultiSelectDropdownProps {
 }
 
 const PAGE_SIZE = 20;
+const SEARCH_DEBOUNCE_MS = 300;
 const EMPTY_FILTER_OPTIONS: APIJobFilters = {
   countries: [],
   cities: [],
@@ -399,6 +401,7 @@ function toggleSelection(currentValues: string[], nextValue: string): string[] {
 export default function JobBrowserPage({
   mode,
   syncSelectionToUrl = false,
+  showSortControls = true,
 }: JobBrowserPageProps) {
   const { isLarge, isMedium, isSmall } = useResponsive();
   const { user, isLoading: isAuthLoading } = useAuth();
@@ -407,7 +410,7 @@ export default function JobBrowserPage({
   const [selectedJobFallback, setSelectedJobFallback] = useState<JobUiModel | null>(null);
   const urlJobIdRef = useRef<string | null>(syncSelectionToUrl ? readSelectedJobIdFromUrl() : null);
   const [searchQuery, setSearchQuery] = useState("");
-  const deferredSearchQuery = useDeferredValue(searchQuery.trim());
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [activeSort, setActiveSort] = useState<JobSortOption>("relevance");
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
   const [selectedCities, setSelectedCities] = useState<string[]>([]);
@@ -423,16 +426,28 @@ export default function JobBrowserPage({
   const [isApplying, setIsApplying] = useState(false);
   const [bookmarkingJobId, setBookmarkingJobId] = useState<string | null>(null);
   const fallbackRequestJobIdRef = useRef<string | null>(null);
+  const jobsRequestSeqRef = useRef(0);
 
   // ── FIX: separate boolean to track whether the floating modal is open ──
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
   const isCompactScreen = isSmall || isMedium;
 
+  useEffect(() => {
+    const trimmedSearchQuery = searchQuery.trim();
+    const timeoutId = window.setTimeout(
+      () => setDebouncedSearchQuery(trimmedSearchQuery),
+      trimmedSearchQuery ? SEARCH_DEBOUNCE_MS : 0,
+    );
+
+    return () => window.clearTimeout(timeoutId);
+  }, [searchQuery]);
+
   // ── FIX: close modal when viewport grows to large (details panel takes over) ──
   useEffect(() => {
     if (isLarge) {
-      setIsDetailsModalOpen(false);
+      const timeoutId = window.setTimeout(() => setIsDetailsModalOpen(false), 0);
+      return () => window.clearTimeout(timeoutId);
     }
   }, [isLarge]);
 
@@ -442,13 +457,70 @@ export default function JobBrowserPage({
     }
 
     let isActive = true;
+    const requestSeq = jobsRequestSeqRef.current + 1;
+    jobsRequestSeqRef.current = requestSeq;
 
     const loadJobs = async () => {
       setIsLoading(true);
       setError(null);
 
-      if (mode === "applications" && !user?.id) {
-        if (!isActive) {
+      try {
+        if (mode === "applications" && !user?.id) {
+          if (!isActive) {
+            return;
+          }
+
+          setJobs([]);
+          setFilterOptions(buildEmptyFilterState());
+          setTotalJobs(0);
+          setTotalPages(0);
+          setError("Please sign in to view your applications.");
+          return;
+        }
+
+        const requestParams = {
+          skip: (currentPage - 1) * PAGE_SIZE,
+          limit: PAGE_SIZE,
+          query: debouncedSearchQuery || undefined,
+          countries: selectedCountries,
+          cities: selectedCities,
+          jobTypes: selectedJobTypes,
+          workTypes: selectedWorkTypes,
+          careerLevels: selectedLevels,
+          sort: activeSort,
+        };
+
+        const response = mode === "applications" && user?.id
+          ? await jobService.getUserApplications(user.id, requestParams)
+          : debouncedSearchQuery
+            ? await jobService.searchJobs({
+              ...requestParams,
+              query: debouncedSearchQuery,
+              userId: user?.id,
+            })
+            : await jobService.listJobs({
+              ...requestParams,
+              userId: user?.id,
+            });
+
+        if (!isActive || jobsRequestSeqRef.current !== requestSeq) {
+          return;
+        }
+
+        if (response.success && response.data) {
+          setJobs(response.data.jobs.map(mapApiJobToUiModel));
+          setFilterOptions(response.data.filters ?? EMPTY_FILTER_OPTIONS);
+          setTotalJobs(response.data.total ?? 0);
+          setTotalPages(response.data.total_pages ?? 0);
+        } else {
+          setJobs([]);
+          setFilterOptions(buildEmptyFilterState());
+          setTotalJobs(0);
+          setTotalPages(0);
+          setError(response.message ?? "We could not load jobs right now.");
+        }
+      } catch (error) {
+        if (!isActive || jobsRequestSeqRef.current !== requestSeq) {
           return;
         }
 
@@ -456,48 +528,12 @@ export default function JobBrowserPage({
         setFilterOptions(buildEmptyFilterState());
         setTotalJobs(0);
         setTotalPages(0);
-        setIsLoading(false);
-        setError("Please sign in to view your applications.");
-        return;
+        setError(error instanceof Error ? error.message : "We could not load jobs right now.");
+      } finally {
+        if (isActive && jobsRequestSeqRef.current === requestSeq) {
+          setIsLoading(false);
+        }
       }
-
-      const requestParams = {
-        skip: (currentPage - 1) * PAGE_SIZE,
-        limit: PAGE_SIZE,
-        query: deferredSearchQuery || undefined,
-        countries: selectedCountries,
-        cities: selectedCities,
-        jobTypes: selectedJobTypes,
-        workTypes: selectedWorkTypes,
-        careerLevels: selectedLevels,
-        sort: activeSort,
-      };
-
-      const response = mode === "applications" && user?.id
-        ? await jobService.getUserApplications(user.id, requestParams)
-        : await jobService.listJobs({
-          ...requestParams,
-          userId: user?.id,
-        });
-
-      if (!isActive) {
-        return;
-      }
-
-      if (response.success && response.data) {
-        setJobs(response.data.jobs.map(mapApiJobToUiModel));
-        setFilterOptions(response.data.filters ?? EMPTY_FILTER_OPTIONS);
-        setTotalJobs(response.data.total ?? 0);
-        setTotalPages(response.data.total_pages ?? 0);
-      } else {
-        setJobs([]);
-        setFilterOptions(buildEmptyFilterState());
-        setTotalJobs(0);
-        setTotalPages(0);
-        setError(response.message ?? "We could not load jobs right now.");
-      }
-
-      setIsLoading(false);
     };
 
     void loadJobs();
@@ -508,7 +544,7 @@ export default function JobBrowserPage({
   }, [
     activeSort,
     currentPage,
-    deferredSearchQuery,
+    debouncedSearchQuery,
     isAuthLoading,
     mode,
     selectedCities,
@@ -528,8 +564,15 @@ export default function JobBrowserPage({
 
   useEffect(() => {
     const currentPageJobIds = new Set(jobs.map((job) => job.id));
+    const currentSelectedJobId = selectedJobId && currentPageJobIds.has(selectedJobId)
+      ? selectedJobId
+      : null;
+    const urlJobId = urlJobIdRef.current && currentPageJobIds.has(urlJobIdRef.current)
+      ? urlJobIdRef.current
+      : null;
     const storedJobId = readPersistedSelectedJobId();
-    const nextSelectedJobId = urlJobIdRef.current
+    const nextSelectedJobId = currentSelectedJobId
+      ?? urlJobId
       ?? (storedJobId && currentPageJobIds.has(storedJobId) ? storedJobId : null)
       ?? jobs[0]?.id
       ?? null;
@@ -683,6 +726,11 @@ export default function JobBrowserPage({
     setSelectedLevels(EMPTY_SELECTED_VALUES);
     setActiveSort("relevance");
     setCurrentPage(1);
+  };
+
+  const handleSearchChange = (value: string) => {
+    setCurrentPage(1);
+    setSearchQuery(value);
   };
 
   const countryOptions = useMemo(
@@ -859,7 +907,7 @@ export default function JobBrowserPage({
         >
           <SearchBar
             value={searchQuery}
-            onChange={setSearchQuery}
+            onChange={handleSearchChange}
             placeholder="Search jobs..."
             style={{
               width: "100%",
@@ -979,50 +1027,52 @@ export default function JobBrowserPage({
             </button>
           </div>
 
-          <div
-            style={{
-              display: "flex",
-              gap: isSmall ? "var(--space-sm)" : "var(--space-md)",
-              fontSize: "var(--text-sm)",
-              color: "var(--light-blue)",
-              alignItems: "center",
-              flexWrap: "wrap",
-              lineHeight: "var(--line-normal)",
-            }}
-          >
-            <span style={{ opacity: 0.7, flexShrink: 0 }}>Sort By:</span>
-
-            <SortLink
-              label="Relevance"
-              isActive={activeSort === "relevance"}
-              onClick={() => {
-                setCurrentPage(1);
-                setActiveSort("relevance");
+          {showSortControls && (
+            <div
+              style={{
+                display: "flex",
+                gap: isSmall ? "var(--space-sm)" : "var(--space-md)",
+                fontSize: "var(--text-sm)",
+                color: "var(--light-blue)",
+                alignItems: "center",
+                flexWrap: "wrap",
+                lineHeight: "var(--line-normal)",
               }}
-            />
+            >
+              <span style={{ opacity: 0.7, flexShrink: 0 }}>Sort By:</span>
 
-            <span style={{ opacity: 0.4 }}>-</span>
+              <SortLink
+                label="Relevance"
+                isActive={activeSort === "relevance"}
+                onClick={() => {
+                  setCurrentPage(1);
+                  setActiveSort("relevance");
+                }}
+              />
 
-            <SortLink
-              label="Date Posted"
-              isActive={activeSort === "date"}
-              onClick={() => {
-                setCurrentPage(1);
-                setActiveSort("date");
-              }}
-            />
+              <span style={{ opacity: 0.4 }}>-</span>
 
-            <span style={{ opacity: 0.4 }}>-</span>
+              <SortLink
+                label="Date Posted"
+                isActive={activeSort === "date"}
+                onClick={() => {
+                  setCurrentPage(1);
+                  setActiveSort("date");
+                }}
+              />
 
-            <SortLink
-              label="Resume Match"
-              isActive={activeSort === "match"}
-              onClick={() => {
-                setCurrentPage(1);
-                setActiveSort("match");
-              }}
-            />
-          </div>
+              <span style={{ opacity: 0.4 }}>-</span>
+
+              <SortLink
+                label="Resume Match"
+                isActive={activeSort === "match"}
+                onClick={() => {
+                  setCurrentPage(1);
+                  setActiveSort("match");
+                }}
+              />
+            </div>
+          )}
 
           {error && (
             <p
