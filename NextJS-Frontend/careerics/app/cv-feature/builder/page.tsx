@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Country, State } from "country-state-city";
 import ISO6391 from "iso-639-1";
+import Animation from "@/components/ui/animation";
 
 import { useGoogleDriveUpload } from "@/hooks";
 import {
@@ -19,6 +20,7 @@ import DynamicCVForm from "@/components/ui/cv-form";
 import Interview from "@/components/ui/interview";
 import InterviewCard from "@/components/ui/interview-card";
 import { PdfPreviewFrame } from "@/components/ui/pdf-preview-frame";
+import { useResponsive } from "@/hooks/useResponsive";
 
 type MultiRow = { id: number };
 
@@ -122,7 +124,6 @@ function isValidLinkedInUrl(value: string): boolean {
   }
 }
 
-
 function addValidationError(
   errors: ValidationErrors,
   fieldId: string,
@@ -154,7 +155,6 @@ function validateOptionalNameLikeText(
     addValidationError(errors, fieldId, `${label} should contain letters only.`);
   }
 }
-
 
 function validateOptionalUrl(
   errors: ValidationErrors,
@@ -433,6 +433,9 @@ function toBuilderPayload(
 
 export default function CVBuilderPage() {
   const { user, isLoading: isAuthLoading } = useAuth();
+  const { isLarge, isMedium, isSmall } = useResponsive();
+
+  const isCompactScreen = isSmall || isMedium;
 
   const [activeStepId, setActiveStepId] = useState(1);
   const [expandedStepId, setExpandedStepId] = useState<number>(1);
@@ -812,7 +815,7 @@ export default function CVBuilderPage() {
     "elementary",
     "conversational",
     "proficient",
-    "ull professional",
+    "full professional",
     "native/bilingual",
   ];
 
@@ -849,44 +852,35 @@ export default function CVBuilderPage() {
             overflowY: "auto",
             scrollbarWidth: "none",
             gap: "1vh",
-
+            padding: isMedium ? "0 var(--space-md)" : "0",
+            boxSizing: "border-box",
           }}
         >
           {isBuilding ? (
             <div
               style={{
+                width: "100%",
                 display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
                 justifyContent: "center",
-                height: "80%",
-                textAlign: "center",
               }}
             >
-              <h2
-                style={{
-                  color: "var(--white)",
-                  fontSize: "var(--text-xl)",
-                  fontFamily: "var(--font-nova-square)",
-                  marginBottom: "var(--space-md)",
-                }}
-              >
-                Building your CV...
-              </h2>
-              <img src="/interview/analyzing.svg" alt="Building CV" style={{ width: "220px" }} />
+              <div style={{ maxWidth: "var(--container-sm)" }}>
+                <Animation message="" />
+              </div>
             </div>
           ) : isFinished ? (
-            <div style={{ padding: "var(--space-xl)", width: "100%" }}>
+            <div style={{ padding: isCompactScreen ? "var(--space-md)" : "var(--space-xl)", width: "100%" }}>
               <h2
                 style={{
                   color: "var(--white)",
-                  fontSize: "var(--text-2xl)",
+                  fontSize: isSmall ? "var(--text-lg)" : "var(--text-2xl)",
                   fontFamily: "var(--font-nova-square)",
                   marginBottom: "var(--space-md)",
                 }}
               >
                 Ready to see your CV?
               </h2>
+
               <div
                 style={{
                   display: "flex",
@@ -901,40 +895,54 @@ export default function CVBuilderPage() {
                   videoBoxStyle={{
                     background: "rgba(255, 255, 255, 0.41)",
                     width: "100%",
-                    minHeight: "360px",
+                    minHeight: isCompactScreen ? "auto" : "360px",
                     borderRadius: "var(--radius-2xl)",
                   }}
                   videoContent={
                     <div
                       style={{
                         display: "flex",
+                        // ── Stack vertically on small; side-by-side on medium+ ──
+                        flexDirection: isSmall ? "column" : "row",
                         alignItems: "center",
                         justifyContent: "center",
-                        gap: "var(--space-xl)",
-                        padding: "var(--space-2xl)",
-                        minHeight: "360px",
+                        gap: isSmall ? "var(--space-lg)" : "var(--space-xl)",
+                        padding: isCompactScreen ? "var(--space-lg)" : "var(--space-2xl)",
+                        minHeight: isCompactScreen ? "auto" : "360px",
                         flexWrap: "wrap",
                       }}
                     >
+                      {/* PDF thumbnail — hidden on small to save space */}
+                      {!isSmall && (
+                        <div
+                          style={{
+                            width: isMedium ? "min(28vw, 180px)" : "min(38vw, 220px)",
+                            height: isMedium ? "min(38vw, 240px)" : "min(52vw, 300px)",
+                            minWidth: "140px",
+                            minHeight: "180px",
+                            borderRadius: "var(--radius-xl)",
+                            flexShrink: 0,
+                            boxShadow: "0 18px 42px rgba(0,0,0,0.2)",
+                            overflow: "hidden",
+                          }}
+                        >
+                          <PdfPreviewFrame
+                            src={downloadUrl}
+                            title="Generated CV preview"
+                          />
+                        </div>
+                      )}
+
+                      {/* Action buttons */}
                       <div
                         style={{
-                          width: "min(38vw, 220px)",
-                          height: "min(52vw, 300px)",
-                          minWidth: "160px",
-                          minHeight: "220px",
-                          borderRadius: "var(--radius-xl)",
-                          flexShrink: 0,
-                          boxShadow: "0 18px 42px rgba(0,0,0,0.2)",
-                          overflow: "hidden",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "var(--space-lg)",
+                          // Full width on small so buttons stretch nicely
+                          width: isSmall ? "100%" : "auto",
                         }}
                       >
-                        <PdfPreviewFrame
-                          src={downloadUrl}
-                          title="Generated CV preview"
-                        />
-                      </div>
-
-                      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-lg)" }}>
                         <a
                           href={downloadUrl ?? "#"}
                           download={downloadName}
@@ -945,16 +953,27 @@ export default function CVBuilderPage() {
                             padding: "var(--button-padding-y) var(--button-padding-x)",
                             borderRadius: "var(--button-radius)",
                             fontWeight: "bold",
-                            width: "240px",
+                            width: isSmall ? "100%" : "240px",
                             textAlign: "center",
                             textDecoration: "none",
                             pointerEvents: downloadUrl ? "auto" : "none",
                             opacity: downloadUrl ? 1 : 0.5,
+                            boxSizing: "border-box",
                           }}
                         >
                           Download CV
                         </a>
-                        <span style={{ color: "var(--white)", textAlign: "center", opacity: 0.6 }}>or</span>
+
+                        <span
+                          style={{
+                            color: "var(--white)",
+                            textAlign: "center",
+                            opacity: 0.6,
+                          }}
+                        >
+                          or
+                        </span>
+
                         <button
                           type="button"
                           onClick={() => void handleSaveToGoogleDrive()}
@@ -968,10 +987,11 @@ export default function CVBuilderPage() {
                             display: "flex",
                             alignItems: "center",
                             gap: "10px",
-                            width: "240px",
+                            width: isSmall ? "100%" : "240px",
                             justifyContent: "center",
                             cursor: isSavingToDrive || !downloadBlob ? "default" : "pointer",
                             opacity: isSavingToDrive || !downloadBlob ? 0.7 : 1,
+                            boxSizing: "border-box",
                           }}
                         >
                           <img src="/global/drive.svg" style={{ width: "18px" }} alt="Drive" />
@@ -981,13 +1001,29 @@ export default function CVBuilderPage() {
                               ? "Saved to Google Drive"
                               : "Save to Google Drive"}
                         </button>
+
                         {driveUploadError ? (
-                          <p style={{ color: "var(--light-red)", width: "240px", margin: 0, textAlign: "center" }}>
+                          <p
+                            style={{
+                              color: "var(--light-red)",
+                              width: isSmall ? "100%" : "240px",
+                              margin: 0,
+                              textAlign: "center",
+                            }}
+                          >
                             {driveUploadError}
                           </p>
                         ) : null}
+
                         {uploadedDriveFile ? (
-                          <p style={{ color: "var(--primary-green)", width: "240px", margin: 0, textAlign: "center" }}>
+                          <p
+                            style={{
+                              color: "var(--primary-green)",
+                              width: isSmall ? "100%" : "240px",
+                              margin: 0,
+                              textAlign: "center",
+                            }}
+                          >
                             Saved to Google Drive.
                           </p>
                         ) : null}
@@ -1002,7 +1038,7 @@ export default function CVBuilderPage() {
               <h2
                 style={{
                   color: "var(--white)",
-                  fontSize: "var(--text-xl)",
+                  fontSize: isSmall ? "var(--text-lg)" : "var(--text-xl)",
                   fontFamily: "var(--font-nova-square)",
                 }}
               >
@@ -1021,7 +1057,18 @@ export default function CVBuilderPage() {
                 </p>
               ) : null}
 
-              <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-sm)" }}>
+<div 
+                style={{ 
+                  display: "flex", 
+                  flexDirection: "column", 
+                  gap: "var(--space-sm)",
+                  // 👇 Hna kbbarna el-عرض f-el-mobile wel-tablet 3ashan ya7od msa7a akbar w maykonsh makhnooq
+                  width: isSmall || isMedium ? "130%" : "100%", 
+                  maxWidth: isSmall ? "170%" : isMedium ? "90%" : "800px",
+                  padding: isSmall ? "0 var(--space-xs)" : "0", // Padding khfeef 3al mobile 3ashan maylza2sh f-el-shasha
+                  boxSizing: "border-box"
+                }}
+              >
                 {expandedStepId === 1 && (
                   <DynamicCVForm
                     values={formData}
@@ -1064,9 +1111,11 @@ export default function CVBuilderPage() {
 
                 {expandedStepId === 2 && (
                   <>
-                  
                     {educationList.map((entry, index) => (
-                      <div key={entry.id} style={{ display: "flex", gap: "var(--space-sm)", marginBottom: "var(--space-xxs)" }}>
+                      <div
+                        key={entry.id}
+                        style={{ display: "flex", gap: "var(--space-sm)", marginBottom: "var(--space-xxs)" }}
+                      >
                         <span style={{ color: "var(--white)", opacity: 0.7 }}>{index + 1}.</span>
                         <div style={{ flex: 1 }}>
                           <DynamicCVForm
@@ -1090,15 +1139,29 @@ export default function CVBuilderPage() {
                             ]}
                           />
                         </div>
-                        <button type="button" onClick={() => removeEntry(entry.id, educationList, setEducationList)}>
-                          <img src="/cv/trash.svg" alt="" aria-hidden="true" style={{ width: "20px", filter: "invert(0.7)", cursor: "pointer" }} />
+                        <button
+                          type="button"
+                          onClick={() => removeEntry(entry.id, educationList, setEducationList)}
+                        >
+                          <img
+                            src="/cv/trash.svg"
+                            alt=""
+                            aria-hidden="true"
+                            style={{ width: "20px", filter: "invert(0.7)", cursor: "pointer" }}
+                          />
                         </button>
                       </div>
                     ))}
                     <button
                       type="button"
                       onClick={() => addEntry(educationList, setEducationList)}
-                      style={{ color: "var(--primary-green)", background: "none", border: "none", cursor: "pointer", marginBottom: "var(--space-2xl)" }}
+                      style={{
+                        color: "var(--primary-green)",
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        marginBottom: "var(--space-2xl)",
+                      }}
                     >
                       + Add another degree
                     </button>
@@ -1111,8 +1174,20 @@ export default function CVBuilderPage() {
                       <div style={{ minWidth: "10px" }} />
                       <div style={{ flex: 1 }}>
                         {langList.map((entry, index) => (
-                          <div key={entry.id} style={{ display: "flex", gap: "var(--space-xs)", marginBottom: "var(--space-sm)" }}>
-                            <span style={{ color: "var(--white)", opacity: 0.7, marginTop: "var(--space-md)", minWidth: "10px" }}>{index + 1}.</span>
+                          <div
+                            key={entry.id}
+                            style={{ display: "flex", gap: "var(--space-xs)", marginBottom: "var(--space-sm)" }}
+                          >
+                            <span
+                              style={{
+                                color: "var(--white)",
+                                opacity: 0.7,
+                                marginTop: "var(--space-md)",
+                                minWidth: "10px",
+                              }}
+                            >
+                              {index + 1}.
+                            </span>
                             <div style={{ flex: 1 }}>
                               <DynamicCVForm
                                 values={formData}
@@ -1122,8 +1197,18 @@ export default function CVBuilderPage() {
                                     id: `lrow-${entry.id}`,
                                     type: "row",
                                     fields: [
-                                      { id: `ln-${entry.id}`, type: "select", placeholder: "Language", options: ALL_LANGUAGES },
-                                      { id: `lp-${entry.id}`, type: "select", placeholder: "Proficiency", options: PROFICIENCY_LEVELS },
+                                      {
+                                        id: `ln-${entry.id}`,
+                                        type: "select",
+                                        placeholder: "Language",
+                                        options: ALL_LANGUAGES,
+                                      },
+                                      {
+                                        id: `lp-${entry.id}`,
+                                        type: "select",
+                                        placeholder: "Proficiency",
+                                        options: PROFICIENCY_LEVELS,
+                                      },
                                     ],
                                   },
                                 ]}
@@ -1134,14 +1219,25 @@ export default function CVBuilderPage() {
                               onClick={() => removeEntry(entry.id, langList, setLangList)}
                               style={{ background: "none", border: "none", cursor: "pointer" }}
                             >
-                              <img src="/cv/trash.svg" alt="" aria-hidden="true" style={{ width: "20px", filter: "invert(0.7)" }} />
+                              <img
+                                src="/cv/trash.svg"
+                                alt=""
+                                aria-hidden="true"
+                                style={{ width: "20px", filter: "invert(0.7)" }}
+                              />
                             </button>
                           </div>
                         ))}
                         <button
                           type="button"
                           onClick={() => addEntry(langList, setLangList)}
-                          style={{ color: "var(--primary-green)", background: "none", border: "none", cursor: "pointer", marginBottom: "var(--space-2xl)" }}
+                          style={{
+                            color: "var(--primary-green)",
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            marginBottom: "var(--space-2xl)",
+                          }}
                         >
                           + Add language
                         </button>
@@ -1152,8 +1248,20 @@ export default function CVBuilderPage() {
                       <div style={{ minWidth: "10px" }} />
                       <div style={{ flex: 1 }}>
                         {skillList.map((entry, index) => (
-                          <div key={entry.id} style={{ display: "flex", gap: "var(--space-sm)", marginBottom: "var(--space-sm)" }}>
-                            <span style={{ color: "var(--white)", opacity: 0.7, marginTop: "var(--space-md)", minWidth: "10px" }}>{index + 1}.</span>
+                          <div
+                            key={entry.id}
+                            style={{ display: "flex", gap: "var(--space-sm)", marginBottom: "var(--space-sm)" }}
+                          >
+                            <span
+                              style={{
+                                color: "var(--white)",
+                                opacity: 0.7,
+                                marginTop: "var(--space-md)",
+                                minWidth: "10px",
+                              }}
+                            >
+                              {index + 1}.
+                            </span>
                             <div style={{ flex: 1 }}>
                               <DynamicCVForm
                                 values={formData}
@@ -1164,7 +1272,12 @@ export default function CVBuilderPage() {
                                     type: "row",
                                     fields: [
                                       { id: `sn-${entry.id}`, type: "text", placeholder: "Skill" },
-                                      { id: `sp-${entry.id}`, type: "select", placeholder: "Level", options: ["Beginner", "Intermediate", "proficient", "Expert"] },
+                                      {
+                                        id: `sp-${entry.id}`,
+                                        type: "select",
+                                        placeholder: "Level",
+                                        options: ["Beginner", "Intermediate", "proficient", "Expert"],
+                                      },
                                     ],
                                   },
                                 ]}
@@ -1175,14 +1288,24 @@ export default function CVBuilderPage() {
                               onClick={() => removeEntry(entry.id, skillList, setSkillList)}
                               style={{ background: "none", border: "none", cursor: "pointer" }}
                             >
-                              <img src="/cv/trash.svg" alt="" aria-hidden="true" style={{ width: "20px", filter: "invert(0.7)" }} />
+                              <img
+                                src="/cv/trash.svg"
+                                alt=""
+                                aria-hidden="true"
+                                style={{ width: "20px", filter: "invert(0.7)" }}
+                              />
                             </button>
                           </div>
                         ))}
                         <button
                           type="button"
                           onClick={() => addEntry(skillList, setSkillList)}
-                          style={{ color: "var(--primary-green)", background: "none", border: "none", cursor: "pointer" }}
+                          style={{
+                            color: "var(--primary-green)",
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                          }}
                         >
                           + Add skill
                         </button>
@@ -1197,8 +1320,25 @@ export default function CVBuilderPage() {
                       <div style={{ minWidth: "10px" }} />
                       <div style={{ flex: 1 }}>
                         {certList.map((entry, index) => (
-                          <div key={entry.id} style={{ display: "flex", gap: "var(--space-sm)", marginBottom: "var(--space-sm)", alignItems: "flex-start" }}>
-                            <span style={{ color: "var(--white)", opacity: 0.7, marginTop: "var(--space-md)", minWidth: "10px" }}>{index + 1}.</span>
+                          <div
+                            key={entry.id}
+                            style={{
+                              display: "flex",
+                              gap: "var(--space-sm)",
+                              marginBottom: "var(--space-sm)",
+                              alignItems: "flex-start",
+                            }}
+                          >
+                            <span
+                              style={{
+                                color: "var(--white)",
+                                opacity: 0.7,
+                                marginTop: "var(--space-md)",
+                                minWidth: "10px",
+                              }}
+                            >
+                              {index + 1}.
+                            </span>
                             <div style={{ flex: 1 }}>
                               <DynamicCVForm
                                 values={formData}
@@ -1219,16 +1359,31 @@ export default function CVBuilderPage() {
                             <button
                               type="button"
                               onClick={() => removeEntry(entry.id, certList, setCertList)}
-                              style={{ background: "none", border: "none", cursor: "pointer", marginTop: "var(--space-md)" }}
+                              style={{
+                                background: "none",
+                                border: "none",
+                                cursor: "pointer",
+                                marginTop: "var(--space-xl)",
+                              }}
                             >
-                              <img src="/cv/trash.svg" alt="" aria-hidden="true" style={{ width: "20px", filter: "invert(0.7)" }} />
+                              <img
+                                src="/cv/trash.svg"
+                                alt=""
+                                aria-hidden="true"
+                                style={{ width: "20px", filter: "invert(0.7)" }}
+                              />
                             </button>
                           </div>
                         ))}
                         <button
                           type="button"
                           onClick={() => addEntry(certList, setCertList)}
-                          style={{ color: "var(--primary-green)", background: "none", border: "none", cursor: "pointer" }}
+                          style={{
+                            color: "var(--primary-green)",
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                          }}
                         >
                           + Add certificate
                         </button>
@@ -1239,8 +1394,25 @@ export default function CVBuilderPage() {
                       <div style={{ minWidth: "10px" }} />
                       <div style={{ flex: 1 }}>
                         {awardList.map((entry, index) => (
-                          <div key={entry.id} style={{ display: "flex", gap: "var(--space-sm)", marginBottom: "var(--space-sm)", alignItems: "flex-start" }}>
-                            <span style={{ color: "var(--white)", opacity: 0.7, marginTop: "var(--space-md)", minWidth: "10px" }}>{index + 1}.</span>
+                          <div
+                            key={entry.id}
+                            style={{
+                              display: "flex",
+                              gap: "var(--space-sm)",
+                              marginBottom: "var(--space-sm)",
+                              alignItems: "flex-start",
+                            }}
+                          >
+                            <span
+                              style={{
+                                color: "var(--white)",
+                                opacity: 0.7,
+                                marginTop: "var(--space-md)",
+                                minWidth: "10px",
+                              }}
+                            >
+                              {index + 1}.
+                            </span>
                             <div style={{ flex: 1 }}>
                               <DynamicCVForm
                                 values={formData}
@@ -1261,16 +1433,31 @@ export default function CVBuilderPage() {
                             <button
                               type="button"
                               onClick={() => removeEntry(entry.id, awardList, setAwardList)}
-                              style={{ background: "none", border: "none", cursor: "pointer", marginTop: "var(--space-md)" }}
+                              style={{
+                                background: "none",
+                                border: "none",
+                                cursor: "pointer",
+                                marginTop: "var(--space-md)",
+                              }}
                             >
-                              <img src="/cv/trash.svg" alt="" aria-hidden="true" style={{ width: "20px", filter: "invert(0.7)" }} />
+                              <img
+                                src="/cv/trash.svg"
+                                alt=""
+                                aria-hidden="true"
+                                style={{ width: "20px", filter: "invert(0.7)" }}
+                              />
                             </button>
                           </div>
                         ))}
                         <button
                           type="button"
                           onClick={() => addEntry(awardList, setAwardList)}
-                          style={{ color: "var(--primary-green)", background: "none", border: "none", cursor: "pointer" }}
+                          style={{
+                            color: "var(--primary-green)",
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                          }}
                         >
                           + Add award
                         </button>
@@ -1284,8 +1471,20 @@ export default function CVBuilderPage() {
                     <div style={{ minWidth: "10px" }} />
                     <div style={{ flex: 1 }}>
                       {experienceList.map((entry, index) => (
-                        <div key={entry.id} style={{ display: "flex", gap: "var(--space-sm)", marginBottom: "var(--space-sm)" }}>
-                          <span style={{ color: "var(--white)", opacity: 0.7, marginTop: "var(--space-md)", minWidth: "10px" }}>{index + 1}.</span>
+                        <div
+                          key={entry.id}
+                          style={{ display: "flex", gap: "var(--space-sm)", marginBottom: "var(--space-sm)" }}
+                        >
+                          <span
+                            style={{
+                              color: "var(--white)",
+                              opacity: 0.7,
+                              marginTop: "var(--space-md)",
+                              minWidth: "10px",
+                            }}
+                          >
+                            {index + 1}.
+                          </span>
                           <div style={{ flex: 1 }}>
                             <DynamicCVForm
                               values={formData}
@@ -1307,16 +1506,31 @@ export default function CVBuilderPage() {
                           <button
                             type="button"
                             onClick={() => removeEntry(entry.id, experienceList, setExperienceList)}
-                            style={{ background: "none", border: "none", cursor: "pointer", marginTop: "var(--space-md)" }}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              cursor: "pointer",
+                              marginTop: "var(--space-md)",
+                            }}
                           >
-                            <img src="/cv/trash.svg" alt="" aria-hidden="true" style={{ width: "20px", filter: "invert(0.7)" }} />
+                            <img
+                              src="/cv/trash.svg"
+                              alt=""
+                              aria-hidden="true"
+                              style={{ width: "20px", filter: "invert(0.7)" }}
+                            />
                           </button>
                         </div>
                       ))}
                       <button
                         type="button"
                         onClick={() => addEntry(experienceList, setExperienceList)}
-                        style={{ color: "var(--primary-green)", background: "none", border: "none", cursor: "pointer" }}
+                        style={{
+                          color: "var(--primary-green)",
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                        }}
                       >
                         + Add experience
                       </button>
@@ -1329,8 +1543,20 @@ export default function CVBuilderPage() {
                     <div style={{ minWidth: "10px" }} />
                     <div style={{ flex: 1 }}>
                       {projectList.map((entry, index) => (
-                        <div key={entry.id} style={{ display: "flex", gap: "var(--space-sm)", marginBottom: "var(--space-sm)" }}>
-                          <span style={{ color: "var(--white)", opacity: 0.7, marginTop: "var(--space-md)", minWidth: "10px" }}>{index + 1}.</span>
+                        <div
+                          key={entry.id}
+                          style={{ display: "flex", gap: "var(--space-sm)", marginBottom: "var(--space-sm)" }}
+                        >
+                          <span
+                            style={{
+                              color: "var(--white)",
+                              opacity: 0.7,
+                              marginTop: "var(--space-md)",
+                              minWidth: "10px",
+                            }}
+                          >
+                            {index + 1}.
+                          </span>
                           <div style={{ flex: 1 }}>
                             <DynamicCVForm
                               values={formData}
@@ -1347,16 +1573,31 @@ export default function CVBuilderPage() {
                           <button
                             type="button"
                             onClick={() => removeEntry(entry.id, projectList, setProjectList)}
-                            style={{ background: "none", border: "none", cursor: "pointer", marginTop: "var(--space-md)" }}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              cursor: "pointer",
+                              marginTop: "var(--space-md)",
+                            }}
                           >
-                            <img src="/cv/trash.svg" alt="" aria-hidden="true" style={{ width: "20px", filter: "invert(0.7)" }} />
+                            <img
+                              src="/cv/trash.svg"
+                              alt=""
+                              aria-hidden="true"
+                              style={{ width: "20px", filter: "invert(0.7)" }}
+                            />
                           </button>
                         </div>
                       ))}
                       <button
                         type="button"
                         onClick={() => addEntry(projectList, setProjectList)}
-                        style={{ color: "var(--primary-green)", background: "none", border: "none", cursor: "pointer" }}
+                        style={{
+                          color: "var(--primary-green)",
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                        }}
                       >
                         + Add project
                       </button>
@@ -1369,8 +1610,20 @@ export default function CVBuilderPage() {
                     <div style={{ minWidth: "10px" }} />
                     <div style={{ flex: 1 }}>
                       {referenceList.map((entry, index) => (
-                        <div key={entry.id} style={{ display: "flex", gap: "var(--space-sm)", marginBottom: "var(--space-sm)" }}>
-                          <span style={{ color: "var(--white)", opacity: 0.7, marginTop: "var(--space-md)", minWidth: "10px" }}>{index + 1}.</span>
+                        <div
+                          key={entry.id}
+                          style={{ display: "flex", gap: "var(--space-sm)", marginBottom: "var(--space-sm)" }}
+                        >
+                          <span
+                            style={{
+                              color: "var(--white)",
+                              opacity: 0.7,
+                              marginTop: "var(--space-md)",
+                              minWidth: "10px",
+                            }}
+                          >
+                            {index + 1}.
+                          </span>
                           <div style={{ flex: 1 }}>
                             <DynamicCVForm
                               values={formData}
@@ -1398,16 +1651,31 @@ export default function CVBuilderPage() {
                           <button
                             type="button"
                             onClick={() => removeEntry(entry.id, referenceList, setReferenceList)}
-                            style={{ background: "none", border: "none", cursor: "pointer", marginTop: "var(--space-md)" }}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              cursor: "pointer",
+                              marginTop: "var(--space-md)",
+                            }}
                           >
-                            <img src="/cv/trash.svg" alt="" aria-hidden="true" style={{ width: "20px", filter: "invert(0.7)" }} />
+                            <img
+                              src="/cv/trash.svg"
+                              alt=""
+                              aria-hidden="true"
+                              style={{ width: "20px", filter: "invert(0.7)" }}
+                            />
                           </button>
                         </div>
                       ))}
                       <button
                         type="button"
                         onClick={() => addEntry(referenceList, setReferenceList)}
-                        style={{ color: "var(--primary-green)", background: "none", border: "none", cursor: "pointer" }}
+                        style={{
+                          color: "var(--primary-green)",
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                        }}
                       >
                         + Add reference
                       </button>
@@ -1429,59 +1697,64 @@ export default function CVBuilderPage() {
                 </p>
               ) : null}
 
-             <div
-  style={{
-    width: "100%",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "flex-end",
-    position: "sticky",
-    zIndex: 5,
-  }}
->
-  <Button
-    variant="primary"
-    onClick={() => {
-      if (expandedStepId === 7) {
-        void handleSubmit();
-        return;
-      }
+              {/* ── Next / Build CV button ── */}
+              <div
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: isSmall ? "stretch" : "flex-end",
+                  position: "relative",
+                  bottom: 0,
+                  paddingBlock: "var(--space-md)",
+                  zIndex: 5,
+                }}
+              >
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    if (expandedStepId === 7) {
+                      void handleSubmit();
+                      return;
+                    }
 
-      const errors = validateStep(expandedStepId);
-      if (Object.keys(errors).length > 0) {
-        handleValidationErrors(errors);
-        return;
-      }
+                    const errors = validateStep(expandedStepId);
+                    if (Object.keys(errors).length > 0) {
+                      handleValidationErrors(errors);
+                      return;
+                    }
 
-      clearValidationErrors();
+                    clearValidationErrors();
 
-      const next = expandedStepId + 1;
-      if (next > activeStepId) setActiveStepId(next);
-      setExpandedStepId(next);
-      setSidebarExpandedId(next);
-    }}
-    disabled={isBuilding}
-    isLoading={isBuilding}
-    style={{
-      minWidth: "160px",
-      whiteSpace: "nowrap",
-      opacity:
-        isBuilding
-          ? 0.7
-          : expandedStepId === 7
-            ? isFormValid()
-              ? 1
-              : 0.5
-            : isStepComplete()
-              ? 1
-              : 0.5,
-      cursor: isBuilding ? "default" : "pointer",
-      transition: "opacity 0.3s ease",
-    }}
-  >
-    {expandedStepId === 7 ? (isBuilding ? "Building..." : "Build CV") : "Next"}
-  </Button>
-</div>
+                    const next = expandedStepId + 1;
+                    if (next > activeStepId) setActiveStepId(next);
+                    setExpandedStepId(next);
+                    setSidebarExpandedId(next);
+                  }}
+                  disabled={isBuilding}
+                  isLoading={isBuilding}
+                  style={{
+                    // Stretch to full width on small screens ──
+                    width: isSmall ? "100%" : undefined,
+                    minWidth: isSmall ? undefined : "160px",
+                    whiteSpace: "nowrap",
+                    opacity:
+                      isBuilding
+                        ? 0.7
+                        : expandedStepId === 7
+                          ? isFormValid()
+                            ? 1
+                            : 0.5
+                          : isStepComplete()
+                            ? 1
+                            : 0.5,
+                    cursor: isBuilding ? "default" : "pointer",
+                    transition: "opacity 0.3s ease",
+                  }}
+                >
+                  {expandedStepId === 7 ? (isBuilding ? "Building..." : "Build CV") : "Next"}
+                </Button>
+              </div>
             </>
           )}
         </div>

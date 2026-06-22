@@ -123,19 +123,18 @@ export default function QuestionsPage() {
     router.push(`/skill-feature/results?${searchParams.toString()}`);
   };
 
-
   return (
     <div
       style={{
         marginLeft: "auto",
         marginRight: "auto",
         display: "flex",
-        width: isLarge ? "65vw" : "85vw",
+        width: isLarge ? "65vw" : isMedium ? "80vw" : "90vw",
         height: "100%",
         flexDirection: "column",
         alignItems: "center",
-        gap:"var(--space-xl)",
-        justifyContent:"space-between",
+        gap: isSmall ? "var(--space-lg)" : "var(--space-xl)",
+        justifyContent: "space-between",
       }}
     >
       <h2
@@ -143,9 +142,10 @@ export default function QuestionsPage() {
           margin: 0,
           width: "100%",
           textAlign: "center",
-          fontSize: "var(--text-lg)",
+          fontSize: isSmall ? "16px" : "var(--text-lg)",
           fontFamily: "var(--font-nova-square), sans-serif",
-          color: "white"
+          color: "white",
+          lineHeight: "1.4",
         }}
       >
         {currentQData
@@ -155,7 +155,7 @@ export default function QuestionsPage() {
 
       <div
         style={{
-          marginTop: "var(--space-xl)",
+          marginTop: isSmall ? "var(--space-lg)" : "var(--space-xl)",
           display: "flex",
           width: "100%",
           flexDirection: "column",
@@ -203,26 +203,31 @@ export default function QuestionsPage() {
                 alignItems: "center",
                 justifyContent: "space-between",
                 borderRadius: "var(--radius-lg)",
-                padding: "var(--space-md) var(--space-lg)",
+                padding: isSmall ? "12px 16px" : "var(--space-md) var(--space-lg)",
                 color: "var(--dark-blue)",
                 backgroundColor: bg,
                 border: `1px solid ${border}`,
                 transition: "all 0.2s ease",
                 cursor: isReviewing ? "default" : "pointer",
+                textAlign: "left",
+                gap: "12px",
               }}
             >
-              <span>{choice}</span>
+              <span style={{ flex: 1, wordBreak: "break-word" }}>{choice}</span>
 
               <span
                 style={{
                   display: "flex",
                   height: "1.45rem",
                   width: "1.45rem",
+                  minWidth: "1.45rem",
+                  minHeight: "1.45rem",
                   alignItems: "center",
                   justifyContent: "center",
                   borderRadius: "50%",
                   border: "2px solid var(--dark-blue)",
                   fontWeight: 800,
+                  flexShrink: 0,
                 }}
               >
                 {isReviewing && isCorrect ? (
@@ -236,6 +241,7 @@ export default function QuestionsPage() {
                       width: "0.6rem",
                       borderRadius: "50%",
                       backgroundColor: "var(--dark-blue)",
+                      flexShrink: 0,
                     }}
                   />
                 ) : null}
@@ -255,7 +261,8 @@ export default function QuestionsPage() {
           flexDirection: "column",
           flexShrink: 0,
           alignSelf: "center",
-          height:"fit-content",
+          height: "fit-content",
+          marginTop: isSmall ? "var(--space-lg)" : "0",
         }}
       >
         <div
@@ -270,72 +277,73 @@ export default function QuestionsPage() {
             alignSelf: "center",
           }}
         >
-
-        <Button
-          variant="secondary-inverted"
-          type="button"
-          onClick={() => navigateTo(currentQuestion - 1)}
-          disabled={currentQuestion === 1}
-          style={{
-            paddingInline: "var(--space-2xl)",
-            paddingBlock: "0",
-            paddingLeft: "0",
-            gap: "var(--space-xl)",
-            height: "fit-content",
-            width: "fit-content",
-            maxWidth: isSmall ? "100%" : "fit-content",
-            flex: isSmall ? 1 : "none",
-            justifyContent: "space-between",
-            borderRadius: "999px",
-          }}
-        >
-          <img
-            src={"/global/next.svg"}
+          <Button
+            variant="secondary-inverted"
+            type="button"
+            onClick={() => navigateTo(currentQuestion - 1)}
+            disabled={currentQuestion === 1}
             style={{
-              height: "var(--icon-md)",
-              transform: "rotate(180deg)",
-              backgroundColor: "white",
-              padding: "var(--space-xxs)",
-              boxSizing: "content-box",
+              paddingInline: isSmall ? "var(--space-lg)" : "var(--space-2xl)",
+              paddingBlock: "0",
+              paddingLeft: "0",
+              gap: isSmall ? "var(--space-md)" : "var(--space-xl)",
+              height: "fit-content",
+              width: "fit-content",
+              maxWidth: isSmall ? "100%" : "fit-content",
+              flex: isSmall ? 1 : "none",
+              justifyContent: "space-between",
               borderRadius: "999px",
+              fontSize: isSmall ? "14px" : "inherit",
             }}
-          />
-          Previous
-        </Button>
+          >
+            <img
+              src={"/global/next.svg"}
+              style={{
+                height: "var(--icon-md)",
+                transform: "rotate(180deg)",
+                backgroundColor: "white",
+                padding: "var(--space-xxs)",
+                boxSizing: "content-box",
+                borderRadius: "999px",
+              }}
+            />
+            Previous
+          </Button>
 
-
-        <Button
-          variant={"primary-inverted"}
-          type="button"
-          onClick={() => navigateTo(currentQuestion + 1)}
-          disabled={!isAnswered || !(currentQuestion < questions.length)}
-          style={{
-            paddingInline: "var(--space-2xl)",
-            paddingBlock: "0",
-            paddingRight: "0",
-            gap: "var(--space-xl)",
-            height: "fit-content",
-            width: "fit-content",
-            maxWidth: isSmall ? "100%" : "fit-content",
-            flex: isSmall ? 1 : "none",
-            justifyContent: "space-between",
-            borderRadius: "999px",
-          }}
-        >
-          Next
-          <img
-            src={"/global/next.svg"}
+          <Button
+            variant={"primary-inverted"}
+            type="button"
+            onClick={() => navigateTo(currentQuestion + 1)}
+            disabled={!isAnswered || !(currentQuestion < questions.length)}
             style={{
-              height: "var(--icon-md)",
-              backgroundColor: "white",
-              padding: "var(--space-xxs)",
-              boxSizing: "content-box",
+              paddingInline: isSmall ? "var(--space-lg)" : "var(--space-2xl)",
+              paddingBlock: "0",
+              paddingRight: "0",
+              gap: isSmall ? "var(--space-md)" : "var(--space-xl)",
+              height: "fit-content",
+              width: "fit-content",
+              maxWidth: isSmall ? "100%" : "fit-content",
+              flex: isSmall ? 1 : "none",
+              justifyContent: "space-between",
               borderRadius: "999px",
+              fontSize: isSmall ? "14px" : "inherit",
             }}
-          />
-        </Button>
+          >
+            Next
+            <img
+              src={"/global/next.svg"}
+              style={{
+                height: "var(--icon-md)",
+                backgroundColor: "white",
+                padding: "var(--space-xxs)",
+                boxSizing: "content-box",
+                borderRadius: "999px",
+              }}
+            />
+          </Button>
         </div>
-        {(!isReviewing && !(currentQuestion < questions.length)) &&
+
+        {!isReviewing && !(currentQuestion < questions.length) && (
           <Button
             variant="primary"
             type="button"
@@ -352,25 +360,31 @@ export default function QuestionsPage() {
           >
             Finish Assessment
           </Button>
-        }
+        )}
       </div>
 
-      {
-        isReviewing && (
-          <Button
-            variant="secondary"
-            size="sm"
-            className="mt-[var(--space-lg)]"
-            onClick={() =>
-              router.push(
-                `/skill-feature/results?${searchParams.toString()}`
-              )
-            }
-          >
-            Back to Results
-          </Button>
-        )
-      }
+      {isReviewing && (
+        <Button
+          variant="secondary"
+          className="mt-[var(--space-lg)]"
+          style={{
+            width: isSmall ? "100%" : "auto",
+            height: isSmall ? "auto" : "fit-content",
+            paddingBlock: isSmall ? "0px" : "var(--space-xs)",
+            fontSize: isSmall ? "13px" : "inherit",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+          onClick={() =>
+            router.push(
+              `/skill-feature/results?${searchParams.toString()}`
+            )
+          }
+        >
+          Back to Results
+        </Button>
+      )}
     </div>
   );
 }
