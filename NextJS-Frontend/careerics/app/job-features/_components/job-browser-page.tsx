@@ -397,7 +397,6 @@ function toggleSelection(currentValues: string[], nextValue: string): string[] {
 }
 
 export default function JobBrowserPage({
-
   mode,
   syncSelectionToUrl = false,
 }: JobBrowserPageProps) {
@@ -424,6 +423,18 @@ export default function JobBrowserPage({
   const [isApplying, setIsApplying] = useState(false);
   const [bookmarkingJobId, setBookmarkingJobId] = useState<string | null>(null);
   const fallbackRequestJobIdRef = useRef<string | null>(null);
+
+  // ── FIX: separate boolean to track whether the floating modal is open ──
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+
+  const isCompactScreen = isSmall || isMedium;
+
+  // ── FIX: close modal when viewport grows to large (details panel takes over) ──
+  useEffect(() => {
+    if (isLarge) {
+      setIsDetailsModalOpen(false);
+    }
+  }, [isLarge]);
 
   useEffect(() => {
     if (isAuthLoading) {
@@ -699,7 +710,6 @@ export default function JobBrowserPage({
   const pageEnd = totalJobs ? Math.min(totalJobs, currentPage * PAGE_SIZE) : 0;
 
   const renderLeftPanelContent = () => {
-
     if (!isLoading && !jobs.length) {
       return <p style={{ color: "white", opacity: 0.8, margin: 0 }}>No jobs match your filters yet.</p>;
     }
@@ -712,7 +722,12 @@ export default function JobBrowserPage({
         <JobCard
           {...job}
           disableNavigation
-          onSelect={() => setSelectedJobId(job.id)}
+          onSelect={() => {
+            setSelectedJobId(job.id);
+            if (isCompactScreen) {
+              setIsDetailsModalOpen(true);
+            }
+          }}
           isBookmarked={job.isSaved}
           isBookmarkLoading={bookmarkingJobId === job.id}
           onBookmarkToggle={() => handleBookmarkToggle(job)}
@@ -721,8 +736,9 @@ export default function JobBrowserPage({
       </div>
     ));
   };
+
   const router = useRouter();
-  //job card
+
   return (
     <div
       style={{
@@ -731,8 +747,55 @@ export default function JobBrowserPage({
         justifyContent: "space-between",
         width: "100%",
         height: "100%",
+        overflow: "hidden",
+        position: "relative",
       }}
     >
+      {isDetailsModalOpen && selectedJob && (
+        <div
+          onClick={() => setIsDetailsModalOpen(false)}
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(10, 10, 10, 0.75)",
+            zIndex: 9999,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: isSmall ? "var(--space-md)" : "var(--space-lg)",
+            boxSizing: "border-box",
+          }}
+        >
+          <div
+            onClick={(event) => event.stopPropagation()}
+            style={{
+              width: isSmall ? "90vw" : "70vw",
+              maxWidth: isSmall ? "90vw" : "var(--container-lg)",
+              maxHeight: "85vh",
+              overflowY: "auto",
+              overflowX: "hidden",
+              scrollbarWidth: "none",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "flex-start",
+              borderRadius: "12px",
+              backgroundColor: "transparent",
+            }}
+          >
+            <JobDetailsCard
+              jobData={selectedJob}
+              onApply={handleApply}
+              isApplying={isApplying}
+              actionLabel="Apply"
+              isApplyDisabled={false}
+            />
+          </div>
+        </div>
+      )}
+
       <button
         type="button"
         onClick={() => router.back()}
@@ -744,6 +807,10 @@ export default function JobBrowserPage({
           boxSizing: "content-box",
           padding: "var(--space-md)",
           paddingBottom: "0",
+          backgroundColor: "transparent",
+          border: "none",
+          position: "relative",
+          zIndex: 1,
         }}
       >
         <img
@@ -756,27 +823,29 @@ export default function JobBrowserPage({
           }}
         />
       </button>
+
       <div
         style={{
           display: "flex",
-          flexDirection: isSmall ? "column" : "row",
+          flexDirection: "row",
           width: "100%",
           maxHeight: "100%",
           height: "100%",
-          padding: "var(--space-xl)",
+          paddingInline: isSmall ? "var(--space-md)" : "var(--space-xl)",
+          paddingBottom: isSmall ? "var(--space-md)" : "var(--space-xl)",
           paddingTop: "0",
           boxSizing: "border-box",
           justifyContent: isLarge ? "space-between" : "center",
           overflow: "hidden",
           scrollbarWidth: "none",
           position: "relative",
-          gap: "calc(var(--space-xl) *1 )",
+          gap: "calc(var(--space-xl) * 1)",
         }}
       >
         <div
           style={{
-            width: "fit-content",
-            maxWidth: "var(--container-sm)",
+            width: isCompactScreen ? "100%" : "fit-content",
+            maxWidth: isCompactScreen ? "100%" : "var(--container-sm)",
             minHeight: "0",
             display: "flex",
             flexDirection: "column",
@@ -792,7 +861,6 @@ export default function JobBrowserPage({
             value={searchQuery}
             onChange={setSearchQuery}
             placeholder="Search jobs..."
-
             style={{
               width: "100%",
             }}
@@ -813,7 +881,9 @@ export default function JobBrowserPage({
               selectedValues={selectedCountries}
               onToggle={(value) => {
                 setCurrentPage(1);
-                setSelectedCountries((current) => toggleSelection(current, value));
+                setSelectedCountries((current) =>
+                  toggleSelection(current, value),
+                );
               }}
               onClear={() => {
                 setCurrentPage(1);
@@ -843,7 +913,9 @@ export default function JobBrowserPage({
               selectedValues={selectedJobTypes}
               onToggle={(value) => {
                 setCurrentPage(1);
-                setSelectedJobTypes((current) => toggleSelection(current, value));
+                setSelectedJobTypes((current) =>
+                  toggleSelection(current, value),
+                );
               }}
               onClear={() => {
                 setCurrentPage(1);
@@ -858,7 +930,9 @@ export default function JobBrowserPage({
               selectedValues={selectedWorkTypes}
               onToggle={(value) => {
                 setCurrentPage(1);
-                setSelectedWorkTypes((current) => toggleSelection(current, value));
+                setSelectedWorkTypes((current) =>
+                  toggleSelection(current, value),
+                );
               }}
               onClear={() => {
                 setCurrentPage(1);
@@ -891,12 +965,14 @@ export default function JobBrowserPage({
                 paddingInline: "var(--space-sm)",
                 paddingBlock: "var(--space-xxs)",
                 backgroundColor: "transparent",
-                color: hasActiveFilters ? "var(--light-blue)" : "var(--text-grey)",
+                color: hasActiveFilters
+                  ? "var(--light-blue)"
+                  : "var(--text-grey)",
                 cursor: hasActiveFilters ? "pointer" : "not-allowed",
                 whiteSpace: "nowrap",
                 fontSize: "var(--text-base)",
                 fontFamily: "var(--font-jura)",
-                marginLeft: "auto",
+                marginLeft: isCompactScreen ? "0" : "auto",
               }}
             >
               Reset Filters
@@ -948,8 +1024,6 @@ export default function JobBrowserPage({
             />
           </div>
 
-
-
           {error && (
             <p
               style={{
@@ -973,10 +1047,11 @@ export default function JobBrowserPage({
           >
             {renderLeftPanelContent()}
           </div>
+
           <div
             style={{
               display: "flex",
-              alignItems: isSmall ? "flex-start" : "center",
+              alignItems: isCompactScreen ? "flex-start" : "center",
               justifyContent: "space-between",
               flexDirection: isSmall ? "column" : "row",
               color: "var(--light-blue)",
@@ -997,6 +1072,7 @@ export default function JobBrowserPage({
               {Math.max(totalPages, 1)}
             </span>
           </div>
+
           <div
             style={{
               display: "flex",
@@ -1039,47 +1115,48 @@ export default function JobBrowserPage({
             </Button>
           </div>
         </div>
-        {/* job details */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "flex-start",
-            width: "fit-content",
-            minWidth: "fit-content",
-            minHeight: "0",
-            overflowY: "auto",
-            overflowX: "hidden",
-            scrollbarWidth: "none",
-            flex: 1,
-            borderLeft: "1px solid white"
-          }}
-        >
-          {selectedJob ? (
-            <JobDetailsCard
-              jobData={selectedJob}
-              onApply={handleApply}
-              isApplying={isApplying}
-              actionLabel="Apply"
-              isApplyDisabled={false}
-            />
-          ) : (
-            <div
-              style={{
-                color: "var(--light-blue)",
-                paddingTop: "var(--space-2xl)",
-                fontSize: "var(--text-base)",
-                fontFamily: "var(--font-jura)",
-                lineHeight: "var(--line-normal)",
-                minWidth: "var(--container-md)"
-              }}
-            >
-              {isLoading ? "Loading job details..." : "No job selected yet."}
-            </div>
-          )}
-        </div>
-      </div>
 
+        {isLarge && (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "flex-start",
+              width: "fit-content",
+              minWidth: "fit-content",
+              minHeight: "0",
+              overflowY: "auto",
+              overflowX: "hidden",
+              scrollbarWidth: "none",
+              flex: 1,
+              borderLeft: "1px solid white",
+            }}
+          >
+            {selectedJob ? (
+              <JobDetailsCard
+                jobData={selectedJob}
+                onApply={handleApply}
+                isApplying={isApplying}
+                actionLabel="Apply"
+                isApplyDisabled={false}
+              />
+            ) : (
+              <div
+                style={{
+                  color: "var(--light-blue)",
+                  paddingTop: "var(--space-2xl)",
+                  fontSize: "var(--text-base)",
+                  fontFamily: "var(--font-jura)",
+                  lineHeight: "var(--line-normal)",
+                  minWidth: "var(--container-md)",
+                }}
+              >
+                {isLoading ? "Loading job details..." : "No job selected yet."}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -29,6 +29,18 @@ export default function BookmarkedJobs() {
   const [isApplying, setIsApplying] = useState(false);
   const [bookmarkingJobId, setBookmarkingJobId] = useState<string | null>(null);
 
+  // ── Separate boolean to control the floating modal on compact screens ──
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+
+  const isCompactScreen = isSmall || isMedium;
+
+  // ── Close modal when viewport grows to large (side panel takes over) ──
+  useEffect(() => {
+    if (isLarge) {
+      setIsDetailsModalOpen(false);
+    }
+  }, [isLarge]);
+
   useEffect(() => {
     if (isAuthLoading) {
       return;
@@ -143,6 +155,7 @@ export default function BookmarkedJobs() {
       if (selectedJobId === job.id) {
         clearPersistedSelectedJobId();
         setSelectedJobId(null);
+        setIsDetailsModalOpen(false);
       }
     } else {
       setError(response.message ?? "We could not update this bookmark.");
@@ -183,157 +196,107 @@ export default function BookmarkedJobs() {
     setIsApplying(false);
   };
 
+  const handleCardSelect = (jobId: string) => {
+    setSelectedJobId(jobId);
+    // Only open the floating modal on compact screens;
+    // on large screens the side panel handles it.
+    if (isCompactScreen) {
+      setIsDetailsModalOpen(true);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setIsDetailsModalOpen(false);
+  };
+
   const renderBookmarkCards = () => {
     if (isLoading) {
-      return <p style={{ color: "white", margin: 0, }}>Loading jobs...</p>;
+      return <p style={{ color: "white", margin: 0 }}>Loading jobs...</p>;
     }
 
     if (!filteredJobs.length) {
-      return <p style={{ color: "white", margin: 0, }}>No bookmarked jobs found.</p>;
+      return <p style={{ color: "white", margin: 0 }}>No bookmarked jobs found.</p>;
     }
 
     return filteredJobs.map((job) => (
-      <div key={job.id} onClick={() => setSelectedJobId(job.id)} style={{ cursor: "pointer" }}>
+      <div
+        key={job.id}
+        onClick={() => handleCardSelect(job.id)}
+        style={{ cursor: "pointer" }}
+      >
         <JobCard
           {...job}
           isBookmarked={job.isSaved}
           isBookmarkLoading={bookmarkingJobId === job.id}
           onBookmarkToggle={() => handleBookmarkToggle(job)}
-          isSelected={job.id===selectedJobId}
+          isSelected={job.id === selectedJobId}
         />
       </div>
     ));
   };
 
-  const renderDefaultGrid = () => (
-    <div style={{
-      display: "grid",
-      gridTemplateColumns: isLarge ? "repeat(3, 1fr)" : isMedium ? "repeat(2, 1fr)" : "repeat(1, 1fr)",
-      gap: "10px",
-      paddingRight: "20px",
-      width: "100%",
-      boxSizing: "border-box",
-      paddingBottom: "10vh",
-      overflowY: "auto",
-      scrollbarWidth: "none",
-    }}>
-      {renderBookmarkCards()}
-    </div>
-  );
+  const router = useRouter();
 
-  const renderSelectedLayout = () => (
+  return (
     <div
       style={{
-        display: isLarge ? "flex" : "grid",
-        gridTemplateColumns: "1fr",
-        gridTemplateRows: "1fr",
-        gap: "calc(var(--space-xl) *2 )",
-        height: "100%",
+        padding: "var(--space-xl)",
+        height: "100dvh",
+        width: "100%",
         overflow: "hidden",
-        justifyContent: "space-between",
-        position: "relative"
-      }}
-    >
-
-      {/* Cards List Panel */}
-      <div style={{
-        width: "fit-content",
-        height: "100%",
         display: "flex",
         flexDirection: "column",
-        position: "relative",
-        gap: "var(--space-md)",
-        overflowY: "auto",
-        scrollbarWidth: "none",
-        gridArea: "1 / 1 / 2 / 2",
-        zIndex: 0,
-      }}>
+        gap: "var(--space-lg)",
+      }}
+    >
+      {/* ── Floating modal for small / medium screens ── */}
+      {isDetailsModalOpen && selectedJob && (
         <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "var(--space-md)",
-          }}
-        >
-
-
-          {renderBookmarkCards()}
-        </div>
-      </div>
-
-
-      {/* Floating/Side Details Card Container */}
-      <div style={{
-        height: "100%",
-        justifyContent: "center",
-        alignItems: "flex-start",
-        position: "relative",
-        zIndex: isLarge ? 1 : 10,
-        display: "flex",
-        gridArea: "1 / 1 / 2 / 2",
-        marginLeft: isLarge ? "0" : "auto",
-        scrollbarWidth: "none",
-        minWidth:"0",
-        flex:1,
-        borderLeft:"1px solid white"
-      }}>
-        <div
-          style={{
-            position: "relative",
-            width: "fit-content",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "flex-start",
-            height: "100%",
-            maxWidth: "70vw",
-          }}
-        >
-          {selectedJob && (
-            <JobDetailsCard
-              jobData={selectedJob}
-              onApply={handleApply}
-              onClose={() => setSelectedJobId(null)}
-              isApplying={isApplying}
-              actionLabel="Apply"
-              isApplyDisabled={false}
-            />
-          )}
-        </div>
-      </div>
-    </div>
-  );
-
-  const router = useRouter();
-  return (
-
-    <div style={{
-      padding: "var(--space-xl)",
-      height: "100dvh",
-      width: "100%",
-      overflow: "hidden",
-      display: "flex",
-      flexDirection: "column",
-      gap: "var(--space-lg)",
-    }}>
-
-
-      {selectedJob && !isLarge && (
-        <div
-          onClick={() => setSelectedJobId(null)}
+          onClick={handleCloseModal}
           style={{
             position: "fixed",
             top: 0,
             left: 0,
-            width: "100vw",
-            height: "100vh",
-            backgroundColor: "var(--bg-color)",
-            opacity: 0.65,
-            zIndex: 5,
-            pointerEvents: "auto",
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(10, 10, 10, 0.75)",
+            zIndex: 9999,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: isSmall ? "var(--space-md)" : "var(--space-lg)",
+            boxSizing: "border-box",
           }}
-        />
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: isSmall ? "90vw" : "70vw",
+              maxWidth: "var(--container-lg)",
+              maxHeight: "85vh",
+              overflowY: "auto",
+              overflowX: "hidden",
+              scrollbarWidth: "none",
+              backgroundColor: "transparent",
+              borderRadius: "12px",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "flex-start",
+            }}
+          >
+            <JobDetailsCard
+              jobData={selectedJob}
+              onApply={handleApply}
+              onClose={handleCloseModal}
+              isApplying={isApplying}
+              actionLabel="Apply"
+              isApplyDisabled={false}
+            />
+          </div>
+        </div>
       )}
 
+      {/* ── Header row ── */}
       <div
         style={{
           display: "flex",
@@ -345,7 +308,7 @@ export default function BookmarkedJobs() {
           style={{
             color: "white",
             fontFamily: "Nova Square, sans-serif",
-            fontSize: "var(--text-xl)"
+            fontSize: "var(--text-xl)",
           }}
         >
           Bookmarked Jobs
@@ -356,7 +319,7 @@ export default function BookmarkedJobs() {
             display: "flex",
             alignItems: "center",
             justifyContent: "flex-end",
-            gap: "var(--space-md)"
+            gap: "var(--space-md)",
           }}
         >
           <SearchBar
@@ -371,29 +334,11 @@ export default function BookmarkedJobs() {
               width: "var(--icon-lg)",
               height: "var(--icon-lg)",
               cursor: "pointer",
+              background: "none",
+              border: "none",
             }}
-          >
-            <img
-              src="/global/close.svg"
-              alt="Close"
-              style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "contain",
-              }}
-            />
-          </button>
+          />
         </div>
-      </div>
-
-      <div style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        position: "relative",
-        zIndex: 1,
-      }}>
-
       </div>
 
       {error && (
@@ -402,7 +347,82 @@ export default function BookmarkedJobs() {
         </p>
       )}
 
-      {selectedJob ? renderSelectedLayout() : renderDefaultGrid()}
+      {/* ── Main content area ── */}
+      <div
+        style={{
+          display: "flex",
+          flex: 1,
+          gap: "calc(var(--space-xl) * 2)",
+          overflow: "hidden",
+          position: "relative",
+        }}
+      >
+        {/* Left panel — card list */}
+        <div
+          style={{
+            // On compact screens take full width; on large share space with the side panel
+            width: isCompactScreen ? "100%" : "fit-content",
+            maxWidth: isCompactScreen ? "100%" : "var(--container-sm)",
+            display: isLarge
+              ? "flex"
+              : isCompactScreen
+                ? "grid"
+                : "flex",
+            gridTemplateColumns: isMedium ? "repeat(2, 1fr)" : "repeat(1, 1fr)",
+            flexDirection: "column",
+            gap: "var(--space-md)",
+            overflowY: "auto",
+            overflowX: "hidden",
+            scrollbarWidth: "none",
+            paddingBottom: "var(--space-xl)",
+            alignContent: "flex-start",
+          }}
+        >
+          {renderBookmarkCards()}
+        </div>
+
+        {/* Right panel — job details, large screens only */}
+        {isLarge && (
+          <div
+            style={{
+              flex: 1,
+              minWidth: 0,
+              height: "100%",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "flex-start",
+              overflowY: "auto",
+              overflowX: "hidden",
+              scrollbarWidth: "none",
+              borderLeft: "1px solid white",
+            }}
+          >
+            {selectedJob ? (
+              <JobDetailsCard
+                jobData={selectedJob}
+                onApply={handleApply}
+                onClose={() => setSelectedJobId(null)}
+                isApplying={isApplying}
+                actionLabel="Apply"
+                isApplyDisabled={false}
+              />
+            ) : (
+              <div
+                style={{
+                  color: "var(--light-blue)",
+                  paddingTop: "var(--space-2xl)",
+                  fontSize: "var(--text-base)",
+                  fontFamily: "var(--font-jura)",
+                  lineHeight: "var(--line-normal)",
+                  minWidth: "var(--container-md)",
+                }}
+              >
+                {isLoading && "Loading job details..." }
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

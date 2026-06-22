@@ -177,56 +177,76 @@ export default function CV() {
     closeGoogleDriveWindow(driveTab);
   };
 
-  return (
-    <div
+const [windowWidth, setWindowWidth] = React.useState(
+  typeof window !== "undefined" ? window.innerWidth : 1200
+);
+
+React.useEffect(() => {
+  const handleResize = () => setWindowWidth(window.innerWidth);
+  window.addEventListener("resize", handleResize);
+  return () => window.removeEventListener("resize", handleResize);
+}, []);
+
+const isSmall = windowWidth <= 576;
+const isMedium = windowWidth > 576 && windowWidth <= 992;
+const isResponsive = isSmall || isMedium;
+
+return (
+  <div
+    style={{
+      width: "100%",
+      height: "100%",
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: isSmall ? "flex-start" : "center",
+      alignItems: "flex-start",
+      gap: "var(--space-lg)",
+      padding: isSmall ? "var(--space-md)" : "var(--space-2xl)",
+    }}
+  >
+    <h1
       style={{
+        fontSize: isSmall ? "20px" : "36px",
+        fontWeight: "300",
+        lineHeight: "1.2",
+        fontFamily: "var(--font-nova-square)",
+        textAlign: isSmall ? "center" : "left",
         width: "100%",
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "flex-center",
-        alignItems: "flex-start",
-        gap: "var(--space-lg)",
-        padding: "var(--space-2xl)",
       }}
     >
-      <h1
-        style={{
-          fontSize: "36px",
-          fontWeight: "300",
-          lineHeight: "1.1",
-          fontFamily: "var(--font-nova-square)",
-        }}
-      >
-        Upload your CV and we&apos;ll do the rest!
-      </h1>
+      Upload your CV and we&apos;ll do the rest!
+    </h1>
 
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "var(--space-2xl)",
-          width: "100%",
-          height: "100%",
-        }}
-      >
+    <div
+      style={{
+        display: "flex",
+        flexDirection: isResponsive ? "column" : "row",
+        alignItems: "center",
+        gap: isSmall ? "var(--space-lg)" : "var(--space-2xl)",
+        width: "100%",
+        height: isResponsive ? "auto" : "100%",
+      }}
+    >
+      {!(isResponsive && status === "enhancing") && (
         <div
           style={{
             display: "flex",
             flexDirection: "column",
-            gap: "var(--space-2xl)",
+            gap: "var(--space-md)",
             flexShrink: 0,
-            height: "var(--container-2xs)",
+            height: isSmall ? "auto" : "var(--container-2xs)",
+            width: isSmall ? "100%" : "220px",
             justifyContent: "space-between",
-            flexGrow:0,
+            flexGrow: 0,
           }}
         >
           <div
             onClick={() => status === "idle" && fileInputRef.current?.click()}
             style={{
-              width: "220px",
-              minHeight:0,
-              flex:1,
+              width: "100%",
+              height: isSmall ? "160px" : "auto",
+              minHeight: 0,
+              flex: isSmall ? "none" : 1,
               backgroundColor: "white",
               borderRadius: "32px",
               display: "flex",
@@ -276,134 +296,154 @@ export default function CV() {
           </Button>
 
           {error ? (
-            <p style={{ color: "#ffb4b4", maxWidth: "220px", marginTop: "-8px" }}>{error}</p>
+            <p style={{ color: "#ffb4b4", maxWidth: "100%", marginTop: "-8px", textAlign: "center" }}>{error}</p>
           ) : null}
         </div>
+      )}
 
-        <input
-          type="file"
-          ref={fileInputRef}
-          style={{ display: "none" }}
-          onChange={handleFileChange}
-          accept=".pdf,.docx"
-        />
+      <input
+        type="file"
+        ref={fileInputRef}
+        style={{ display: "none" }}
+        onChange={handleFileChange}
+        accept=".pdf,.docx"
+      />
 
-        <div style={{ width: "1px", height: "300px", backgroundColor: "rgb(255, 255, 255)" }} />
+      {!(isResponsive) && (
+        <div style={{ width: "1px", height: "300px", backgroundColor: "rgb(255, 255, 255)", opacity: 0.3 }} />
+      )}
 
-
-        {status === "completed" ? (
-
-          <InterviewContainer
-            questionTitle=""
-            videoBoxStyle={{
-              backgroundColor: "rgba(255, 255, 255, 0.41)",
-              boxShadow: "0 20px 50px rgba(0,0,0,0.3)",
-            }}
-            videoContent={
-              <div
-              style={{
-                display: "flex",
-                height: "var(--container-xs)",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "20px",
-                  padding: "20px",
-                  width: "var(--container-md)"
-                }}
-              >
-                <div
-                  style={{
-                    width: "min(34vw, 180px)",
-                    height: "min(46vw, 240px)",
-                    minWidth: "130px",
-                    minHeight: "170px",
-                    borderRadius: "25px",
-                    flexShrink: 0,
-                    overflow: "hidden",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <PdfPreviewFrame src={downloadUrl} title="CV preview" />
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
-                  <a
-                    href={downloadUrl ?? "#"}
-                    download={downloadName}
-                    style={{
-                      backgroundColor: "#d4ff47",
-                      color: "#1a1a1a",
-                      border: "none",
-                      padding: "14px 40px",
-                      borderRadius: "12px",
-                      fontWeight: "bold",
-                      width: "240px",
-                      textAlign: "center",
-                      textDecoration: "none",
-                      pointerEvents: downloadUrl ? "auto" : "none",
-                      opacity: downloadUrl ? 1 : 0.5,
-                    }}
-                  >
-                    Download
-                  </a>
-                  <span style={{ color: "white", textAlign: "center", opacity: 0.6 }}>or</span>
-                  <button
-                    type="button"
-                    onClick={() => void handleSaveToGoogleDrive()}
-                    disabled={isSavingToDrive || !downloadBlob}
-                    style={{
-                      backgroundColor: "white",
-                      color: "#1a1a1a",
-                      border: "none",
-                      padding: "12px 20px",
-                      borderRadius: "10px",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "10px",
-                      width: "240px",
-                      justifyContent: "center",
-                      cursor: isSavingToDrive || !downloadBlob ? "default" : "pointer",
-                      opacity: isSavingToDrive || !downloadBlob ? 0.7 : 1,
-                    }}
-                  >
-                    <img src="/global/drive.svg" style={{ width: "18px" }} alt="Drive" />
-                    {isSavingToDrive
-                      ? "Opening Drive..."
-                      : uploadedDriveFile
-                        ? "Saved to Google Drive"
-                        : "Save to Google Drive"}
-                  </button>
-                  {driveUploadError ? (
-                    <p style={{ color: "#ffb4b4", width: "240px", margin: 0, textAlign: "center" }}>
-                      {driveUploadError}
-                    </p>
-                  ) : null}
-                  {uploadedDriveFile ? (
-                    <p style={{ color: "#d4ff47", width: "240px", margin: 0, textAlign: "center" }}>
-                      Saved to Google Drive.
-                    </p>
-                  ) : null}
-                </div>
-              </div>
-            }
-          />
-
-        ) : null}
-        {status === "enhancing" &&
-        <div
+{status === "completed" ? (
+  <InterviewContainer
+    questionTitle=""
+    videoBoxStyle={{
+      backgroundColor: "rgba(255, 255, 255, 0.41)",
+      boxShadow: "0 20px 50px rgba(0,0,0,0.3)",
+      width: "var(--container-xm)",
+      height: (isSmall || isMedium) ? "auto" : "var(--container-2xs)",
+    }}
+    videoContent={
+      <div
         style={{
-          width:"100%",
-          display:"flex",
-          justifyContent:"center",
+          display: "flex",
+          flexDirection: (isSmall || isMedium) ? "column" : "row",
+          height: (isSmall || isMedium) ? "var(--container-xxs)" : "var(--container-xs)",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: (isSmall || isMedium) ? "12px" : "20px",
+          padding: (isSmall || isMedium) ? "12px" : "20px",
+          width: (isSmall || isMedium) ? "100%" : "var(--container-md)"
         }}
+      >
+        <div
+          style={{
+            width: (isSmall || isMedium) ? "110px" : "min(34vw, 180px)",
+            height: (isSmall || isMedium) ? "150px" : "min(46vw, 240px)",
+            minWidth: (isSmall || isMedium) ? "auto" : "130px",
+            minHeight: (isSmall || isMedium) ? "auto" : "170px",
+            borderRadius: "16px",
+            flexShrink: 0,
+            overflow: "hidden",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
         >
-          <div style={{ maxWidth: "var(--container-sm)" }}>
+          <PdfPreviewFrame src={downloadUrl} title="CV preview" />
+        </div>
+
+        <div 
+          style={{ 
+            display: "flex", 
+            flexDirection: (isSmall || isMedium) ? "row" : "column", 
+            gap: (isSmall || isMedium) ? "8px" : "15px", 
+            width: "100%", 
+            alignItems: "center",
+            justifyContent: "center"
+          }}
+        >
+          <a
+            href={downloadUrl ?? "#"}
+            download={downloadName}
+            style={{
+              backgroundColor: "#d4ff47",
+              color: "#1a1a1a",
+              border: "none",
+              padding: (isSmall || isMedium) ? "2px 5px" : "14px 40px",
+              borderRadius: "10px",
+              fontWeight: "bold",
+              width: (isSmall || isMedium) ? "50%" : "240px",
+              fontSize: (isSmall || isMedium) ? "14px" : "16px",
+              textAlign: "center",
+              textDecoration: "none",
+              pointerEvents: downloadUrl ? "auto" : "none",
+              opacity: downloadUrl ? 1 : 0.5,
+            }}
+          >
+            Download
+          </a>
+
+          <button
+            type="button"
+            onClick={() => void handleSaveToGoogleDrive()}
+            disabled={isSavingToDrive || !downloadBlob}
+            style={{
+              backgroundColor: "white",
+              color: "#1a1a1a",
+              border: "none",
+              padding: (isSmall || isMedium) ? "2px 5px" : "12px 20px",
+              borderRadius: "10px",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              width: (isSmall || isMedium) ? "50%" : "240px",
+              fontSize: (isSmall || isMedium) ? "13px" : "16px",
+              justifyContent: "center",
+              cursor: isSavingToDrive || !downloadBlob ? "default" : "pointer",
+              opacity: isSavingToDrive || !downloadBlob ? 0.7 : 1,
+            }}
+          >
+            <img src="/global/drive.svg" style={{ width: (isSmall || isMedium) ? "16px" : "18px" }} alt="Drive" />
+            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {isSavingToDrive
+                ? "Saving..."
+                : uploadedDriveFile
+                  ? "Saved"
+                  : "Save to Drive"}
+            </span>
+          </button>
+        </div>
+
+        {driveUploadError ? (
+          <p style={{ color: "#ffb4b4", width: "100%", margin: 0, textAlign: "center", fontSize: "12px" }}>
+            {driveUploadError}
+          </p>
+        ) : null}
+        {uploadedDriveFile ? (
+          <p style={{ color: "#d4ff47", width: "100%", margin: 0, textAlign: "center", fontSize: "12px" }}>
+            Saved to Google Drive.
+          </p>
+        ) : null}
+      </div>
+    }
+  />
+) : null}
+
+      {status === "enhancing" && (
+        <div
+          style={{
+            width: "100%",
+            display: "flex",
+            justifyContent: "center",
+            padding: "20px 0"
+          }}
+        >
+          <div style={{ width: "100%", maxWidth: "var(--container-sm)" }}>
             <Animation message="" />
           </div>
         </div>
-        }
-      </div>
+      )}
     </div>
-  );
+  </div>
+);
 }

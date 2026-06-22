@@ -14,7 +14,7 @@ export default function ResultsPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
 
-    const { isMedium, isLarge } = useResponsive();
+    const { isSmall, isMedium, isLarge } = useResponsive();
 
     const {
         userId,
@@ -173,9 +173,10 @@ export default function ResultsPage() {
                     flexDirection: "column",
                     alignItems: "center",
                     textAlign: "center",
+                    padding: isSmall ? "var(--space-md)" : "0",
                 }}
             >
-                <div style={{ maxWidth: "var(--container-sm)" }}>
+                <div style={{ width: "100%", maxWidth: "var(--container-sm)" }}>
                     <Animation message="Calculating your score..." />
                 </div>
             </section>
@@ -190,9 +191,10 @@ export default function ResultsPage() {
                     flexDirection: "column",
                     alignItems: "center",
                     textAlign: "center",
+                    padding: isSmall ? "var(--space-md)" : "0",
                 }}
             >
-                <div style={{ maxWidth: "var(--container-sm)" }}>
+                <div style={{ width: "100%", maxWidth: "var(--container-sm)" }}>
                     <Animation message="Preparing your assessment questions..." />
                 </div>
             </section>
@@ -208,12 +210,14 @@ export default function ResultsPage() {
                     alignItems: "center",
                     textAlign: "center",
                     gap: "var(--space-md)",
+                    padding: "var(--space-xl)",
                 }}
             >
                 <h2
                     style={{
                         margin: 0,
                         color: "var(--light-red)",
+                        fontSize: isSmall ? "20px" : "24px",
                     }}
                 >
                     An Error Occurred
@@ -223,6 +227,7 @@ export default function ResultsPage() {
                     style={{
                         maxWidth: "30rem",
                         color: "rgba(255,255,255,0.7)",
+                        fontSize: isSmall ? "14px" : "16px",
                     }}
                 >
                     {error}
@@ -247,11 +252,11 @@ export default function ResultsPage() {
                 display: "grid",
                 width: "100%",
                 maxWidth: "62rem",
-                gap: "var(--space-2xl)",
+                gap: isSmall ? "var(--space-xl)" : "var(--space-2xl)",
                 borderRadius: "var(--radius-2xl)",
                 border: "1px solid var(--border-subtle)",
                 backgroundColor: "rgba(255, 255, 255, 0.03)",
-                padding: "var(--space-2xl)",
+                padding: isSmall ? "var(--space-xl) var(--space-md)" : "var(--space-2xl)",
                 gridTemplateColumns:
                     isMedium || isLarge
                         ? "1fr auto 1fr"
@@ -265,15 +270,16 @@ export default function ResultsPage() {
                     flexDirection: "column",
                     alignItems: "center",
                     color: "white",
-                    gap: "var(--space-lg)",
+                    gap: isSmall ? "var(--space-md)" : "var(--space-lg)",
                     justifyContent: "space-around",
+                    textAlign: "center",
                 }}
             >
                 <h2
                     style={{
                         margin: 0,
                         color: "white",
-                        fontSize: "var(--space-xl)",
+                        fontSize: isSmall ? "18px" : "var(--space-xl)",
                     }}
                 >
                     Your Score
@@ -282,8 +288,8 @@ export default function ResultsPage() {
                 <div
                     style={{
                         position: "relative",
-                        width: "10rem",
-                        height: "10rem",
+                        width: isSmall ? "8rem" : "10rem",
+                        height: isSmall ? "8rem" : "10rem",
                     }}
                 >
                     <svg
@@ -321,7 +327,7 @@ export default function ResultsPage() {
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            fontSize: "var(--text-2xl)",
+                            fontSize: isSmall ? "var(--text-xl)" : "var(--text-2xl)",
                             fontWeight: 800,
                         }}
                     >
@@ -332,6 +338,7 @@ export default function ResultsPage() {
                 <Button
                     variant="primary"
                     size="md"
+                    style={{ width: isSmall ? "100%" : "auto" }}
                     onClick={() =>
                         router.push(
                             `/skill-feature/questions?${searchParams.toString()}&review=true`
@@ -358,11 +365,15 @@ export default function ResultsPage() {
                 style={{
                     display: "flex",
                     flexDirection: "column",
-                    gap: "var(--space-lg)",
+                    gap: isSmall ? "var(--space-md)" : "var(--space-lg)",
                     justifyContent: "space-around",
                     alignItems:
                         isMedium || isLarge
                             ? "flex-start"
+                            : "center",
+                    textAlign:
+                        isMedium || isLarge
+                            ? "left"
                             : "center",
                 }}
             >
@@ -370,7 +381,7 @@ export default function ResultsPage() {
                     style={{
                         margin: 0,
                         color: "white",
-                        fontSize: "var(--space-xl)",
+                        fontSize: isSmall ? "18px" : "var(--space-xl)",
                     }}
                 >
                     Your Proficiency Level
@@ -378,7 +389,10 @@ export default function ResultsPage() {
 
                 <p
                     className="m-0 mt-[var(--space-md)] text-[length:var(--text-xl)] font-normal leading-[var(--line-tight)] text-[var(--primary-green)]"
-                    style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
+                    style={{ 
+                        fontFamily: "var(--font-nova-square), sans-serif",
+                        fontSize: isSmall ? "20px" : "var(--text-xl)"
+                    }}
                 >
                     {lvl}
                 </p>
@@ -386,6 +400,8 @@ export default function ResultsPage() {
                 <p style={{
                     maxWidth: "30rem",
                     color: "rgba(255,255,255,0.7)",
+                    fontSize: isSmall ? "14px" : "16px",
+                    margin: isSmall ? "0 0 var(--space-xs) 0" : "0",
                 }}>
                     Assessment complete. You can review each question to see the correct answers, or
                     retake the assessment to generate a fresh session.
@@ -395,6 +411,7 @@ export default function ResultsPage() {
                         variant="secondary"
                         size="md"
                         disabled={isRetaking}
+                        style={{ width: isSmall ? "100%" : "auto" }}
                         onClick={() => {
                             if (!startNewSession || isRetaking) {
                                 return;

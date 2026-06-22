@@ -116,7 +116,7 @@ const JobDetailsCard: React.FC<JobDetailsProps> = ({
       color: "white",
       height: "100%",
       maxHeight: "100%",
-      width: "var(--container-md)",
+      width: "var(--container-xm)",
       flexShrink: 0,
       overflow: "hidden",
       display: "flex",
@@ -192,19 +192,6 @@ const JobDetailsCard: React.FC<JobDetailsProps> = ({
                   </div>
                 ))}
               </div>
-{onClose && 
-              <div
-              onClick={onClose}
-                style={{
-                  fontSize: "var(--icon-md)",
-                  height: "fit-content",
-                  lineHeight: "var(--icon-md)",
-                  cursor: "pointer",
-                }}
-              >
-                ✖
-              </div>
-            }
             </div>
 
             {/* Company + Location Row */}
@@ -261,18 +248,31 @@ const JobDetailsCard: React.FC<JobDetailsProps> = ({
           }}>
             {jobData.salary ? (
               <div style={{
-                backgroundColor: "var(--primary-green)",
-                color: "var(--bg-color)",
-                padding: "var(--space-md) ",
-                borderRadius: "var(--radius-xl)",
-                fontWeight: "bold",
-                maxWidth: "100%",
-                wordBreak: "break-word"
+                width: "fit-content",
+                      height: "fit-content",
+                      backgroundColor: "var(--bg-grey)",
+                      color: "black",
+                      paddingInline: "var(--space-xxs)",
+                      borderRadius: "var(--radius-lg)",
+                      fontSize: "var(--text-sm)",
               }}>
                 Salary: {jobData.salary}
               </div>
             ) : null}
           </div>
+          {onClose && 
+              <div
+              onClick={onClose}
+                style={{
+                  fontSize: "var(--icon-md)",
+                  height: "fit-content",
+                  lineHeight: "var(--icon-md)",
+                  cursor: "pointer",
+                }}
+              >
+                ✖
+              </div>
+            }
         </div>
 
         {/* 2. Accordions Section */}
