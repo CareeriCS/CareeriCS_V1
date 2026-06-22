@@ -81,7 +81,7 @@ const JobCard: React.FC<JobProps> = ({
           ? "var(--light-blue)"
           : "var(--bg-grey)",
         borderRadius: "var(--radius-xl)",
-        padding: "var(--space-lg)",
+        padding: "var(--space-md)",
         display: "flex",
         flexDirection: "column",
         gap: "var(--space-md)",

@@ -241,10 +241,10 @@ function BlogContent() {
           height: "100%",
           marginTop: BLOG_CONTENT_TOP_OFFSET,
           display: "grid",
-          padding: "var(--space-xl)",
+          padding: "var(--space-md)",
           gridTemplateColumns: "repeat(2, 1fr)",
           gridTemplateRows: "auto 1fr",
-          gridColumnGap: "var(--space-lg)",
+          gridColumnGap: "var(--space-2xl)",
           rowGap: "var(--space-md)",
           color: "white",
           textAlign: "left",
@@ -391,7 +391,7 @@ function BlogContent() {
               display: "flex",
               justifyContent: "flex-start",
               alignItems: "flex-start",
-              gap: "var(--space-xl)",
+              gap: "var(--space-2xl)",
             }}
           >
             <div>
@@ -423,7 +423,7 @@ function BlogContent() {
         <div
           style={{
             width: "100%",
-            height: "100%",
+            height: "80%",
             backgroundColor: "var(--medium-blue)",
             borderRadius: "var(--radius-xl)",
             padding: "var(--space-xl)",

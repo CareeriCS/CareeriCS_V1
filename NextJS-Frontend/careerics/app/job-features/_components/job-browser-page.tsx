@@ -797,6 +797,7 @@ export default function JobBrowserPage({
         height: "100%",
         overflow: "hidden",
         position: "relative",
+        paddingTop: isSmall ? "var(--space-2xl)" : "var(--space-2xl)",
       }}
     >
       {isDetailsModalOpen && selectedJob && (
