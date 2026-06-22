@@ -48,10 +48,12 @@ export default function JourneyLayout({
                     type="button"
                     onClick={() => router.back()}
                     style={{
+                        position: "fixed",
+                        top: "var(--space-xl)",
+                        right: "var(--space-xl)",
                         width: "5vh",
                         height: "5vh",
                         cursor: "pointer",
-                        margin: "20px",
 
                     }}
                 >
@@ -59,6 +61,7 @@ export default function JourneyLayout({
                         src="/global/close.svg"
                         alt="Close"
                         style={{
+                            
                             width: "100%",
                             height: "100%",
                             objectFit: "contain",

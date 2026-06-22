@@ -30,6 +30,19 @@ export function resolvePostAuthPath(options?: {
   );
 }
 
+export function buildAuthRedirectHref(
+  authPath: string,
+  redirect?: string | null,
+): string {
+  const safePath = getSafePostAuthPath(redirect);
+  if (!safePath) {
+    return authPath;
+  }
+
+  const params = new URLSearchParams({ redirect: safePath });
+  return `${authPath}?${params.toString()}`;
+}
+
 export function rememberPendingPostAuthPath(candidate?: string | null): void {
   if (typeof window === "undefined") {
     return;

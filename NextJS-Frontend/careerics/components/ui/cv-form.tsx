@@ -20,14 +20,15 @@ interface DynamicCVFormProps {
 
 const inputBaseStyle: React.CSSProperties = {
   width: "100%",
-  height: "38px", 
-  padding: "0 15px",
+  height: "fit-content", 
+  paddingBlock: "var(--space-xs)",
+  paddingInline: "var(--space-md)",
   borderRadius: "8px",
   border: "none",
   backgroundColor: "white",
   color: "#333",
   fontFamily: "var(--font-nova-square), sans-serif",
-  fontSize: "13px",
+  fontSize: "var(--text-sm)",
   outline: "none",
 };
 
@@ -46,8 +47,7 @@ export default function DynamicCVForm({ fields, values, onChange }: DynamicCVFor
             onChange={(e) => onChange(field.id, e.target.value)}
             style={{ 
               ...inputBaseStyle, 
-              height: "50px", 
-              paddingTop: "8px", 
+              paddingTop: "10px", 
               resize: "none" 
             }}
           />
@@ -70,7 +70,7 @@ export default function DynamicCVForm({ fields, values, onChange }: DynamicCVFor
         );
       case 'row':
         return (
-          <div key={field.id} style={{ display: "flex", gap: "50px", width: "100%" }}>
+          <div key={field.id} style={{ display: "flex", gap: "var(--space-sm)", width: "100%" }}>
             {field.fields?.map((subField) => (
               <div key={subField.id} style={{ flex: subField.width === "/3" ? 2 : 1 }}>
                 {renderField(subField)}
@@ -95,8 +95,8 @@ export default function DynamicCVForm({ fields, values, onChange }: DynamicCVFor
   return (
     <div style={{
       backgroundColor: "#4c4f6d", 
-      padding: "25px 45px",       
-      borderRadius: "35px",
+      padding: "var(--space-lg)",       
+      borderRadius: "var(--radius-lg)",
       width: "70%",
       display: "flex",
       flexDirection: "column",
