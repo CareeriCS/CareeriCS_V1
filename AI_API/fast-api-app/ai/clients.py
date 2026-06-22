@@ -1,4 +1,20 @@
 import os
+
+# Must be set before importing transformers. Railway is CPU-only and the
+# installed TensorFlow native libraries can segfault during transformers backend
+# discovery. SER and sentiment use PyTorch pipelines only.
+os.environ.setdefault("TRANSFORMERS_NO_TF", "1")
+os.environ.setdefault("USE_TF", "0")
+os.environ.setdefault("USE_FLAX", "0")
+os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")
+os.environ.setdefault("HF_HOME", os.getenv("HF_HOME", os.getenv("TRANSFORMERS_CACHE", "/tmp/huggingface")))
+
+# Keep local ML inference from oversubscribing small Railway containers.
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "1")
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
+
 import shutil
 import tempfile
 from typing import Any, Callable
@@ -77,10 +93,19 @@ def _build_pipeline(task: str, model: str):
     # Import transformers only when a specific pipeline is first used.
     from transformers import pipeline
 
+    try:
+        import torch
+
+        torch.set_num_threads(1)
+        torch.set_num_interop_threads(1)
+    except Exception:
+        pass
+
     return pipeline(
         task,
         model=model,
         framework="pt",
+        device=-1,
     )
 
 
