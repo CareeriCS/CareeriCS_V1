@@ -123,29 +123,36 @@ export default function QuestionsPage() {
     router.push(`/skill-feature/results?${searchParams.toString()}`);
   };
 
-  return (
+return (
     <div
       style={{
         marginLeft: "auto",
         marginRight: "auto",
         display: "flex",
         width: isLarge ? "65vw" : isMedium ? "80vw" : "90vw",
-        height: "100%",
+        height: "auto",
+        minHeight: "100%",
         flexDirection: "column",
         alignItems: "center",
-        gap: isSmall ? "var(--space-lg)" : "var(--space-xl)",
-        justifyContent: "space-between",
+        gap: isSmall ? "var(--space-md)" : "var(--space-lg)",
+        justifyContent: isSmall ? "flex-start" : "center", // Align to top on mobile for smooth scrolling flow
+        paddingBlock: isSmall ? "var(--space-md)" : "var(--space-xl)",
+        paddingBottom: isSmall ? "32px" : "var(--space-xl)", // Extra breathing room at the bottom for mobile
+        overflowY: isSmall ? "auto" : "visible", // Triggers natural viewport scrolling on small viewports
       }}
     >
+      {/* Question Title */}
       <h2
         style={{
           margin: 0,
           width: "100%",
-          textAlign: "center",
-          fontSize: isSmall ? "16px" : "var(--text-lg)",
-          fontFamily: "var(--font-nova-square), sans-serif",
+          textAlign: "left", 
+          fontSize: isSmall ? "15px" : isMedium ? "var(--text-md)" : "18px",
+          fontFamily: "var(--font-nova-square)",
           color: "white",
           lineHeight: "1.4",
+          fontWeight: 500,
+          marginBottom: isSmall ? "8px" : "10px",
         }}
       >
         {currentQData
@@ -153,13 +160,14 @@ export default function QuestionsPage() {
           : "Question unavailable"}
       </h2>
 
+      {/* Choices Options Container */}
       <div
         style={{
-          marginTop: isSmall ? "var(--space-lg)" : "var(--space-xl)",
           display: "flex",
           width: "100%",
           flexDirection: "column",
-          gap: "var(--space-md)",
+          gap: isSmall ? "10px" : "10px",
+          marginBottom: isSmall ? "16px" : "10px",
         }}
       >
         {(currentQData?.options || []).map((choice: string) => {
@@ -203,17 +211,23 @@ export default function QuestionsPage() {
                 alignItems: "center",
                 justifyContent: "space-between",
                 borderRadius: "var(--radius-lg)",
-                padding: isSmall ? "12px 16px" : "var(--space-md) var(--space-lg)",
+                padding: isSmall 
+                  ? "12px 16px" 
+                  : isMedium 
+                    ? "14px 20px" 
+                    : "16px 24px",
                 color: "var(--dark-blue)",
                 backgroundColor: bg,
                 border: `1px solid ${border}`,
-                transition: "all 0.2s ease",
+                transition: "all 0.15s ease",
                 cursor: isReviewing ? "default" : "pointer",
                 textAlign: "left",
-                gap: "12px",
+                gap: "16px",
               }}
             >
-              <span style={{ flex: 1, wordBreak: "break-word" }}>{choice}</span>
+              <span style={{ flex: 1, wordBreak: "break-word", fontSize: isSmall ? "13px" : "15px", fontWeight: 400 }}>
+                {choice}
+              </span>
 
               <span
                 style={{
@@ -251,18 +265,17 @@ export default function QuestionsPage() {
         })}
       </div>
 
+      {/* Navigation and Bottom Control Section */}
       <div
         style={{
           display: "flex",
-          justifyContent: "flex-start",
+          justifyContent: "center",
           alignItems: "center",
           width: "100%",
-          gap: isSmall ? "var(--space-md)" : "var(--space-lg)",
+          gap: isSmall ? "12px" : "var(--space-md)",
           flexDirection: "column",
-          flexShrink: 0,
-          alignSelf: "center",
-          height: "fit-content",
-          marginTop: isSmall ? "var(--space-lg)" : "0",
+          marginTop: isSmall ? "16px" : "auto", // Flow naturally downwards right after the choices container on mobile
+          position: "relative",
         }}
       >
         <div
@@ -271,10 +284,8 @@ export default function QuestionsPage() {
             justifyContent: "center",
             alignItems: "center",
             width: "100%",
-            gap: isSmall ? "var(--space-md)" : "var(--space-lg)",
+            gap: isSmall ? "12px" : "16px",
             flexDirection: "row",
-            flexShrink: 0,
-            alignSelf: "center",
           }}
         >
           <Button
@@ -284,25 +295,23 @@ export default function QuestionsPage() {
             disabled={currentQuestion === 1}
             style={{
               paddingInline: isSmall ? "var(--space-lg)" : "var(--space-2xl)",
-              paddingBlock: "0",
-              paddingLeft: "0",
-              gap: isSmall ? "var(--space-md)" : "var(--space-xl)",
-              height: "fit-content",
+              gap: isSmall ? "8px" : "12px",
+              height: isSmall ? "36px" : "42px",
               width: "fit-content",
               maxWidth: isSmall ? "100%" : "fit-content",
               flex: isSmall ? 1 : "none",
               justifyContent: "space-between",
               borderRadius: "999px",
-              fontSize: isSmall ? "14px" : "inherit",
+              fontSize: isSmall ? "13px" : "14px",
             }}
           >
             <img
               src={"/global/next.svg"}
               style={{
-                height: "var(--icon-md)",
+                height: isSmall ? "14px" : "16px",
                 transform: "rotate(180deg)",
                 backgroundColor: "white",
-                padding: "var(--space-xxs)",
+                padding: "4px",
                 boxSizing: "content-box",
                 borderRadius: "999px",
               }}
@@ -317,25 +326,23 @@ export default function QuestionsPage() {
             disabled={!isAnswered || !(currentQuestion < questions.length)}
             style={{
               paddingInline: isSmall ? "var(--space-lg)" : "var(--space-2xl)",
-              paddingBlock: "0",
-              paddingRight: "0",
-              gap: isSmall ? "var(--space-md)" : "var(--space-xl)",
-              height: "fit-content",
+              gap: isSmall ? "8px" : "12px",
+              height: isSmall ? "36px" : "42px",
               width: "fit-content",
               maxWidth: isSmall ? "100%" : "fit-content",
               flex: isSmall ? 1 : "none",
               justifyContent: "space-between",
               borderRadius: "999px",
-              fontSize: isSmall ? "14px" : "inherit",
+              fontSize: isSmall ? "13px" : "14px",
             }}
           >
             Next
             <img
               src={"/global/next.svg"}
               style={{
-                height: "var(--icon-md)",
+                height: isSmall ? "14px" : "16px",
                 backgroundColor: "white",
-                padding: "var(--space-xxs)",
+                padding: "4px",
                 boxSizing: "content-box",
                 borderRadius: "999px",
               }}
@@ -343,6 +350,7 @@ export default function QuestionsPage() {
           </Button>
         </div>
 
+        {/* Finish Assessment Button */}
         {!isReviewing && !(currentQuestion < questions.length) && (
           <Button
             variant="primary"
@@ -351,11 +359,10 @@ export default function QuestionsPage() {
             disabled={!allAnswered}
             style={{
               paddingInline: "var(--space-2xl)",
-              paddingBlock: "var(--space-xxs)",
-              height: "fit-content",
-              width: isSmall ? "100%" : "fit-content",
-              marginLeft: isSmall ? 0 : "auto",
-              flex: "none",
+              height: isSmall ? "32px" : "38px",
+              fontSize: isSmall ? "13px" : "14px",
+              width: isSmall ? "100%" : "auto",
+              marginTop: isSmall ? "4px" : "8px",
             }}
           >
             Finish Assessment
@@ -363,18 +370,19 @@ export default function QuestionsPage() {
         )}
       </div>
 
+      {/* Back to Results (Review Mode Only) */}
       {isReviewing && (
         <Button
           variant="secondary"
-          className="mt-[var(--space-lg)]"
+          className="mt-[var(--space-md)]"
           style={{
             width: isSmall ? "100%" : "auto",
-            height: isSmall ? "auto" : "fit-content",
-            paddingBlock: isSmall ? "0px" : "var(--space-xs)",
-            fontSize: isSmall ? "13px" : "inherit",
+            height: isSmall ? "34px" : "40px",
+            fontSize: isSmall ? "13px" : "14px",
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
+            marginTop: isSmall ? "8px" : "16px",
           }}
           onClick={() =>
             router.push(

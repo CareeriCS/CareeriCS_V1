@@ -206,7 +206,7 @@ export default function SidebarLogicOnly({
           minHeight: 0,
           minWidth: 0,
           maxWidth: "100%",
-          overflow: "hidden",
+          overflow: "auto",
           backgroundColor: "transparent",
           padding: isLarge ? "var(--space-2xl)" : isMedium ? "var(--space-lg)" : "var(--space-md)",
         }}
