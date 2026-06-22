@@ -337,7 +337,7 @@ export default function CareerQuestionsPage() {
 
   const { isSmall } = useResponsive();
 
-  return (
+return (
     <Interview
       questions={sidebarSteps}
       currentActiveId={currentStepId}
@@ -351,7 +351,16 @@ export default function CareerQuestionsPage() {
       title="Career Quiz"
       label=""
     >
-      <section className="mx-auto flex w-full min-w-0 max-w-[52rem] flex-col items-center gap-[var(--space-xl)]">
+
+      <section 
+        className="mx-auto flex w-full min-w-0 max-w-[52rem] flex-col items-center gap-[var(--space-md)] md:gap-[var(--space-xl)]"
+        style={{
+          height: "auto",
+          minHeight: "100%",
+          overflowY: isSmall ? "auto" : "visible",
+          paddingBottom: isSmall ? "40px" : "0px", // Gives breathing room at the very bottom on mobile
+        }}
+      >
         {isSubmitting ? (
           <div
             style={{
@@ -372,28 +381,29 @@ export default function CareerQuestionsPage() {
           </div>
         ) : currentGroup ? (
           <>
-            <div className="flex w-full min-w-0 flex-col gap-[var(--space-lg)]">
+            {/* Questions wrapper block */}
+            <div className="flex w-full min-w-0 flex-col gap-[var(--space-md)] md:gap-[var(--space-lg)]">
               {currentGroup.questions.map((question) => (
                 <article
                   key={question.id}
-                  className="flex w-full min-w-0 flex-col items-center gap-[var(--space-lg)] rounded-[var(--radius-2xl)] border border-[rgba(255,255,255,0.12)] bg-[rgba(61,67,84,0.68)] px-[var(--space-lg)] py-[var(--space-xl)] shadow-sm backdrop-blur-sm sm:px-[var(--space-xl)]"
+                  className="flex w-full min-w-0 flex-col items-center gap-[var(--space-md)] rounded-[var(--radius-2xl)] border border-[rgba(255,255,255,0.12)] bg-[rgba(61,67,84,0.68)] px-[var(--space-md)] py-[var(--space-lg)] shadow-sm backdrop-blur-sm sm:px-[var(--space-xl)] md:gap-[var(--space-lg)] md:py-[var(--space-xl)]"
                 >
                   <p
-                    className="m-0 w-full break-words text-center text-[length:var(--text-base)] font-medium leading-[var(--line-normal)] text-[var(--text-primary)]"
+                    className="m-0 w-full break-words text-center text-[length:var(--text-sm)] font-medium leading-[var(--line-normal)] text-[var(--text-primary)] md:text-[length:var(--text-base)]"
                     style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
                   >
                     {question.text}
                   </p>
 
-                  <div className="flex w-full flex-col items-center justify-center gap-[var(--space-md)] md:flex-row md:gap-[var(--space-lg)]">
+                  <div className="flex w-full flex-col items-center justify-center gap-[var(--space-sm)] md:flex-row md:gap-[var(--space-lg)]">
                     <span
-                      className="text-center text-[length:var(--text-sm)] font-medium text-[var(--light-red)]"
+                      className="text-center text-[length:12px] font-medium text-[var(--light-red)] md:text-[length:var(--text-sm)]"
                       style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
                     >
                       Strongly Disagree
                     </span>
 
-                    <div className="flex flex-wrap items-center justify-center gap-[var(--space-md)]">
+                    <div className="flex flex-wrap items-center justify-center gap-[var(--space-xs)] md:gap-[var(--space-md)]">
                       {ratingValues.map((value) => {
                         const isSelected = ratings[question.id] === value;
 
@@ -404,14 +414,14 @@ export default function CareerQuestionsPage() {
                             aria-label={`Rate ${value} out of 5`}
                             aria-pressed={isSelected}
                             onClick={() => handleRate(question.id, value)}
-                            className={getRatingButtonClass(value, isSelected)}
+                            className={`${getRatingButtonClass(value, isSelected)} scale-90 md:scale-100`}
                           />
                         );
                       })}
                     </div>
 
                     <span
-                      className="text-center text-[length:var(--text-sm)] font-medium text-[var(--light-green)]"
+                      className="text-center text-[length:12px] font-medium text-[var(--light-green)] md:text-[length:var(--text-sm)]"
                       style={{ fontFamily: "var(--font-nova-square), sans-serif" }}
                     >
                       Strongly Agree
@@ -427,16 +437,17 @@ export default function CareerQuestionsPage() {
               </p>
             ) : null}
 
+            {/* Controller Action Buttons flowing perfectly below content */}
             <div
               style={{
                 display: "flex",
-                justifyContent: "flex-start",
+                justifyContent: "center",
                 alignItems: "center",
                 width: "100%",
-                gap: isSmall ? "var(--space-md)" : "var(--space-lg)",
+                gap: isSmall ? "10px" : "var(--space-md)",
                 flexDirection: "column",
-                flexShrink: 0,
-                alignSelf: "center",
+                marginTop: isSmall ? "24px" : "32px",
+                position: "relative",
               }}
             >
               <div
@@ -445,10 +456,8 @@ export default function CareerQuestionsPage() {
                   justifyContent: "center",
                   alignItems: "center",
                   width: "100%",
-                  gap: isSmall ? "var(--space-md)" : "var(--space-lg)",
+                  gap: isSmall ? "12px" : "16px",
                   flexDirection: "row",
-                  flexShrink: 0,
-                  alignSelf: "center",
                 }}
               >
                 <Button
@@ -460,26 +469,27 @@ export default function CareerQuestionsPage() {
                   }}
                   disabled={currentStepId === 1 || isLoadingQuestions || isSubmitting}
                   style={{
-                    paddingInline: "var(--space-2xl)",
+                    paddingInline: isSmall ? "var(--space-lg)" : "var(--space-2xl)",
                     paddingBlock: "0",
                     paddingLeft: "0",
-                    gap: "var(--space-xl)",
-                    height: "fit-content",
+                    gap: isSmall ? "8px" : "12px",
+                    height: isSmall ? "36px" : "42px",
                     width: "fit-content",
                     maxWidth: isSmall ? "100%" : "fit-content",
                     flex: isSmall ? 1 : "none",
                     justifyContent: "space-between",
                     borderRadius: "999px",
+                    fontSize: isSmall ? "13px" : "14px",
                   }}
                 >
                   <img
                     src={"/global/next.svg"}
                     alt=""
                     style={{
-                      height: "var(--icon-md)",
+                      height: isSmall ? "14px" : "16px",
                       transform: "rotate(180deg)",
                       backgroundColor: "white",
-                      padding: "var(--space-xxs)",
+                      padding: "4px",
                       boxSizing: "content-box",
                       borderRadius: "999px",
                     }}
@@ -498,16 +508,17 @@ export default function CareerQuestionsPage() {
                     currentStepId === questionGroups.length
                   }
                   style={{
-                    paddingInline: "var(--space-2xl)",
+                    paddingInline: isSmall ? "var(--space-lg)" : "var(--space-2xl)",
                     paddingBlock: "0",
                     paddingRight: "0",
-                    gap: "var(--space-xl)",
-                    height: "fit-content",
+                    gap: isSmall ? "8px" : "12px",
+                    height: isSmall ? "36px" : "42px",
                     width: "fit-content",
                     maxWidth: isSmall ? "100%" : "fit-content",
                     flex: isSmall ? 1 : "none",
                     justifyContent: "space-between",
                     borderRadius: "999px",
+                    fontSize: isSmall ? "13px" : "14px",
                   }}
                 >
                   Next
@@ -515,15 +526,16 @@ export default function CareerQuestionsPage() {
                     src={"/global/next.svg"}
                     alt=""
                     style={{
-                      height: "var(--icon-md)",
+                      height: isSmall ? "14px" : "16px",
                       backgroundColor: "white",
-                      padding: "var(--space-xxs)",
+                      padding: "4px",
                       boxSizing: "content-box",
                       borderRadius: "999px",
                     }}
                   />
                 </Button>
               </div>
+
               {currentStepId === questionGroups.length ? (
                 <Button
                   variant="primary"
@@ -533,12 +545,13 @@ export default function CareerQuestionsPage() {
                   isLoading={isSubmitting}
                   style={{
                     paddingInline: "var(--space-2xl)",
-                    paddingBlock: "var(--space-xxs)",
-                    height: "fit-content",
+                    height: isSmall ? "36px" : "42px",
+                    fontSize: isSmall ? "13px" : "14px",
                     width: isSmall ? "100%" : "fit-content",
                     marginLeft: isSmall ? 0 : "auto",
                     flex: "none",
                     opacity: !currentGroup || isSubmitting ? 0.55 : 1,
+                    marginTop: isSmall ? "8px" : "12px",
                   }}
                 >
                   {isSubmitting ? "Finding matches..." : "Finish"}
