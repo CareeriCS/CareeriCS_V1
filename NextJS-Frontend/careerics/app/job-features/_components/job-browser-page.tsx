@@ -796,33 +796,7 @@ export default function JobBrowserPage({
         </div>
       )}
 
-      <button
-        type="button"
-        onClick={() => router.back()}
-        style={{
-          width: "var(--icon-lg)",
-          height: "var(--icon-lg)",
-          cursor: "pointer",
-          alignSelf: "flex-end",
-          boxSizing: "content-box",
-          padding: "var(--space-md)",
-          paddingBottom: "0",
-          backgroundColor: "transparent",
-          border: "none",
-          position: "relative",
-          zIndex: 1,
-        }}
-      >
-        <img
-          src="/global/close.svg"
-          alt="Close"
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "contain",
-          }}
-        />
-      </button>
+      
 
       <div
         style={{

@@ -307,22 +307,22 @@ function buildPrefillState(profile: CVProfile): BuilderPrefillState {
 function profileHasStoredCvData(profile: CVProfile): boolean {
   return Boolean(
     profile.full_name ||
-      profile.professional_title ||
-      profile.summary ||
-      profile.portfolio ||
-      profile.country ||
-      profile.city ||
-      profile.phone ||
-      profile.email ||
-      profile.linkedin ||
-      profile.skills.length ||
-      profile.experiences.length ||
-      profile.education.length ||
-      profile.certifications.length ||
-      profile.projects.length ||
-      profile.languages.length ||
-      profile.awards.length ||
-      profile.references.length,
+    profile.professional_title ||
+    profile.summary ||
+    profile.portfolio ||
+    profile.country ||
+    profile.city ||
+    profile.phone ||
+    profile.email ||
+    profile.linkedin ||
+    profile.skills.length ||
+    profile.experiences.length ||
+    profile.education.length ||
+    profile.certifications.length ||
+    profile.projects.length ||
+    profile.languages.length ||
+    profile.awards.length ||
+    profile.references.length,
   );
 }
 
@@ -845,11 +845,12 @@ export default function CVBuilderPage() {
           className="scroll-area"
           style={{
             width: "100%",
-            maxWidth: "900px",
+            maxWidth: "100%",
             display: "flex",
             flexDirection: "column",
             height: "100%",
             overflowY: "auto",
+            overflowX: "hidden",
             scrollbarWidth: "none",
             gap: "1vh",
             padding: isMedium ? "0 var(--space-md)" : "0",
@@ -1057,13 +1058,13 @@ export default function CVBuilderPage() {
                 </p>
               ) : null}
 
-<div 
-                style={{ 
-                  display: "flex", 
-                  flexDirection: "column", 
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
                   gap: "var(--space-sm)",
                   // 👇 Hna kbbarna el-عرض f-el-mobile wel-tablet 3ashan ya7od msa7a akbar w maykonsh makhnooq
-                  width: isSmall || isMedium ? "130%" : "100%", 
+                  width: isSmall || isMedium ? "130%" : "100%",
                   maxWidth: isSmall ? "170%" : isMedium ? "90%" : "800px",
                   padding: isSmall ? "0 var(--space-xs)" : "0", // Padding khfeef 3al mobile 3ashan maylza2sh f-el-shasha
                   boxSizing: "border-box"
@@ -1114,10 +1115,10 @@ export default function CVBuilderPage() {
                     {educationList.map((entry, index) => (
                       <div
                         key={entry.id}
-                        style={{ display: "flex", gap: "var(--space-sm)", marginBottom: "var(--space-xxs)" }}
+                        style={{ display: "flex", gap: "var(--space-sm)", marginBottom: "var(--space-xxs)", maxWidth: "100%" }}
                       >
                         <span style={{ color: "var(--white)", opacity: 0.7 }}>{index + 1}.</span>
-                        <div style={{ flex: 1 }}>
+                        <div style={{ flex: 1, maxWidth: "100%" }}>
                           <DynamicCVForm
                             values={formData}
                             onChange={handleInputChange}
@@ -1142,6 +1143,7 @@ export default function CVBuilderPage() {
                         <button
                           type="button"
                           onClick={() => removeEntry(entry.id, educationList, setEducationList)}
+                          style={{ position:"absolute", right: "0" }}
                         >
                           <img
                             src="/cv/trash.svg"
@@ -1217,7 +1219,7 @@ export default function CVBuilderPage() {
                             <button
                               type="button"
                               onClick={() => removeEntry(entry.id, langList, setLangList)}
-                              style={{ background: "none", border: "none", cursor: "pointer" }}
+                              style={{ position:"absolute", right: "0" }}
                             >
                               <img
                                 src="/cv/trash.svg"
@@ -1250,7 +1252,7 @@ export default function CVBuilderPage() {
                         {skillList.map((entry, index) => (
                           <div
                             key={entry.id}
-                            style={{ display: "flex", gap: "var(--space-sm)", marginBottom: "var(--space-sm)" }}
+                            style={{ display: "flex", marginBottom: "var(--space-sm)" }}
                           >
                             <span
                               style={{
@@ -1286,7 +1288,7 @@ export default function CVBuilderPage() {
                             <button
                               type="button"
                               onClick={() => removeEntry(entry.id, skillList, setSkillList)}
-                              style={{ background: "none", border: "none", cursor: "pointer" }}
+                              style={{ position: "absolute", right: "0" }}
                             >
                               <img
                                 src="/cv/trash.svg"
@@ -1359,12 +1361,7 @@ export default function CVBuilderPage() {
                             <button
                               type="button"
                               onClick={() => removeEntry(entry.id, certList, setCertList)}
-                              style={{
-                                background: "none",
-                                border: "none",
-                                cursor: "pointer",
-                                marginTop: "var(--space-xl)",
-                              }}
+                              style={{ position:"absolute", right: "0" }}
                             >
                               <img
                                 src="/cv/trash.svg"
@@ -1433,12 +1430,7 @@ export default function CVBuilderPage() {
                             <button
                               type="button"
                               onClick={() => removeEntry(entry.id, awardList, setAwardList)}
-                              style={{
-                                background: "none",
-                                border: "none",
-                                cursor: "pointer",
-                                marginTop: "var(--space-md)",
-                              }}
+                               style={{ position:"absolute", right: "0" }}
                             >
                               <img
                                 src="/cv/trash.svg"
@@ -1506,12 +1498,7 @@ export default function CVBuilderPage() {
                           <button
                             type="button"
                             onClick={() => removeEntry(entry.id, experienceList, setExperienceList)}
-                            style={{
-                              background: "none",
-                              border: "none",
-                              cursor: "pointer",
-                              marginTop: "var(--space-md)",
-                            }}
+                  style={{ position:"absolute", right: "0" }}
                           >
                             <img
                               src="/cv/trash.svg"
@@ -1573,12 +1560,7 @@ export default function CVBuilderPage() {
                           <button
                             type="button"
                             onClick={() => removeEntry(entry.id, projectList, setProjectList)}
-                            style={{
-                              background: "none",
-                              border: "none",
-                              cursor: "pointer",
-                              marginTop: "var(--space-md)",
-                            }}
+                             style={{ position:"absolute", right: "0" }}
                           >
                             <img
                               src="/cv/trash.svg"
@@ -1651,12 +1633,7 @@ export default function CVBuilderPage() {
                           <button
                             type="button"
                             onClick={() => removeEntry(entry.id, referenceList, setReferenceList)}
-                            style={{
-                              background: "none",
-                              border: "none",
-                              cursor: "pointer",
-                              marginTop: "var(--space-md)",
-                            }}
+                             style={{ position:"absolute", right: "0" }}
                           >
                             <img
                               src="/cv/trash.svg"
