@@ -1,8 +1,11 @@
 from uuid import UUID
 import json
 import logging
+import os
 import subprocess
 import sys
+from concurrent.futures import Future, ThreadPoolExecutor
+from threading import Lock
 from typing import Any
 
 from sqlalchemy.orm import Session as DBSession
@@ -20,15 +23,17 @@ from utils.util import (
     convert_audio_and_video,
     delete_files,
     evaluate_answer_service,
-    ser,
-    fer,
-    emotion_evaluation,
-    sentiment_analysis
 )
 
 
 logger = logging.getLogger(__name__)
 MEDIA_ANALYSIS_TIMEOUT_SECONDS = 120
+MEDIA_ANALYSIS_EXECUTOR = ThreadPoolExecutor(
+    max_workers=1,
+    thread_name_prefix="careerics-media-analysis",
+)
+_media_analysis_lock = Lock()
+_media_analysis_queued_answer_ids: set[str] = set()
 
 
 # ============================================================
@@ -379,12 +384,40 @@ def _queue_or_run_media_analysis(
     answer,
     background_tasks: BackgroundTasks | None,
 ):
-    if background_tasks is not None:
-        background_tasks.add_task(_run_final_media_analysis_by_answer_id, str(answer.id))
-        return
+    """Queue media analysis without tying it to FastAPI BackgroundTasks.
 
-    # Fallback for tests or internal calls outside FastAPI BackgroundTasks.
-    _run_final_media_analysis(db, answer)
+    FastAPI background tasks still run in the web process after a response, and
+    multiple interview questions can overlap heavy FER/SER/sentiment subprocesses.
+    A single executor serializes analysis so Railway does not run out of memory
+    and return intermittent 502 responses while the user continues the interview.
+    """
+
+    del db, background_tasks  # Analysis reloads its own DB session by answer id.
+
+    answer_id = str(answer.id)
+    with _media_analysis_lock:
+        if answer_id in _media_analysis_queued_answer_ids:
+            logger.info("Media analysis already queued for answer %s", answer_id)
+            return
+        _media_analysis_queued_answer_ids.add(answer_id)
+
+    try:
+        future = MEDIA_ANALYSIS_EXECUTOR.submit(_run_final_media_analysis_by_answer_id, answer_id)
+        future.add_done_callback(lambda completed: _finalize_media_analysis_task(answer_id, completed))
+    except Exception:
+        with _media_analysis_lock:
+            _media_analysis_queued_answer_ids.discard(answer_id)
+        logger.exception("Could not queue media analysis for answer %s", answer_id)
+
+
+def _finalize_media_analysis_task(answer_id: str, completed: Future):
+    with _media_analysis_lock:
+        _media_analysis_queued_answer_ids.discard(answer_id)
+
+    try:
+        completed.result()
+    except Exception:
+        logger.exception("Queued media analysis task failed for answer %s", answer_id)
 
 
 def _run_final_media_analysis_by_answer_id(answer_id: str):
@@ -451,36 +484,27 @@ def _run_isolated_media_analysis(
     returns its default value and the text evaluation still succeeds.
     """
 
-    command = r'''
-import json
-import sys
-
-from utils.util import fer, ser, emotion_evaluation, sentiment_analysis
-
-request = json.loads(sys.stdin.read())
-analysis_type = request["analysis_type"]
-payload = request["payload"]
-
-if analysis_type == "fer":
-    result = emotion_evaluation(fer(payload["path"]))
-elif analysis_type == "ser":
-    result = ser(payload["path"])
-elif analysis_type == "sentiment":
-    result = sentiment_analysis(payload["text"])
-else:
-    raise ValueError(f"Unsupported analysis type: {analysis_type}")
-
-print(json.dumps({"result": result}))
-'''
+    env = {
+        **os.environ,
+        "TRANSFORMERS_NO_TF": "1",
+        "USE_TF": "0",
+        "USE_FLAX": "0",
+        "TF_CPP_MIN_LOG_LEVEL": "3",
+        "OMP_NUM_THREADS": "1",
+        "MKL_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "NUMEXPR_NUM_THREADS": "1",
+    }
 
     try:
         completed = subprocess.run(
-            [sys.executable, "-c", command],
+            [sys.executable, "-m", "services.interview.media_analysis_runner"],
             input=json.dumps({"analysis_type": analysis_type, "payload": payload}),
             text=True,
             capture_output=True,
             timeout=MEDIA_ANALYSIS_TIMEOUT_SECONDS,
             check=False,
+            env=env,
         )
     except subprocess.TimeoutExpired:
         logger.warning("%s media analysis timed out", analysis_type)
