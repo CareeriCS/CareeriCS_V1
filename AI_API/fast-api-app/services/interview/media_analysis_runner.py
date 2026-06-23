@@ -1,8 +1,6 @@
 import json
 import sys
 
-from utils.util import fer, ser, emotion_evaluation, sentiment_analysis
-
 
 def main() -> None:
     request = json.loads(sys.stdin.read())
@@ -10,10 +8,16 @@ def main() -> None:
     payload = request["payload"]
 
     if analysis_type == "fer":
+        from utils.interview.fer import fer, emotion_evaluation
+
         result = emotion_evaluation(fer(payload["path"]))
     elif analysis_type == "ser":
+        from utils.interview.ser import ser
+
         result = ser(payload["path"])
     elif analysis_type == "sentiment":
+        from utils.interview.sentiment import sentiment_analysis
+
         result = sentiment_analysis(payload["text"])
     else:
         raise ValueError(f"Unsupported analysis type: {analysis_type}")
