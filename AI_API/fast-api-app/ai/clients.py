@@ -25,6 +25,10 @@ from huggingface_hub import InferenceClient
 load_dotenv()
 
 
+class AIProviderConfigurationError(RuntimeError):
+    """Raised when an AI provider client cannot be configured safely."""
+
+
 def _bootstrap_ffmpeg_path() -> None:
     ffmpeg_path = os.getenv("FFMPEG_PATH", "").strip()
 
@@ -70,6 +74,21 @@ _bootstrap_ffmpeg_path()
 
 DS_TOKEN = os.getenv("DS_TOKEN")
 HF_TOKEN = os.getenv("HF_TOKEN")
+HF_ROUTER_TOKEN = HF_TOKEN or DS_TOKEN
+AI_ROUTER_BASE_URL = os.getenv("AI_ROUTER_BASE_URL", "https://router.huggingface.co/v1")
+
+
+def _require_hf_router_token() -> str:
+    if HF_ROUTER_TOKEN:
+        return HF_ROUTER_TOKEN
+
+    raise AIProviderConfigurationError(
+        "AI provider token is not configured. Set HF_TOKEN with Hugging Face Inference Providers permission."
+    )
+
+
+def is_hf_router_token_configured() -> bool:
+    return bool(HF_ROUTER_TOKEN)
 
 
 class _LazyObject:
@@ -111,22 +130,22 @@ def _build_pipeline(task: str, model: str):
 
 DS_Client = _LazyObject(
     lambda: OpenAI(
-        base_url="https://router.huggingface.co/v1",
-        api_key=DS_TOKEN,
+        base_url=AI_ROUTER_BASE_URL,
+        api_key=_require_hf_router_token(),
     )
 )
 
 minimax_client = _LazyObject(
     lambda: OpenAI(
-        base_url="https://router.huggingface.co/v1",
-        api_key=HF_TOKEN,
+        base_url=AI_ROUTER_BASE_URL,
+        api_key=_require_hf_router_token(),
     )
 )
 
 whisper_client = _LazyObject(
     lambda: InferenceClient(
         provider="hf-inference",
-        api_key=HF_TOKEN,
+        api_key=_require_hf_router_token(),
     )
 )
 
