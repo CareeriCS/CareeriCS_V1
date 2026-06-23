@@ -120,6 +120,11 @@ function normalizeEvaluationPayload(payload: unknown): APIEvaluationResponse | n
   };
 }
 
+const pendingEvaluateRequests = new Map<
+  string,
+  Promise<ApiResponse<APIEvaluationResponse | null>>
+>();
+
 export const interviewService = {
   // ── Sessions ────────────────────────────────────────────────────────────────
 
@@ -224,6 +229,18 @@ export const interviewService = {
     isFollowup = false,
     answerId?: string,
   ): Promise<ApiResponse<APIEvaluationResponse | null>> {
+    const requestKey = [
+      sessionId,
+      questionId,
+      isFollowup ? "followup" : "main",
+      answerId || "latest",
+    ].join(":");
+
+    const pendingRequest = pendingEvaluateRequests.get(requestKey);
+    if (pendingRequest) {
+      return pendingRequest;
+    }
+
     const form = new FormData();
     form.append("session_id", sessionId);
     form.append("question_id", questionId);
@@ -231,7 +248,8 @@ export const interviewService = {
     if (answerId) {
       form.append("answer_id", answerId);
     }
-    return fastapiApi
+
+    const request = fastapiApi
       .post<unknown>("/answers/evaluate/", form, { noRetry: true })
       .then((response) => {
         if (!response.success) {
@@ -255,7 +273,15 @@ export const interviewService = {
           ...response,
           data: normalized,
         };
+      })
+      .finally(() => {
+        if (pendingEvaluateRequests.get(requestKey) === request) {
+          pendingEvaluateRequests.delete(requestKey);
+        }
       });
+
+    pendingEvaluateRequests.set(requestKey, request);
+    return request;
   },
 
   getAnswerByQuestionSession(
