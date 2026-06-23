@@ -8,6 +8,7 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from threading import Lock
 from typing import Any
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DBSession
 from fastapi import BackgroundTasks, HTTPException, UploadFile
 from fastapi.concurrency import run_in_threadpool
@@ -27,13 +28,13 @@ from utils.util import (
 
 
 logger = logging.getLogger(__name__)
-MEDIA_ANALYSIS_TIMEOUT_SECONDS = 120
+MEDIA_ANALYSIS_TIMEOUT_SECONDS = int(os.getenv("MEDIA_ANALYSIS_TIMEOUT_SECONDS", "300"))
 MEDIA_ANALYSIS_EXECUTOR = ThreadPoolExecutor(
-    max_workers=1,
+    max_workers=int(os.getenv("MEDIA_ANALYSIS_WORKERS", "1")),
     thread_name_prefix="careerics-media-analysis",
 )
 TTS_EXECUTOR = ThreadPoolExecutor(
-    max_workers=1,
+    max_workers=int(os.getenv("FOLLOWUP_TTS_WORKERS", "1")),
     thread_name_prefix="careerics-followup-tts",
 )
 _media_analysis_lock = Lock()
@@ -188,12 +189,21 @@ def evaluate_answer_service_wrapper(
         else question.question_text
     )
 
-    evaluation = evaluate_answer_service(
-        question_text=question_text,
-        user_answer=answer.answer_text,
-        interview_type=session.type,
-        is_followup=is_followup_allowed,
-    )
+    try:
+        evaluation = evaluate_answer_service(
+            question_text=question_text,
+            user_answer=answer.answer_text or "",
+            interview_type=session.type,
+            is_followup=is_followup_allowed,
+        )
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Answer evaluation failed for answer %s", answer.id)
+        raise HTTPException(
+            status_code=502,
+            detail="Answer evaluation failed. Please try again.",
+        )
 
     score = evaluation["score"]
     feedback = evaluation["feedback"]
@@ -207,45 +217,45 @@ def evaluate_answer_service_wrapper(
     _queue_or_run_media_analysis(db, answer, background_tasks)
 
     if is_followup:
-        return {
-            "evaluation": feedback,
-            "grade": score,
-            "followup_recommended": False,
-            "followup": None,
-            "emotion_evaluation": answer.emotion_evaluation,
-            "tone_evaluation": answer.tone_evaluation,
-        }
+        return _build_evaluation_response(answer, feedback, score, False, None)
 
     if existing_followup:
-        return {
-            "evaluation": feedback,
-            "grade": score,
-            "followup_recommended": True,
-            "followup": _serialize_followup(existing_followup),
-            "emotion_evaluation": answer.emotion_evaluation,
-            "tone_evaluation": answer.tone_evaluation,
-        }
+        return _build_evaluation_response(
+            answer,
+            feedback,
+            score,
+            True,
+            _serialize_followup(existing_followup),
+        )
 
     if is_followup_allowed and followup_required:
         followup_info = _handle_followup(db, answer.id, improvement)
+        return _build_evaluation_response(answer, feedback, score, True, followup_info)
 
-        return {
-            "evaluation": feedback,
-            "grade": score,
-            "followup_recommended": True,
-            "followup": followup_info,
-            "emotion_evaluation": answer.emotion_evaluation,
-            "tone_evaluation": answer.tone_evaluation,
-        }
+    return _build_evaluation_response(answer, feedback, score, False, None)
 
+
+# ======================================================
+# RESPONSE HELPERS
+# ======================================================
+
+def _build_evaluation_response(
+    answer,
+    feedback: str,
+    score: float,
+    followup_recommended: bool,
+    followup,
+):
     return {
         "evaluation": feedback,
         "grade": score,
-        "followup_recommended": False,
-        "followup": None,
+        "followup_recommended": followup_recommended,
+        "followup": followup,
         "emotion_evaluation": answer.emotion_evaluation,
         "tone_evaluation": answer.tone_evaluation,
+        "sentiment_evaluation": answer.sentiment_evaluation,
     }
+
 
 # ======================================================
 # STORE BASIC EVALUATION
@@ -327,9 +337,16 @@ def _get_followup_for_main_answer(
     if not main_answer:
         return None
 
+    return _get_followup_by_answer_id(db, main_answer.id)
+
+
+def _get_followup_by_answer_id(
+    db: DBSession,
+    answer_id: UUID,
+) -> models.Followup | None:
     return (
         db.query(models.Followup)
-        .filter(models.Followup.answer_id == main_answer.id)
+        .filter(models.Followup.answer_id == answer_id)
         .first()
     )
 
@@ -343,6 +360,12 @@ def _handle_followup(
     answer_id: UUID,
     followup_text: str
 ):
+    existing_followup = _get_followup_by_answer_id(db, answer_id)
+    if existing_followup:
+        if not existing_followup.fquestion_audio:
+            _queue_followup_tts(str(existing_followup.id))
+        return _serialize_followup(existing_followup)
+
     followup = models.Followup(
         fquestion_text=followup_text,
         fquestion_audio=None,
@@ -350,7 +373,29 @@ def _handle_followup(
     )
 
     db.add(followup)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        existing_followup = _get_followup_by_answer_id(db, answer_id)
+        if existing_followup:
+            logger.warning(
+                "Follow-up already exists for answer %s; returning existing row after duplicate insert race.",
+                answer_id,
+            )
+            if not existing_followup.fquestion_audio:
+                _queue_followup_tts(str(existing_followup.id))
+            return _serialize_followup(existing_followup)
+
+        logger.exception(
+            "Follow-up insert failed for answer %s and no existing row was found after rollback.",
+            answer_id,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail="Could not create follow-up question at this time.",
+        )
+
     db.refresh(followup)
 
     _queue_followup_tts(str(followup.id))
@@ -387,7 +432,7 @@ def _generate_followup_audio_by_id(followup_id: str):
     db = SessionLocal()
     try:
         followup = db.get(models.Followup, UUID(followup_id))
-        if not followup:
+        if not followup or followup.fquestion_audio:
             return
 
         audio_filename = _generate_tts(
@@ -471,6 +516,22 @@ def _run_final_media_analysis_by_answer_id(answer_id: str):
         db.close()
 
 
+def _analysis_timeout_result(analysis_type: str) -> dict[str, Any]:
+    return {
+        "status": "timeout",
+        "analysis_type": analysis_type,
+        "timeout_seconds": MEDIA_ANALYSIS_TIMEOUT_SECONDS,
+    }
+
+
+def _analysis_failed_result(analysis_type: str, reason: str) -> dict[str, Any]:
+    return {
+        "status": "failed",
+        "analysis_type": analysis_type,
+        "reason": reason,
+    }
+
+
 def _run_final_media_analysis(
     db: DBSession,
     answer
@@ -507,6 +568,26 @@ def _run_final_media_analysis(
     db.commit()
 
 
+def _payload_summary(analysis_type: str, payload: dict[str, Any]) -> dict[str, Any]:
+    if analysis_type in {"fer", "ser"}:
+        path = str(payload.get("path", ""))
+        return {
+            "kind": "media",
+            "has_path": bool(path),
+            "extension": os.path.splitext(path)[1].lower(),
+        }
+
+    if analysis_type == "sentiment":
+        text = str(payload.get("text", ""))
+        return {
+            "kind": "text",
+            "text_length": len(text),
+            "word_count": len(text.split()),
+        }
+
+    return {"kind": "unknown"}
+
+
 def _run_isolated_media_analysis(
     analysis_type: str,
     payload: dict[str, Any],
@@ -535,11 +616,16 @@ def _run_isolated_media_analysis(
             env=env,
         )
     except subprocess.TimeoutExpired:
-        logger.warning("%s media analysis timed out", analysis_type)
-        return default
+        logger.warning(
+            "%s media analysis timed out after %s seconds. payload=%s",
+            analysis_type,
+            MEDIA_ANALYSIS_TIMEOUT_SECONDS,
+            _payload_summary(analysis_type, payload),
+        )
+        return _analysis_timeout_result(analysis_type) if default is None else default
     except Exception:
         logger.exception("%s media analysis subprocess failed to start", analysis_type)
-        return default
+        return _analysis_failed_result(analysis_type, "subprocess_start_failed") if default is None else default
 
     if completed.returncode != 0:
         logger.warning(
@@ -548,7 +634,7 @@ def _run_isolated_media_analysis(
             completed.returncode,
             completed.stderr[-1000:],
         )
-        return default
+        return _analysis_failed_result(analysis_type, "subprocess_failed") if default is None else default
 
     try:
         return json.loads(completed.stdout)["result"]
@@ -559,4 +645,4 @@ def _run_isolated_media_analysis(
             completed.stdout[-1000:],
             completed.stderr[-1000:],
         )
-        return default
+        return _analysis_failed_result(analysis_type, "invalid_output") if default is None else default
