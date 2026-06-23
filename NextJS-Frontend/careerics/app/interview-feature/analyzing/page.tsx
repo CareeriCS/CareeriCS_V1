@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Animation from "@/components/ui/animation";
 import InterviewLayout from "@/components/ui/interview";
 import { interviewService } from "@/services/interview.service";
-import { buildInterviewAudioCandidates, normalizeInterviewAudioUrl } from "@/lib/interview-media";
+import { normalizeInterviewAudioUrl } from "@/lib/interview-media";
 import { useNavigationLock } from "@/lib/navigation-lock";
 import type { APIFollowup } from "@/types";
 import { useInterviewFlow } from "@/hooks";
@@ -54,16 +54,6 @@ export default function AnalyzingPage() {
   const [isEvaluating, setIsEvaluating] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [followup, setFollowup] = useState<APIFollowup | null>(null);
-  const [isReplayingFollowup, setIsReplayingFollowup] = useState(false);
-  const [isFollowupAutoplayBlocked, setIsFollowupAutoplayBlocked] = useState(false);
-
-  const followupAudioElementRef = useRef<HTMLAudioElement | null>(null);
-  const followupCandidateIndexRef = useRef(0);
-
-  const followupAudioCandidates = useMemo(
-    () => buildInterviewAudioCandidates(followup?.audio || "", "followups"),
-    [followup?.audio],
-  );
   const navigationLockOwner = useMemo(
     () => `interview-analyzing:${sessionId || "pending"}`,
     [sessionId],
@@ -83,142 +73,6 @@ export default function AnalyzingPage() {
   );
 
   const safeCurrentQ = Math.min(Math.max(currentQ, 1), Math.max(layoutQuestions.length, 1));
-
-  const playFollowupAudio = useCallback(
-    async (startIndex = 0): Promise<boolean> => {
-      const player = followupAudioElementRef.current;
-      if (!player || !followupAudioCandidates.length) {
-        return false;
-      }
-
-      const safeStartIndex = Math.max(0, Math.min(startIndex, followupAudioCandidates.length - 1));
-
-      for (let index = safeStartIndex; index < followupAudioCandidates.length; index += 1) {
-        const candidate = followupAudioCandidates[index];
-        followupCandidateIndexRef.current = index;
-
-        if (player.src !== candidate) {
-          player.src = candidate;
-          player.load();
-        }
-
-        player.currentTime = 0;
-        player.muted = false;
-        player.volume = 1;
-
-        try {
-          await player.play();
-          setIsFollowupAutoplayBlocked(false);
-          return true;
-        } catch (error) {
-          const blocked = error instanceof DOMException && error.name === "NotAllowedError";
-          if (blocked) {
-            setIsFollowupAutoplayBlocked(true);
-            return false;
-          }
-        }
-      }
-
-      return false;
-    },
-    [followupAudioCandidates],
-  );
-
-  const speakFollowupFallback = useCallback((): boolean => {
-    if (
-      typeof window === "undefined" ||
-      !("speechSynthesis" in window) ||
-      !followup?.text?.trim()
-    ) {
-      return false;
-    }
-
-    try {
-      const utterance = new SpeechSynthesisUtterance(followup.text.trim());
-      utterance.lang = "en-US";
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(utterance);
-      return true;
-    } catch {
-      return false;
-    }
-  }, [followup?.text]);
-
-  useEffect(() => {
-    if (!isFinished || !followup) {
-      return;
-    }
-
-    followupCandidateIndexRef.current = 0;
-
-    if (!followupAudioCandidates.length) {
-      setIsFollowupAutoplayBlocked(false);
-      speakFollowupFallback();
-      return;
-    }
-
-    void playFollowupAudio(0);
-  }, [followup, followupAudioCandidates, isFinished, playFollowupAudio, speakFollowupFallback]);
-
-  useEffect(() => {
-    if (!isFollowupAutoplayBlocked || typeof window === "undefined") {
-      return;
-    }
-
-    let disposed = false;
-
-    const retryPlayback = () => {
-      if (disposed) {
-        return;
-      }
-
-      void playFollowupAudio(followupCandidateIndexRef.current);
-    };
-
-    window.addEventListener("pointerdown", retryPlayback, { once: true });
-    window.addEventListener("keydown", retryPlayback, { once: true });
-
-    return () => {
-      disposed = true;
-      window.removeEventListener("pointerdown", retryPlayback);
-      window.removeEventListener("keydown", retryPlayback);
-    };
-  }, [isFollowupAutoplayBlocked, playFollowupAudio]);
-
-  useEffect(() => {
-    return () => {
-      if (typeof window !== "undefined" && "speechSynthesis" in window) {
-        window.speechSynthesis.cancel();
-      }
-    };
-  }, []);
-
-  const handleFollowupAudioError = () => {
-    const nextIndex = followupCandidateIndexRef.current + 1;
-    if (nextIndex < followupAudioCandidates.length) {
-      void playFollowupAudio(nextIndex);
-      return;
-    }
-
-    speakFollowupFallback();
-  };
-
-  const handleReplayFollowupAudio = async () => {
-    if (!followup || isReplayingFollowup) {
-      return;
-    }
-
-    setIsReplayingFollowup(true);
-
-    try {
-      const started = await playFollowupAudio(followupCandidateIndexRef.current);
-      if (!started) {
-        speakFollowupFallback();
-      }
-    } finally {
-      setIsReplayingFollowup(false);
-    }
-  };
 
   useEffect(() => {
     if (missingContext) {
