@@ -57,27 +57,41 @@ export const PhaseCard = (props: PhaseCardProps) => {
         </h3>
 
 
-        <div
-          style={{
-            width: "100%",
-            height: "100%",
-            flex: 1,
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            overflow: "hidden",
-          }}
-        >
-          <img
-            src={`/home/next-phase/${phaseNumber}.svg`}
-            alt="Current Phase"
+        {!(isSmall && phaseNumber === "5") ?
+          <div
             style={{
               width: "100%",
-              objectFit: "fill",
-              display: "block",
+              height: "100%",
+              flex: 1,
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              overflow: "hidden",
             }}
-          />
-        </div>
+          >
+            <img
+              src={`/home/next-phase/${phaseNumber}.svg`}
+              alt="Current Phase"
+              style={{
+                width: "100%",
+                objectFit: "fill",
+                display: "block",
+              }}
+            />
+          </div>
+          : (
+            <p
+              style={{
+                fontSize: "var(--text-base)",
+                opacity: 0.7,
+                margin: 0,
+                padding:"var(--space-lg)",
+                paddingTop:"0",
+              }}
+            >
+              You've completed this career track. Keep building and growing!
+            </p>
+          )}
       </div>
     );
   }
@@ -127,37 +141,41 @@ export const PhaseCard = (props: PhaseCardProps) => {
             margin: 0,
           }}
         >
-          {desc}
+          {phaseNumber !== "5" ? desc :
+            "You've completed all phases in this career track. Keep building projects, gaining experience, and exploring advanced topics to continue growing in your field."
+          }
         </p>
       </div>
 
       {/* RIGHT SIDE IMAGE */}
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          justifyContent: "center",
-          alignItems:
-            phaseNumber === "2" || phaseNumber === "5"
-              ? "flex-end"
-              : phaseNumber === "4"
-                ? "flex-start"
-                : "center",
-          overflow: "hidden",
-          minWidth: 0,
-          borderLeft: "1px solid white"
-        }}
-      >
-        <img
-          src={`/home/next-phase/${phaseNumber}.svg`}
-          alt="Next Phase"
+      {phaseNumber !== "5" &&
+        <div
           style={{
-            width: "100%",
-            height: "auto",
-            objectFit: "fill",
+            flex: 1,
+            display: "flex",
+            justifyContent: "center",
+            alignItems:
+              phaseNumber === "2" || phaseNumber === "5"
+                ? "flex-end"
+                : phaseNumber === "4"
+                  ? "flex-start"
+                  : "center",
+            overflow: "hidden",
+            minWidth: 0,
+            borderLeft: "1px solid white"
           }}
-        />
-      </div>
+        >
+          <img
+            src={`/home/next-phase/${phaseNumber}.svg`}
+            alt="Next Phase"
+            style={{
+              width: "100%",
+              height: "auto",
+              objectFit: "fill",
+            }}
+          />
+        </div>
+      }
     </div>
   );
 }

@@ -72,6 +72,25 @@ type ValidationErrors = Record<string, string>;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
 const PHONE_ALLOWED_PATTERN = /^\+?[0-9\s().-]+$/;
 const TEXT_NAME_PATTERN = /^[\p{L}\s.'-]+$/u;
+const STEP_ONE_FIELD_IDS = new Set([
+  "name",
+  "job",
+  "country",
+  "city",
+  "phone",
+  "email",
+  "port",
+  "link",
+  "sum",
+]);
+const STEP_FIELD_PREFIXES: Array<{ stepId: number; prefixes: string[] }> = [
+  { stepId: 2, prefixes: ["inst-", "q-", "t-", "d-"] },
+  { stepId: 3, prefixes: ["ln-", "lp-", "sn-", "sp-"] },
+  { stepId: 4, prefixes: ["cname-", "corg-", "cdate-", "aname-", "aorg-", "adate-", "adesc-"] },
+  { stepId: 5, prefixes: ["role-", "org-", "tp-", "resp-", "ach-"] },
+  { stepId: 6, prefixes: ["pname-", "prole-", "ptech-", "pdesc-", "pach-"] },
+  { stepId: 7, prefixes: ["rn-", "rr-", "ro-", "rc-"] },
+];
 
 function countDigits(value: string): number {
   return value.replace(/\D/g, "").length;
@@ -124,6 +143,34 @@ function isValidLinkedInUrl(value: string): boolean {
   }
 }
 
+function getStepIdForField(fieldId: string): number | null {
+  if (!fieldId || fieldId === "_form") {
+    return null;
+  }
+
+  if (STEP_ONE_FIELD_IDS.has(fieldId)) {
+    return 1;
+  }
+
+  const match = STEP_FIELD_PREFIXES.find(({ prefixes }) =>
+    prefixes.some((prefix) => fieldId.startsWith(prefix)),
+  );
+
+  return match?.stepId ?? null;
+}
+
+function getFirstActionableErrorFieldId(errors: ValidationErrors): string | null {
+  return Object.keys(errors).find((fieldId) => fieldId !== "_form") ?? null;
+}
+
+function getValidationSummaryMessages(errors: ValidationErrors): string[] {
+  return [...new Set(
+    Object.entries(errors)
+      .filter(([fieldId]) => fieldId !== "_form")
+      .map(([, message]) => message),
+  )];
+}
+
 function addValidationError(
   errors: ValidationErrors,
   fieldId: string,
@@ -152,7 +199,11 @@ function validateOptionalNameLikeText(
   const value = getFormValue(formData, fieldId);
 
   if (value && !isValidNameLikeText(value)) {
-    addValidationError(errors, fieldId, `${label} should contain letters only.`);
+    addValidationError(
+      errors,
+      fieldId,
+      `${label} should contain at least 2 letters and may include spaces, apostrophes, periods, or hyphens.`,
+    );
   }
 }
 
@@ -330,26 +381,6 @@ function rowHasAnyValue(formData: Record<string, string>, fieldIds: string[]): b
   return fieldIds.some((fieldId) => getFormValue(formData, fieldId) !== "");
 }
 
-function rowHasRequiredValues(formData: Record<string, string>, requiredFieldIds: string[]): boolean {
-  return requiredFieldIds.every((fieldId) => getFormValue(formData, fieldId) !== "");
-}
-
-function optionalRowsAreValid(
-  formData: Record<string, string>,
-  rows: MultiRow[],
-  getAllFields: (row: MultiRow) => string[],
-  getRequiredFields: (row: MultiRow) => string[],
-): boolean {
-  return rows.every((row) => {
-    const allFieldIds = getAllFields(row);
-    if (!rowHasAnyValue(formData, allFieldIds)) {
-      return true;
-    }
-
-    return rowHasRequiredValues(formData, getRequiredFields(row));
-  });
-}
-
 function toBuilderPayload(
   formData: Record<string, string>,
   educationList: MultiRow[],
@@ -433,7 +464,7 @@ function toBuilderPayload(
 
 export default function CVBuilderPage() {
   const { user, isLoading: isAuthLoading } = useAuth();
-  const { isLarge, isMedium, isSmall } = useResponsive();
+  const { isMedium, isSmall } = useResponsive();
 
   const isCompactScreen = isSmall || isMedium;
 
@@ -448,6 +479,7 @@ export default function CVBuilderPage() {
   const [downloadBlob, setDownloadBlob] = useState<Blob | null>(null);
   const [downloadName, setDownloadName] = useState("careerics_CV.pdf");
   const [isPrefillingProfile, setIsPrefillingProfile] = useState(false);
+  const [pendingFocusFieldId, setPendingFocusFieldId] = useState<string | null>(null);
 
   const [educationList, setEducationList] = useState<MultiRow[]>(() => [createRow()]);
   const [langList, setLangList] = useState<MultiRow[]>(() => [createRow()]);
@@ -480,13 +512,40 @@ export default function CVBuilderPage() {
 
   const handleInputChange = (id: string, value: string) => {
     markFormDirty();
-    setFormData((previous) => ({ ...previous, [id]: value }));
-    setValidationErrors((previous) => {
-      if (!previous[id]) return previous;
+    setBuildError(null);
 
-      const nextErrors = { ...previous };
-      delete nextErrors[id];
-      return nextErrors;
+    const stepId = getStepIdForField(id);
+    setFormData((previous) => {
+      const nextFormData = { ...previous, [id]: value };
+
+      setValidationErrors((previousErrors) => {
+        if (!stepId) {
+          if (!previousErrors[id]) return previousErrors;
+
+          const nextErrors = { ...previousErrors };
+          delete nextErrors[id];
+          return nextErrors;
+        }
+
+        const hasStepErrors = Object.keys(previousErrors).some(
+          (fieldId) => getStepIdForField(fieldId) === stepId,
+        );
+
+        if (!hasStepErrors) {
+          return previousErrors;
+        }
+
+        const nextStepErrors = validateStep(stepId, nextFormData);
+        const preservedErrors = Object.fromEntries(
+          Object.entries(previousErrors).filter(
+            ([fieldId]) => getStepIdForField(fieldId) !== stepId,
+          ),
+        );
+
+        return { ...preservedErrors, ...nextStepErrors };
+      });
+
+      return nextFormData;
     });
   };
 
@@ -495,6 +554,7 @@ export default function CVBuilderPage() {
     setList: React.Dispatch<React.SetStateAction<MultiRow[]>>,
   ) => {
     markFormDirty();
+    setBuildError(null);
     setList([...list, createRow()]);
   };
 
@@ -508,7 +568,13 @@ export default function CVBuilderPage() {
     }
 
     markFormDirty();
+    setBuildError(null);
     setList(list.filter((item) => item.id !== id));
+    setValidationErrors((previous) =>
+      Object.fromEntries(
+        Object.entries(previous).filter(([fieldId]) => !fieldId.endsWith(`-${id}`)),
+      ),
+    );
   };
 
   useEffect(() => {
@@ -568,6 +634,27 @@ export default function CVBuilderPage() {
     };
   }, [isAuthLoading, user?.id]);
 
+  useEffect(() => {
+    if (!pendingFocusFieldId || pendingFocusFieldId === "_form") {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      const target = document.getElementById(pendingFocusFieldId);
+
+      if (target instanceof HTMLElement) {
+        target.scrollIntoView({ behavior: "smooth", block: "center" });
+        target.focus();
+      }
+
+      setPendingFocusFieldId(null);
+    }, 60);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [expandedStepId, pendingFocusFieldId]);
+
   const cvSteps = [
     { id: 1, title: "Personal Details", text: "Name, Job Title, Portfolio, Summary..." },
     { id: 2, title: "Education", text: "Institution, Qualification, Period, Details." },
@@ -578,117 +665,125 @@ export default function CVBuilderPage() {
     { id: 7, title: "References", text: "Professional vouchers" },
   ];
 
-  const validateStep = (stepId: number): ValidationErrors => {
+  const validateStep = (
+    stepId: number,
+    values: Record<string, string> = formData,
+  ): ValidationErrors => {
     const errors: ValidationErrors = {};
 
     switch (stepId) {
       case 1: {
-        validateRequiredText(errors, formData, "name", "Full Name");
-        validateRequiredText(errors, formData, "job", "Job Title");
-        validateRequiredText(errors, formData, "country", "Country");
-        validateRequiredText(errors, formData, "city", "City");
-        validateRequiredText(errors, formData, "phone", "Phone Number");
-        validateRequiredText(errors, formData, "email", "Email Address");
+        validateRequiredText(errors, values, "name", "Full Name");
+        validateRequiredText(errors, values, "job", "Job Title");
+        validateRequiredText(errors, values, "country", "Country");
+        validateRequiredText(errors, values, "city", "City");
+        validateRequiredText(errors, values, "phone", "Phone Number");
+        validateRequiredText(errors, values, "email", "Email Address");
 
-        validateOptionalNameLikeText(errors, formData, "name", "Full Name");
+        validateOptionalNameLikeText(errors, values, "name", "Full Name");
 
-        const phone = getFormValue(formData, "phone");
+        const phone = getFormValue(values, "phone");
         if (phone && !isValidPhoneNumber(phone)) {
-          addValidationError(errors, "phone", "Phone Number should contain 8 to 15 digits and only valid phone characters.");
+          addValidationError(
+            errors,
+            "phone",
+            "Phone Number should contain 10 to 15 digits and only valid phone characters.",
+          );
         }
 
-        const email = getFormValue(formData, "email");
+        const email = getFormValue(values, "email");
         if (email && !isValidEmail(email)) {
           addValidationError(errors, "email", "Email Address should be valid, for example name@example.com.");
         }
 
-        validateOptionalUrl(errors, formData, "port", "Portfolio");
-        validateOptionalLinkedInUrl(errors, formData, "link", "LinkedIn Profile");
+        validateOptionalUrl(errors, values, "port", "Portfolio");
+        validateOptionalLinkedInUrl(errors, values, "link", "LinkedIn Profile");
 
         break;
       }
 
       case 2:
         educationList.forEach((entry, index) => {
-          const allFields = [`inst-${entry.id}`, `q-${entry.id}`, `t-${entry.id}`, `d-${entry.id}`];
-          if (!rowHasAnyValue(formData, allFields)) return;
+          const visibleFields = [`inst-${entry.id}`, `q-${entry.id}`, `t-${entry.id}`];
+          if (!rowHasAnyValue(values, visibleFields)) return;
 
-          validateRequiredText(errors, formData, `inst-${entry.id}`, `Education ${index + 1} institution`);
-          validateRequiredText(errors, formData, `q-${entry.id}`, `Education ${index + 1} qualification`);
-          validateRequiredText(errors, formData, `t-${entry.id}`, `Education ${index + 1} time period`);
+          validateRequiredText(errors, values, `inst-${entry.id}`, `Education ${index + 1} institution`);
+          validateRequiredText(errors, values, `q-${entry.id}`, `Education ${index + 1} qualification`);
+          validateRequiredText(errors, values, `t-${entry.id}`, `Education ${index + 1} time period`);
         });
         break;
 
       case 3:
         langList.forEach((entry, index) => {
           const allFields = [`ln-${entry.id}`, `lp-${entry.id}`];
-          if (!rowHasAnyValue(formData, allFields)) return;
+          if (!rowHasAnyValue(values, allFields)) return;
 
-          validateRequiredText(errors, formData, `ln-${entry.id}`, `Language ${index + 1}`);
-          validateRequiredText(errors, formData, `lp-${entry.id}`, `Language ${index + 1} proficiency`);
+          validateRequiredText(errors, values, `ln-${entry.id}`, `Language ${index + 1}`);
+          validateRequiredText(errors, values, `lp-${entry.id}`, `Language ${index + 1} proficiency`);
         });
 
         skillList.forEach((entry, index) => {
           const allFields = [`sn-${entry.id}`, `sp-${entry.id}`];
-          if (!rowHasAnyValue(formData, allFields)) return;
+          if (!rowHasAnyValue(values, allFields)) return;
 
-          validateRequiredText(errors, formData, `sn-${entry.id}`, `Skill ${index + 1}`);
-          validateRequiredText(errors, formData, `sp-${entry.id}`, `Skill ${index + 1} level`);
+          validateRequiredText(errors, values, `sn-${entry.id}`, `Skill ${index + 1}`);
+          validateRequiredText(errors, values, `sp-${entry.id}`, `Skill ${index + 1} level`);
         });
         break;
 
       case 4:
         certList.forEach((entry, index) => {
           const allFields = [`cname-${entry.id}`, `corg-${entry.id}`, `cdate-${entry.id}`];
-          if (!rowHasAnyValue(formData, allFields)) return;
+          if (!rowHasAnyValue(values, allFields)) return;
 
-          validateRequiredText(errors, formData, `cname-${entry.id}`, `Certificate ${index + 1} title`);
-          validateRequiredText(errors, formData, `corg-${entry.id}`, `Certificate ${index + 1} organization`);
-          validateRequiredText(errors, formData, `cdate-${entry.id}`, `Certificate ${index + 1} date`);
+          validateRequiredText(errors, values, `cname-${entry.id}`, `Certificate ${index + 1} title`);
+          validateRequiredText(errors, values, `corg-${entry.id}`, `Certificate ${index + 1} organization`);
+          validateRequiredText(errors, values, `cdate-${entry.id}`, `Certificate ${index + 1} date`);
         });
 
         awardList.forEach((entry, index) => {
-          const allFields = [`aname-${entry.id}`, `aorg-${entry.id}`, `adate-${entry.id}`, `adesc-${entry.id}`];
-          if (!rowHasAnyValue(formData, allFields)) return;
+          const visibleFields = [`aname-${entry.id}`, `aorg-${entry.id}`, `adate-${entry.id}`];
+          if (!rowHasAnyValue(values, visibleFields)) return;
 
-          validateRequiredText(errors, formData, `aname-${entry.id}`, `Award ${index + 1} title`);
-          validateRequiredText(errors, formData, `aorg-${entry.id}`, `Award ${index + 1} organization`);
-          validateRequiredText(errors, formData, `adate-${entry.id}`, `Award ${index + 1} year`);
+          validateRequiredText(errors, values, `aname-${entry.id}`, `Award ${index + 1} title`);
+          validateRequiredText(errors, values, `aorg-${entry.id}`, `Award ${index + 1} organization`);
+          validateRequiredText(errors, values, `adate-${entry.id}`, `Award ${index + 1} year`);
         });
         break;
 
       case 5:
         experienceList.forEach((entry, index) => {
-          const allFields = [`role-${entry.id}`, `org-${entry.id}`, `tp-${entry.id}`, `resp-${entry.id}`, `ach-${entry.id}`];
-          if (!rowHasAnyValue(formData, allFields)) return;
+          const visibleFields = [`role-${entry.id}`, `org-${entry.id}`, `tp-${entry.id}`, `resp-${entry.id}`];
+          if (!rowHasAnyValue(values, visibleFields)) return;
 
-          validateRequiredText(errors, formData, `role-${entry.id}`, `Experience ${index + 1} role`);
-          validateRequiredText(errors, formData, `org-${entry.id}`, `Experience ${index + 1} organization`);
-          validateRequiredText(errors, formData, `tp-${entry.id}`, `Experience ${index + 1} time period`);
-          validateRequiredText(errors, formData, `resp-${entry.id}`, `Experience ${index + 1} responsibilities`);
+          validateRequiredText(errors, values, `role-${entry.id}`, `Experience ${index + 1} role`);
+          validateRequiredText(errors, values, `org-${entry.id}`, `Experience ${index + 1} organization`);
+          validateRequiredText(errors, values, `tp-${entry.id}`, `Experience ${index + 1} time period`);
+          validateRequiredText(errors, values, `resp-${entry.id}`, `Experience ${index + 1} responsibilities`);
         });
         break;
 
       case 6:
         projectList.forEach((entry, index) => {
           const allFields = [`pname-${entry.id}`, `prole-${entry.id}`, `ptech-${entry.id}`, `pdesc-${entry.id}`, `pach-${entry.id}`];
-          if (!rowHasAnyValue(formData, allFields)) return;
+          if (!rowHasAnyValue(values, allFields)) return;
 
-          validateRequiredText(errors, formData, `prole-${entry.id}`, `Project ${index + 1} role`);
-          validateRequiredText(errors, formData, `pdesc-${entry.id}`, `Project ${index + 1} description`);
+          validateRequiredText(errors, values, `pname-${entry.id}`, `Project ${index + 1} name`);
+          validateRequiredText(errors, values, `prole-${entry.id}`, `Project ${index + 1} role`);
+          validateRequiredText(errors, values, `pdesc-${entry.id}`, `Project ${index + 1} description`);
         });
         break;
 
       case 7:
         referenceList.forEach((entry, index) => {
           const allFields = [`rn-${entry.id}`, `rr-${entry.id}`, `ro-${entry.id}`, `rc-${entry.id}`];
-          if (!rowHasAnyValue(formData, allFields)) return;
+          if (!rowHasAnyValue(values, allFields)) return;
 
-          validateRequiredText(errors, formData, `rn-${entry.id}`, `Reference ${index + 1} name`);
-          validateRequiredText(errors, formData, `rc-${entry.id}`, `Reference ${index + 1} contact info`);
-          validateOptionalNameLikeText(errors, formData, `rn-${entry.id}`, `Reference ${index + 1} name`);
+          validateRequiredText(errors, values, `rn-${entry.id}`, `Reference ${index + 1} name`);
+          validateRequiredText(errors, values, `rc-${entry.id}`, `Reference ${index + 1} contact info`);
+          validateOptionalNameLikeText(errors, values, `rn-${entry.id}`, `Reference ${index + 1} name`);
 
-          const contactInfo = getFormValue(formData, `rc-${entry.id}`);
+          const contactInfo = getFormValue(values, `rc-${entry.id}`);
           if (
             contactInfo &&
             !isValidEmail(contactInfo) &&
@@ -706,9 +801,11 @@ export default function CVBuilderPage() {
     return errors;
   };
 
-  const validateAllSteps = (): ValidationErrors => {
+  const validateAllSteps = (
+    values: Record<string, string> = formData,
+  ): ValidationErrors => {
     return [1, 2, 3, 4, 5, 6, 7].reduce<ValidationErrors>((allErrors, step) => {
-      return { ...allErrors, ...validateStep(step) };
+      return { ...allErrors, ...validateStep(step, values) };
     }, {});
   };
 
@@ -721,13 +818,32 @@ export default function CVBuilderPage() {
   };
 
   const handleValidationErrors = (errors: ValidationErrors) => {
+    const firstFieldId = getFirstActionableErrorFieldId(errors);
+    const firstErrorMessage = firstFieldId ? errors[firstFieldId] : errors._form;
+    const targetStepId = firstFieldId ? getStepIdForField(firstFieldId) : null;
+
     setValidationErrors(errors);
-    setBuildError("Please make sure all required fields are filled out correctly.");
+    setBuildError(
+      firstErrorMessage
+        ? `Please fix the highlighted fields. ${firstErrorMessage}`
+        : "Please fix the highlighted fields.",
+    );
+
+    if (targetStepId) {
+      setActiveStepId(targetStepId);
+      setExpandedStepId(targetStepId);
+      setSidebarExpandedId(targetStepId);
+    }
+
+    if (firstFieldId) {
+      setPendingFocusFieldId(firstFieldId);
+    }
   };
 
   const clearValidationErrors = () => {
     setValidationErrors({});
     setBuildError(null);
+    setPendingFocusFieldId(null);
   };
 
   const handleSubmit = async () => {
@@ -736,6 +852,8 @@ export default function CVBuilderPage() {
       handleValidationErrors(errors);
       return;
     }
+
+    clearValidationErrors();
 
     if (isAuthLoading) { setBuildError("Checking your session. Please try again."); return; }
     if (!user?.id) { setBuildError("Please sign in first to build your CV."); return; }
@@ -818,6 +936,7 @@ export default function CVBuilderPage() {
     "full professional",
     "native/bilingual",
   ];
+  const validationSummaryMessages = getValidationSummaryMessages(validationErrors);
 
   return (
     <Interview
@@ -1074,6 +1193,7 @@ export default function CVBuilderPage() {
                   <DynamicCVForm
                     values={formData}
                     onChange={handleInputChange}
+                    errors={validationErrors}
                     fields={[
                       { id: "name", type: "text", placeholder: "Full Name" },
                       {
@@ -1122,6 +1242,7 @@ export default function CVBuilderPage() {
                           <DynamicCVForm
                             values={formData}
                             onChange={handleInputChange}
+                            errors={validationErrors}
                             fields={[
                               { id: `inst-${entry.id}`, type: "text", placeholder: "Institution's name" },
                               {
@@ -1194,6 +1315,7 @@ export default function CVBuilderPage() {
                               <DynamicCVForm
                                 values={formData}
                                 onChange={handleInputChange}
+                                errors={validationErrors}
                                 fields={[
                                   {
                                     id: `lrow-${entry.id}`,
@@ -1268,6 +1390,7 @@ export default function CVBuilderPage() {
                               <DynamicCVForm
                                 values={formData}
                                 onChange={handleInputChange}
+                                errors={validationErrors}
                                 fields={[
                                   {
                                     id: `srow-${entry.id}`,
@@ -1345,6 +1468,7 @@ export default function CVBuilderPage() {
                               <DynamicCVForm
                                 values={formData}
                                 onChange={handleInputChange}
+                                errors={validationErrors}
                                 fields={[
                                   { id: `cname-${entry.id}`, type: "text", placeholder: "Certificate Title" },
                                   {
@@ -1414,6 +1538,7 @@ export default function CVBuilderPage() {
                               <DynamicCVForm
                                 values={formData}
                                 onChange={handleInputChange}
+                                errors={validationErrors}
                                 fields={[
                                   { id: `aname-${entry.id}`, type: "text", placeholder: "Award Title" },
                                   {
@@ -1481,6 +1606,7 @@ export default function CVBuilderPage() {
                             <DynamicCVForm
                               values={formData}
                               onChange={handleInputChange}
+                              errors={validationErrors}
                               fields={[
                                 { id: `role-${entry.id}`, type: "text", placeholder: "Role" },
                                 {
@@ -1548,6 +1674,7 @@ export default function CVBuilderPage() {
                             <DynamicCVForm
                               values={formData}
                               onChange={handleInputChange}
+                              errors={validationErrors}
                               fields={[
                                 { id: `pname-${entry.id}`, type: "text", placeholder: "Project Name" },
                                 { id: `prole-${entry.id}`, type: "text", placeholder: "Your Role" },
@@ -1610,6 +1737,7 @@ export default function CVBuilderPage() {
                             <DynamicCVForm
                               values={formData}
                               onChange={handleInputChange}
+                              errors={validationErrors}
                               fields={[
                                 {
                                   id: `ref-row1-${entry.id}`,
@@ -1662,16 +1790,35 @@ export default function CVBuilderPage() {
               </div>
 
               {buildError ? (
-                <p
+                <div
                   style={{
                     color: "var(--light-red)",
                     fontFamily: "var(--font-jura)",
                     marginTop: "var(--space-xl)",
-                    marginBottom: 0,
                   }}
                 >
-                  {buildError}
-                </p>
+                  <p style={{ margin: 0 }}>{buildError}</p>
+                  {validationSummaryMessages.length > 1 ? (
+                    <ul
+                      style={{
+                        marginTop: "var(--space-sm)",
+                        marginBottom: 0,
+                        paddingLeft: "1.2rem",
+                        display: "grid",
+                        gap: "4px",
+                      }}
+                    >
+                      {validationSummaryMessages.slice(0, 4).map((message) => (
+                        <li key={message}>{message}</li>
+                      ))}
+                      {validationSummaryMessages.length > 4 ? (
+                        <li key="more-errors">
+                          {`${validationSummaryMessages.length - 4} more field${validationSummaryMessages.length - 4 === 1 ? "" : "s"} need attention.`}
+                        </li>
+                      ) : null}
+                    </ul>
+                  ) : null}
+                </div>
               ) : null}
 
               {/* ── Next / Build CV button ── */}

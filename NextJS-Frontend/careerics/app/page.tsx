@@ -1,10 +1,17 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import FeatureCard from "@/components/ui/feature-card";
 import type { CardType } from "@/components/ui/feature-card";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui";
 import { useResponsive } from "@/hooks/useResponsive";
+import { useAuth } from "@/providers/auth-provider";
+import { buildAuthRedirectHref } from "@/lib/auth/post-auth-redirect";
+import {
+  buildCareerQuizSelectionHref,
+  buildCareerQuizStartHref,
+  startCareerQuizSession,
+} from "@/lib/career-quiz";
 
 type LayoutItem = {
   area: string;
@@ -19,8 +26,12 @@ type Layout = {
 
 export default function LandingPage() {
   const router = useRouter();
+  const { user, isLoading: isAuthLoading } = useAuth();
+  const userId = user?.id ?? null;
 
   const [active, setActive] = useState("home");
+  const [isStartingCareerQuiz, setIsStartingCareerQuiz] = useState(false);
+  const [careerQuizError, setCareerQuizError] = useState<string | null>(null);
 
   const [hovered, setHovered] = useState<string | null>(null);
 
@@ -73,6 +84,37 @@ export default function LandingPage() {
   }, []);
 
   const { isLarge, isMedium, isSmall } = useResponsive();
+
+  const handleStartJourney = useCallback(async () => {
+    if (isStartingCareerQuiz || isAuthLoading) return;
+
+    const startHref = buildCareerQuizStartHref({
+      origin: "home",
+      returnTo: "/features/home",
+    });
+
+    if (!userId) {
+      setCareerQuizError("Please sign in first to start your career quiz.");
+      router.push(buildAuthRedirectHref("/auth/login", startHref));
+      return;
+    }
+
+    setCareerQuizError(null);
+    setIsStartingCareerQuiz(true);
+
+    try {
+      const quizId = await startCareerQuizSession(userId);
+      router.push(
+        buildCareerQuizSelectionHref(quizId, {
+          origin: "home",
+          returnTo: "/features/home",
+        }),
+      );
+    } catch (err) {
+      setCareerQuizError(err instanceof Error ? err.message : "Unable to start the career quiz right now. Please try again.");
+      setIsStartingCareerQuiz(false);
+    }
+  }, [isAuthLoading, isStartingCareerQuiz, router, userId]);
 
   const getLayout = (): Layout => {
     if (isLarge) {
@@ -617,10 +659,27 @@ export default function LandingPage() {
             style={{ width: "100%", height: "auto" }}
           />
         </div>
+        {careerQuizError && (
+          <p
+            style={{
+              alignSelf: "flex-end",
+              margin: 0,
+              marginRight: "20vw",
+              color: "#FFD3D3",
+              fontFamily: "var(--font-jura)",
+              fontSize: "0.95rem",
+            }}
+          >
+            {careerQuizError}
+          </p>
+        )}
         <Button
-          onClick={() => router.push("/auth/login")}
+          onClick={() => {
+            void handleStartJourney();
+          }}
           variant="primary"
           size="md"
+          disabled={isStartingCareerQuiz || isAuthLoading}
           style={{
             flex: 0,
             width: "fit-content",
@@ -628,7 +687,7 @@ export default function LandingPage() {
             marginRight: "20vw",
           }}
         >
-          Start Your Journey
+          {isStartingCareerQuiz ? "Starting..." : "Start Your Journey"}
         </Button>
       </section>
     </div>

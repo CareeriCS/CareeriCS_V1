@@ -1,7 +1,11 @@
 ﻿"use client";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { authService } from "@/services/auth.service";
+import {
+  buildAuthRedirectHref,
+  resolvePostAuthPath,
+} from "@/lib/auth/post-auth-redirect";
 import InputField from "@/components/ui/input-field";
 import { Button } from "@/components/ui/button"
 import AlertMessage from "@/components/ui/alert-message";
@@ -17,6 +21,11 @@ import AlertMessage from "@/components/ui/alert-message";
  */
 export default function Register() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = resolvePostAuthPath({
+    redirect: searchParams.get("redirect"),
+    callbackUrl: searchParams.get("callbackUrl"),
+  });
 
   // -- Form state --
   const [displayName, setDisplayName] = useState("");
@@ -136,12 +145,17 @@ export default function Register() {
         displayName: normalizedDisplayName,
       });
 
+      if (data.session) {
+        window.location.href = redirectTo;
+        return;
+      }
+
       // If Supabase has "Confirm email" enabled, user.identities will be
       // empty until they click the link. Show a success message instead.
       if (data.user) {
         setSuccess("Check your email for a confirmation link, then sign in.");
         setTimeout(() => {
-          router.push("/auth/login");
+          router.push(buildAuthRedirectHref("/auth/login", redirectTo));
         }, 2500);
       }
     } catch (err: unknown) {
@@ -154,7 +168,7 @@ export default function Register() {
 
   async function handleGoogleRegister() {
     try {
-      await authService.signInWithGoogle("/features/home");
+      await authService.signInWithGoogle(redirectTo);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Google sign-up failed.";
       setError(message);

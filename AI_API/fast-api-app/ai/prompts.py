@@ -309,8 +309,10 @@ def career_quiz_evaluation_prompt(
 
         "IMPORTANT RULES:\n"
         "- Return EXACTLY 3 career tracks.\n"
+        "- ALWAYS FIND A MATCH\n"
         "- Recommendations must be sorted from highest score to lowest score.\n"
         "- Scores must be realistic and differentiated.\n"
+        "- Scores must be between 0-100.\n"
         "- Do NOT assign identical scores unless absolutely necessary.\n"
         "- Use ONLY the provided track IDs.\n"
         "- Never invent new tracks.\n"
