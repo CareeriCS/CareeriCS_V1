@@ -325,7 +325,7 @@ export default function CourseLibraryPage() {
               type="button"
               onClick={() => router.back()}
               aria-label="Close courses"
-              className="flex h-[var(--icon-lg)] w-[var(--icon-lg)] shrink-0 items-center justify-center rounded-full border-none bg-transparent p-0 transition hover:bg-[var(--light-red)]"
+              className="flex h-[var(--icon-lg)] w-[var(--icon-lg)] shrink-0 items-center justify-center rounded-full border-none bg-transparent p-0 transition cursor-pointer hover:bg-[var(--bg-hover)] ]"
             >
               <img
                 src="/global/close.svg"

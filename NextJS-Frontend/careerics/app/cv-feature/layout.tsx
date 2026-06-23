@@ -54,6 +54,7 @@ export default function JourneyLayout({
                         width: "5vh",
                         height: "5vh",
                         cursor: "pointer",
+                        zIndex: 1000,
 
                     }}
                 >
